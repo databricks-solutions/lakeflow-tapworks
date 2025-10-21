@@ -1,0 +1,12 @@
+bundle:
+  name: final_saas_bundle
+targets:
+  dev:
+    default: true
+    mode: development
+    presets:
+      source_linked_deployment: true
+
+include:
+  - resources/*.yml
+  - resources/*/*.yml
