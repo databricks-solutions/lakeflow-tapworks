@@ -1,9 +1,14 @@
 bundle:
-  name: final_saas_bundle
+  name: lakehouse_tap
 targets:
   dev:
     default: true
     mode: development
+    presets:
+      source_linked_deployment: true
+  prod:
+    default: false
+    mode: production
     presets:
       source_linked_deployment: true
 
