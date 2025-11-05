@@ -1,0 +1,8 @@
+resources:
+  schemas:
+    final_saas_db:
+      name: final_saas_db
+      catalog_name: poc2_test_catalog
+      comment: "Schema for final SaaS data ingestion - managed by DABS"
+      properties:
+        managed_by: "databricks_asset_bundle"
