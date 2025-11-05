@@ -79,3 +79,5 @@ terraform.rc
 # Databricks Asset Bundles
 .databricks/
 .bundle/
+resources/gateways/
+resources/pipelines/
