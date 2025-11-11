@@ -10,15 +10,15 @@ def get_connection_id(workspace_client, connection_name):
     return connection.connection_id
 
 
-def create_gateways(df, catalog, schema, workspace_client, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge'):
+def create_gateways(df, catalog, schema, workspace_client, project_name, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge'):
     """Create gateway YAML configuration from dataframe."""
     gateways = {}
     unique_gateways = df.groupby('gateway').first()
 
     for gateway_id, row in unique_gateways.iterrows():
         connection_id = get_connection_id(workspace_client, row['connection_name'])
-        gateway_name = f"gateway_{gateway_id}"
-        pipeline_name = f"pipeline_{gateway_name}"
+        gateway_name = f"{project_name}_gateway_{gateway_id}"
+        pipeline_name = f"{project_name}_pipeline_{gateway_name}"
 
         gateways[pipeline_name] = {
             'name': gateway_name,
@@ -43,13 +43,13 @@ def create_gateways(df, catalog, schema, workspace_client, node_type_id='m5d.lar
     return {'resources': {'pipelines': gateways}}
 
 
-def create_pipelines(df, catalog, schema):
+def create_pipelines(df, catalog, schema, project_name):
     """Create pipeline YAML configuration from dataframe."""
     pipelines = {}
 
     for pipeline_group, group_df in df.groupby('pipeline_group'):
         gateway_id = group_df.iloc[0]['gateway']
-        pipeline_name = f"pipeline_ingestion_{pipeline_group}"
+        pipeline_name = f"{project_name}_pipeline_ingestion_{pipeline_group}"
 
         tables = [{
             'table': {
@@ -62,12 +62,12 @@ def create_pipelines(df, catalog, schema):
         } for _, row in group_df.iterrows()]
 
         pipelines[pipeline_name] = {
-            'name': f"ingestion_{pipeline_group}",
+            'name': f"{project_name}_ingestion_{pipeline_group}",
             'configuration': {
                 'pipelines.***REMOVED***': '600'
             },
             'ingestion_definition': {
-                'ingestion_gateway_id': f"${{resources.pipelines.pipeline_gateway_{gateway_id}.id}}",
+                'ingestion_gateway_id': f"${{resources.pipelines.{project_name}_pipeline_{project_name}_gateway_{gateway_id}.id}}",
                 'objects': tables
             }
         }
@@ -75,7 +75,7 @@ def create_pipelines(df, catalog, schema):
     return {'resources': {'pipelines': pipelines}}
 
 
-def generate_yaml_files(df, catalog, schema, workspace_client, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge', output_gateway='gateways.yml', output_pipeline='pipelines.yml'):
+def generate_yaml_files(df, catalog, schema, workspace_client, project_name, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge', output_gateway='gateways.yml', output_pipeline='pipelines.yml'):
     """Generate gateway and pipeline YAML files from dataframe.
 
     Args:
@@ -93,13 +93,14 @@ def generate_yaml_files(df, catalog, schema, workspace_client, node_type_id='m5d
         catalog (str): Target Databricks catalog name
         schema (str): Target Databricks schema name
         workspace_client (WorkspaceClient): Databricks workspace client instance
+        project_name (str): Project name prefix for all resources to avoid naming clashes
         node_type_id (str): Worker node type for cluster (default: 'm5d.large')
         driver_node_type_id (str): Driver node type for cluster (default: 'c5a.8xlarge')
         output_gateway (str): Output path for gateway YAML file
         output_pipeline (str): Output path for pipeline YAML file
     """
-    gateways_yaml = create_gateways(df, catalog, schema, workspace_client, node_type_id, driver_node_type_id)
-    pipelines_yaml = create_pipelines(df, catalog, schema)
+    gateways_yaml = create_gateways(df, catalog, schema, workspace_client, project_name, node_type_id, driver_node_type_id)
+    pipelines_yaml = create_pipelines(df, catalog, schema, project_name)
 
     with open(output_gateway, 'w') as f:
         yaml.dump(gateways_yaml, f, default_flow_style=False, sort_keys=False)
@@ -126,6 +127,7 @@ if __name__ == "__main__":
         catalog='jack_demos',
         schema='ingestion_schema',
         workspace_client=workspace_client,
+        project_name='my_project',
         output_gateway='resources/gateways.yml',
         output_pipeline='resources/pipelines.yml'
     )

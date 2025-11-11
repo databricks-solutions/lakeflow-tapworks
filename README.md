@@ -16,6 +16,7 @@ This tool is ideal for DataOps teams managing multiple data ingestion pipelines 
 - **Batch Configuration**: Process multiple tables at once from a simple CSV input
 - **Automatic Connection Management**: Retrieves Databricks connection IDs automatically
 - **Pipeline Grouping**: Logically group tables into separate ingestion pipelines
+- **Project Namespacing**: Prefix all resources with project names to avoid naming clashes across multiple projects
 - **DAB Integration**: Generates DAB-compatible YAML with proper resource references
 - **Continuous Ingestion**: Configured for continuous streaming pipelines
 - **Flexible Cluster Configuration**: Customizable node types for compute resources
@@ -72,13 +73,14 @@ df = pd.read_csv('your_config.csv')
 # Generate YAML files
 generate_yaml_files(
     df=df,
-    target_catalog='your_catalog',
-    target_schema='your_schema',
-    worker_node_type='m5d.large',
-    driver_node_type='c5a.8xlarge',
-    gateway_output_path='resources/gateways/gateways.yml',
-    pipeline_output_path='resources/pipelines/pipelines.yml',
-    w=w
+    catalog='your_catalog',
+    schema='your_schema',
+    workspace_client=w,
+    project_name='my_project',  # Prefix for all resources to avoid naming clashes
+    node_type_id='m5d.large',
+    driver_node_type_id='c5a.8xlarge',
+    output_gateway='resources/gateways/gateways.yml',
+    output_pipeline='resources/pipelines/pipelines.yml'
 )
 ```
 
@@ -117,19 +119,26 @@ See `examples/example_config.csv` for a complete example.
 
 ## Generated YAML Structure
 
+All resources are prefixed with the `project_name` to ensure uniqueness across multiple projects.
+
 ### Gateway YAML
 Defines streaming gateways with cluster configurations:
 ```yaml
 resources:
   pipelines:
-    gateway_name:
-      name: gateway_name
+    my_project_pipeline_my_project_gateway_1:
+      name: my_project_gateway_1
       continuous: true
-      cluster:
-        - num_workers: 2
+      clusters:
+        - num_workers: 1
           node_type_id: m5d.large
           driver_node_type_id: c5a.8xlarge
-          spark_conf: {...}
+      gateway_definition:
+        connection_name: sql_server_prod
+        gateway_storage_catalog: bronze
+        gateway_storage_schema: ingestion
+        gateway_storage_name: my_project_gateway_1
+        source_type: SQLSERVER
 ```
 
 ### Pipeline YAML
@@ -137,13 +146,10 @@ Defines ingestion pipelines with table mappings:
 ```yaml
 resources:
   pipelines:
-    pipeline_name:
-      name: pipeline_name
-      catalog: target_catalog
-      target: target_schema
+    my_project_pipeline_ingestion_sales:
+      name: my_project_ingestion_sales
       ingestion_definition:
-        connection_name: connection_name
-        ingestion_gateway_id: ${resources.pipelines.gateway_name.id}
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_1.id}
         objects: [...]
 ```
 
@@ -173,6 +179,36 @@ lakehouse-tapworks/
 
 ## Advanced Configuration
 
+### Project Namespacing
+
+The `project_name` parameter is crucial when managing multiple projects in the same Databricks workspace. It prefixes all resource names and keys to prevent naming conflicts:
+
+```python
+# Project A
+generate_yaml_files(
+    df=df_project_a,
+    catalog='bronze',
+    schema='ingestion',
+    workspace_client=w,
+    project_name='project_a',  # All resources prefixed with 'project_a_'
+    # ...
+)
+
+# Project B
+generate_yaml_files(
+    df=df_project_b,
+    catalog='bronze',
+    schema='ingestion',
+    workspace_client=w,
+    project_name='project_b',  # All resources prefixed with 'project_b_'
+    # ...
+)
+```
+
+This generates distinct resources like:
+- `project_a_pipeline_gateway_1` vs `project_b_pipeline_gateway_1`
+- `project_a_ingestion_sales` vs `project_b_ingestion_sales`
+
 ### Custom Cluster Sizing
 
 Adjust cluster node types based on your workload:
@@ -180,10 +216,12 @@ Adjust cluster node types based on your workload:
 ```python
 generate_yaml_files(
     df=df,
-    target_catalog='your_catalog',
-    target_schema='your_schema',
-    worker_node_type='m5d.xlarge',      # Larger workers
-    driver_node_type='c5a.16xlarge',    # Larger driver
+    catalog='your_catalog',
+    schema='your_schema',
+    workspace_client=w,
+    project_name='my_project',
+    node_type_id='m5d.xlarge',         # Larger workers
+    driver_node_type_id='c5a.16xlarge', # Larger driver
     # ...
 )
 ```
