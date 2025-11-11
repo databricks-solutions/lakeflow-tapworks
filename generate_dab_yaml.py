@@ -76,7 +76,28 @@ def create_pipelines(df, catalog, schema):
 
 
 def generate_yaml_files(df, catalog, schema, workspace_client, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge', output_gateway='gateways.yml', output_pipeline='pipelines.yml'):
-    """Generate gateway and pipeline YAML files from dataframe."""
+    """Generate gateway and pipeline YAML files from dataframe.
+
+    Args:
+        df (pd.DataFrame): Input dataframe with the following required columns:
+            - source_database: Source database name (e.g., 'sales_db')
+            - source_schema: Source schema name (e.g., 'dbo')
+            - source_table_name: Source table name (e.g., 'customers')
+            - target_catalog: Databricks catalog (e.g., 'bronze')
+            - target_schema: Databricks schema (e.g., 'sales')
+            - target_table_name: Destination table name (e.g., 'customers')
+            - pipeline_group: Groups tables into pipelines (e.g., 'sales_ingestion')
+            - gateway: Gateway identifier (e.g., 'sqlserver_gateway_1')
+            - connection_name: Databricks connection name (e.g., 'sql_server_prod')
+            - schedule: Cron schedule (optional, e.g., '0 0 * * *')
+        catalog (str): Target Databricks catalog name
+        schema (str): Target Databricks schema name
+        workspace_client (WorkspaceClient): Databricks workspace client instance
+        node_type_id (str): Worker node type for cluster (default: 'm5d.large')
+        driver_node_type_id (str): Driver node type for cluster (default: 'c5a.8xlarge')
+        output_gateway (str): Output path for gateway YAML file
+        output_pipeline (str): Output path for pipeline YAML file
+    """
     gateways_yaml = create_gateways(df, catalog, schema, workspace_client, node_type_id, driver_node_type_id)
     pipelines_yaml = create_pipelines(df, catalog, schema)
 
