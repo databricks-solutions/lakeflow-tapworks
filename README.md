@@ -74,10 +74,10 @@ df = pd.read_csv('your_config.csv')
 # Generate YAML files
 generate_yaml_files(
     df=df,
-    catalog='your_catalog',        # For gateway storage only
-    schema='your_schema',          # For gateway storage only
+    gateway_catalog='your_catalog',    # For gateway storage metadata only
+    gateway_schema='your_schema',      # For gateway storage metadata only
     workspace_client=w,
-    project_name='my_project',     # Prefix for all resources to avoid naming clashes
+    project_name='my_project',         # Prefix for all resources to avoid naming clashes
     node_type_id='m5d.large',
     driver_node_type_id='c5a.8xlarge',
     output_gateway='resources/gateways/gateways.yml',
@@ -181,11 +181,11 @@ lakehouse-tapworks/
 1. **Load Configuration**: Reads CSV file with table mappings
 2. **Connect to Databricks**: Initializes WorkspaceClient using your credentials
 3. **Retrieve Connection IDs**: Automatically looks up Databricks connection IDs from connection names
-4. **Generate Gateways**: Creates gateway YAML with cluster configurations (uses catalog/schema for gateway storage metadata)
+4. **Generate Gateways**: Creates gateway YAML with cluster configurations (uses gateway_catalog/gateway_schema for gateway storage metadata)
 5. **Generate Pipelines**: Creates pipeline YAML with table mappings grouped by `pipeline_group` (uses target_catalog/target_schema from each row in the config)
 6. **Output Files**: Writes YAML files to specified paths
 
-**Important**: The `catalog` and `schema` parameters are only used for gateway storage locations. Each pipeline table will be sent to its own `target_catalog` and `target_schema` as specified in the configuration CSV.
+**Important**: The `gateway_catalog` and `gateway_schema` parameters are only used for gateway storage locations. Each pipeline table will be sent to its own `target_catalog` and `target_schema` as specified in the configuration CSV.
 
 ## Advanced Configuration
 
@@ -197,8 +197,8 @@ The `project_name` parameter is crucial when managing multiple projects in the s
 # Project A
 generate_yaml_files(
     df=df_project_a,
-    catalog='bronze',
-    schema='ingestion',
+    gateway_catalog='bronze',
+    gateway_schema='ingestion',
     workspace_client=w,
     project_name='project_a',  # All resources prefixed with 'project_a_'
     # ...
@@ -207,8 +207,8 @@ generate_yaml_files(
 # Project B
 generate_yaml_files(
     df=df_project_b,
-    catalog='bronze',
-    schema='ingestion',
+    gateway_catalog='bronze',
+    gateway_schema='ingestion',
     workspace_client=w,
     project_name='project_b',  # All resources prefixed with 'project_b_'
     # ...
@@ -226,8 +226,8 @@ Adjust cluster node types based on your workload:
 ```python
 generate_yaml_files(
     df=df,
-    catalog='your_catalog',
-    schema='your_schema',
+    gateway_catalog='your_catalog',
+    gateway_schema='your_schema',
     workspace_client=w,
     project_name='my_project',
     node_type_id='m5d.xlarge',         # Larger workers
