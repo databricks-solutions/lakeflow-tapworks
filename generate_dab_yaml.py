@@ -75,7 +75,7 @@ def create_pipelines(df, project_name):
     return {'resources': {'pipelines': pipelines}}
 
 
-def generate_yaml_files(df, catalog, schema, workspace_client, project_name, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge', output_gateway='gateways.yml', output_pipeline='pipelines.yml'):
+def generate_yaml_files(df, gateway_catalog, gateway_schema, workspace_client, project_name, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge', output_gateway='gateways.yml', output_pipeline='pipelines.yml'):
     """Generate gateway and pipeline YAML files from dataframe.
 
     Args:
@@ -90,8 +90,8 @@ def generate_yaml_files(df, catalog, schema, workspace_client, project_name, nod
             - gateway: Gateway identifier (e.g., 'sqlserver_gateway_1')
             - connection_name: Databricks connection name (e.g., 'sql_server_prod')
             - schedule: Cron schedule (optional, e.g., '0 0 * * *')
-        catalog (str): Catalog for gateway storage metadata (not table destinations)
-        schema (str): Schema for gateway storage metadata (not table destinations)
+        gateway_catalog (str): Catalog for gateway storage metadata (not table destinations)
+        gateway_schema (str): Schema for gateway storage metadata (not table destinations)
         workspace_client (WorkspaceClient): Databricks workspace client instance
         project_name (str): Project name prefix for all resources to avoid naming clashes
         node_type_id (str): Worker node type for cluster (default: 'm5d.large')
@@ -101,9 +101,9 @@ def generate_yaml_files(df, catalog, schema, workspace_client, project_name, nod
 
     Note:
         - Pipelines use target_catalog and target_schema from the dataframe for each table
-        - The catalog and schema parameters are only for gateway storage location
+        - The gateway_catalog and gateway_schema parameters are only for gateway storage location
     """
-    gateways_yaml = create_gateways(df, catalog, schema, workspace_client, project_name, node_type_id, driver_node_type_id)
+    gateways_yaml = create_gateways(df, gateway_catalog, gateway_schema, workspace_client, project_name, node_type_id, driver_node_type_id)
     pipelines_yaml = create_pipelines(df, project_name)
 
     with open(output_gateway, 'w') as f:
@@ -128,8 +128,8 @@ if __name__ == "__main__":
     # Generate YAML files
     generate_yaml_files(
         df=df,
-        catalog='jack_demos',
-        schema='ingestion_schema',
+        gateway_catalog='jack_demos',
+        gateway_schema='ingestion_schema',
         workspace_client=workspace_client,
         project_name='my_project',
         output_gateway='resources/gateways.yml',
