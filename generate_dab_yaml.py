@@ -43,7 +43,7 @@ def create_gateways(df, catalog, schema, workspace_client, project_name, node_ty
     return {'resources': {'pipelines': gateways}}
 
 
-def create_pipelines(df, catalog, schema, project_name):
+def create_pipelines(df, project_name):
     """Create pipeline YAML configuration from dataframe."""
     pipelines = {}
 
@@ -56,8 +56,8 @@ def create_pipelines(df, catalog, schema, project_name):
                 'source_catalog': row['source_database'],
                 'source_schema': row['source_schema'],
                 'source_table': row['source_table_name'],
-                'destination_catalog': catalog,
-                'destination_schema': schema
+                'destination_catalog': row['target_catalog'],
+                'destination_schema': row['target_schema']
             }
         } for _, row in group_df.iterrows()]
 
@@ -83,24 +83,28 @@ def generate_yaml_files(df, catalog, schema, workspace_client, project_name, nod
             - source_database: Source database name (e.g., 'sales_db')
             - source_schema: Source schema name (e.g., 'dbo')
             - source_table_name: Source table name (e.g., 'customers')
-            - target_catalog: Databricks catalog (e.g., 'bronze')
-            - target_schema: Databricks schema (e.g., 'sales')
+            - target_catalog: Databricks catalog for destination tables (e.g., 'bronze')
+            - target_schema: Databricks schema for destination tables (e.g., 'sales')
             - target_table_name: Destination table name (e.g., 'customers')
             - pipeline_group: Groups tables into pipelines (e.g., 'sales_ingestion')
             - gateway: Gateway identifier (e.g., 'sqlserver_gateway_1')
             - connection_name: Databricks connection name (e.g., 'sql_server_prod')
             - schedule: Cron schedule (optional, e.g., '0 0 * * *')
-        catalog (str): Target Databricks catalog name
-        schema (str): Target Databricks schema name
+        catalog (str): Catalog for gateway storage metadata (not table destinations)
+        schema (str): Schema for gateway storage metadata (not table destinations)
         workspace_client (WorkspaceClient): Databricks workspace client instance
         project_name (str): Project name prefix for all resources to avoid naming clashes
         node_type_id (str): Worker node type for cluster (default: 'm5d.large')
         driver_node_type_id (str): Driver node type for cluster (default: 'c5a.8xlarge')
         output_gateway (str): Output path for gateway YAML file
         output_pipeline (str): Output path for pipeline YAML file
+
+    Note:
+        - Pipelines use target_catalog and target_schema from the dataframe for each table
+        - The catalog and schema parameters are only for gateway storage location
     """
     gateways_yaml = create_gateways(df, catalog, schema, workspace_client, project_name, node_type_id, driver_node_type_id)
-    pipelines_yaml = create_pipelines(df, catalog, schema, project_name)
+    pipelines_yaml = create_pipelines(df, project_name)
 
     with open(output_gateway, 'w') as f:
         yaml.dump(gateways_yaml, f, default_flow_style=False, sort_keys=False)

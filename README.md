@@ -16,6 +16,7 @@ This tool is ideal for DataOps teams managing multiple data ingestion pipelines 
 - **Batch Configuration**: Process multiple tables at once from a simple CSV input
 - **Automatic Connection Management**: Retrieves Databricks connection IDs automatically
 - **Pipeline Grouping**: Logically group tables into separate ingestion pipelines
+- **Flexible Destinations**: Each table can specify its own target catalog and schema
 - **Project Namespacing**: Prefix all resources with project names to avoid naming clashes across multiple projects
 - **DAB Integration**: Generates DAB-compatible YAML with proper resource references
 - **Continuous Ingestion**: Configured for continuous streaming pipelines
@@ -73,15 +74,17 @@ df = pd.read_csv('your_config.csv')
 # Generate YAML files
 generate_yaml_files(
     df=df,
-    catalog='your_catalog',
-    schema='your_schema',
+    catalog='your_catalog',        # For gateway storage only
+    schema='your_schema',          # For gateway storage only
     workspace_client=w,
-    project_name='my_project',  # Prefix for all resources to avoid naming clashes
+    project_name='my_project',     # Prefix for all resources to avoid naming clashes
     node_type_id='m5d.large',
     driver_node_type_id='c5a.8xlarge',
     output_gateway='resources/gateways/gateways.yml',
     output_pipeline='resources/pipelines/pipelines.yml'
 )
+
+# Note: Pipelines will use target_catalog and target_schema from the CSV for each table
 ```
 
 3. Deploy using Databricks Asset Bundles:
@@ -112,8 +115,13 @@ Create a CSV file with the following columns:
 source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,pipeline_group,gateway,connection_name,schedule
 sales_db,dbo,customers,bronze,sales,customers,sales_ingestion,sqlserver_gateway_1,sql_server_prod,0 0 * * *
 sales_db,dbo,orders,bronze,sales,orders,sales_ingestion,sqlserver_gateway_1,sql_server_prod,0 0 * * *
-inventory_db,dbo,products,bronze,inventory,products,inventory_ingestion,sqlserver_gateway_2,sql_server_prod,0 0 * * *
+inventory_db,dbo,products,silver,inventory,products,inventory_ingestion,sqlserver_gateway_2,sql_server_prod,0 0 * * *
 ```
+
+In this example:
+- Sales tables (`customers`, `orders`) go to `bronze.sales`
+- Inventory tables (`products`) go to `silver.inventory`
+- Each table can specify its own destination catalog and schema
 
 See `examples/example_config.csv` for a complete example.
 
@@ -173,9 +181,11 @@ lakehouse-tapworks/
 1. **Load Configuration**: Reads CSV file with table mappings
 2. **Connect to Databricks**: Initializes WorkspaceClient using your credentials
 3. **Retrieve Connection IDs**: Automatically looks up Databricks connection IDs from connection names
-4. **Generate Gateways**: Creates gateway YAML with cluster configurations
-5. **Generate Pipelines**: Creates pipeline YAML with table mappings grouped by `pipeline_group`
+4. **Generate Gateways**: Creates gateway YAML with cluster configurations (uses catalog/schema for gateway storage metadata)
+5. **Generate Pipelines**: Creates pipeline YAML with table mappings grouped by `pipeline_group` (uses target_catalog/target_schema from each row in the config)
 6. **Output Files**: Writes YAML files to specified paths
+
+**Important**: The `catalog` and `schema` parameters are only used for gateway storage locations. Each pipeline table will be sent to its own `target_catalog` and `target_schema` as specified in the configuration CSV.
 
 ## Advanced Configuration
 
