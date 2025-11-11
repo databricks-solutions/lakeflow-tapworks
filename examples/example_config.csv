@@ -1,0 +1,4 @@
+source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,pipeline_group,gateway,connection_name,schedule
+db1,dbo,products,jack_demos,ingestion_schema,products,1,1,conn_1,*/15 * * * *
+db1,dbo,customers,jack_demos,ingestion_schema,customers,1,1,conn_1,*/15 * * * *
+db1,dbo,transactions,jack_demos,ingestion_schema,transactions_clean,2,2,conn_1,*/15 * * * *
