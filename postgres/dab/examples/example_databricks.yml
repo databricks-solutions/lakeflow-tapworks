@@ -1,0 +1,47 @@
+bundle:
+  name: postgres_lakeflow_connect
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+
+variables:
+  catalog:
+    description: Unity Catalog for gateway tables
+    default: bronze
+
+  schema:
+    description: Schema for gateway metadata tables
+    default: metadata
+
+  # PostgreSQL Connection Variables
+  postgres_host:
+    description: PostgreSQL hostname or IP address
+    default: localhost
+
+  postgres_port:
+    description: PostgreSQL port
+    default: "5432"
+
+  postgres_database:
+    description: PostgreSQL database name
+    default: postgres
+
+  secret_scope:
+    description: Databricks secret scope containing PostgreSQL credentials
+    default: postgres_secrets
+
+  postgres_username_key:
+    description: Secret key name for PostgreSQL username
+    default: postgres_username
+
+  postgres_password_key:
+    description: Secret key name for PostgreSQL password
+    default: postgres_password
+
+  postgres_connection_name:
+    description: Name of the PostgreSQL connection in Unity Catalog
+    default: postgres_connection
