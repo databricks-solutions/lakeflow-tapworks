@@ -1,0 +1,6 @@
+source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,pipeline_group,gateway,connection_name,source_type,schedule
+mydb,public,users,bronze,sales,users,1,1,postgres_prod_connection,POSTGRESQL,0 */6 * * *
+mydb,public,orders,bronze,sales,orders,1,1,postgres_prod_connection,POSTGRESQL,0 */6 * * *
+mydb,public,products,bronze,inventory,products,2,1,postgres_prod_connection,POSTGRESQL,0 */12 * * *
+analytics_db,public,page_views,silver,analytics,page_views,3,2,postgres_analytics_connection,POSTGRESQL,0 */1 * * *
+analytics_db,public,user_sessions,silver,analytics,user_sessions,3,2,postgres_analytics_connection,POSTGRESQL,0 */1 * * *

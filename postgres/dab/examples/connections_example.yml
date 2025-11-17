@@ -1,0 +1,124 @@
+# Example: Creating PostgreSQL Connections with Databricks Asset Bundles
+#
+# This example demonstrates how to create Unity Catalog connections using DABs
+# instead of the SDK-based create_postgres_connection.py script.
+#
+# Benefits of using DABs for connections:
+# - Infrastructure as code (version controlled)
+# - Repeatable deployments across environments
+# - Integrated with pipeline deployments
+# - No manual script execution required
+
+# OPTION 1: Using Default Variables
+# ===================================
+# The connection is already defined in resources/connections.yml
+# Just override the variables in databricks.yml or via CLI:
+
+# databricks bundle deploy -t dev \
+#   -var="postgres_host=<INSTANCE_IP>" \
+#   -var="postgres_database=testdb" \
+#   -var="secret_scope=postgres_secrets"
+
+# OPTION 2: Environment-Specific Overrides
+# =========================================
+# Add to databricks.yml under targets:
+
+targets:
+  dev:
+    mode: development
+    workspace:
+      host: https://your-workspace.cloud.databricks.com
+    variables:
+      postgres_host: dev-postgres.example.com
+      postgres_database: dev_db
+      secret_scope: dev_secrets
+
+  prod:
+    mode: production
+    workspace:
+      host: https://your-prod-workspace.cloud.databricks.com
+    variables:
+      postgres_host: prod-postgres.example.com
+      postgres_database: prod_db
+      secret_scope: prod_secrets
+
+# OPTION 3: Multiple Connections
+# ================================
+# Create additional connections in resources/connections.yml:
+
+resources:
+  connections:
+    postgres_sales:
+      connection_type: POSTGRESQL
+      options:
+        host: "postgres-sales.example.com/sales_db"
+        port: "5432"
+        user: "{{secrets/sales_secrets/postgres_username}}"
+        password: "{{secrets/sales_secrets/postgres_password}}"
+      comment: "Sales database connection"
+
+    postgres_analytics:
+      connection_type: POSTGRESQL
+      options:
+        host: "postgres-analytics.example.com/analytics_db"
+        port: "5432"
+        user: "{{secrets/analytics_secrets/postgres_username}}"
+        password: "{{secrets/analytics_secrets/postgres_password}}"
+      comment: "Analytics database connection"
+
+# DEPLOYMENT WORKFLOW
+# ===================
+
+# Step 1: Create secrets (one-time setup)
+# databricks secrets create-scope postgres_secrets
+# databricks secrets put-secret postgres_secrets postgres_username --string-value "myuser"
+# databricks secrets put-secret postgres_secrets postgres_password --string-value "mypass"
+
+# Step 2: Validate bundle
+# databricks bundle validate -t dev
+
+# Step 3: Deploy bundle (creates connection)
+# databricks bundle deploy -t dev \
+#   -var="postgres_host=<INSTANCE_IP>" \
+#   -var="postgres_database=testdb"
+
+# Step 4: Test connection
+# databricks connections test postgres_connection
+
+# Step 5: Grant permissions (if needed)
+# databricks connections grant postgres_connection USE_CONNECTION user@example.com
+
+# COMPARISON: SDK vs DABs
+# ========================
+
+# SDK Approach (create_postgres_connection.py):
+# - Requires manual script execution
+# - Not version controlled with infrastructure
+# - Separate from pipeline deployment
+# - Must re-run for each environment
+
+# DABs Approach (connections.yml):
+# - Declarative infrastructure as code
+# - Version controlled with pipelines
+# - Single deployment command
+# - Environment-specific overrides
+# - Integrated with CI/CD pipelines
+
+# TROUBLESHOOTING
+# ===============
+
+# View deployed connections:
+# databricks connections list
+
+# Get connection details:
+# databricks connections get postgres_connection
+
+# Test connection:
+# databricks connections test postgres_connection
+
+# Update connection (modify YAML and redeploy):
+# databricks bundle deploy -t dev
+
+# Delete connection:
+# databricks bundle destroy -t dev
+# (or manually: databricks connections delete postgres_connection)
