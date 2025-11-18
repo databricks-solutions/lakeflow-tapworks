@@ -88,8 +88,8 @@ def create_salesforce_catalog(catalog_name: str = "salesforce_connector",
 
 def main():
         # Parse command-line arguments
-    catalog_name = sys.argv[0] if len(sys.argv) > 0 else "salesforce_catalog"
-    schema_name = sys.argv[1] if len(sys.argv) > 1 else "salesforce"
+    catalog_name = sys.argv[1] if len(sys.argv) > 0 else "salesforce_catalog"
+    schema_name = sys.argv[2] if len(sys.argv) > 1 else "salesforce"
 
     print(f"\nCreating catalog: {catalog_name}")
     print(f"Creating schema: {catalog_name}.{schema_name}")
