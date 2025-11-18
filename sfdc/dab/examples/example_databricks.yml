@@ -1,0 +1,37 @@
+bundle:
+  name: salesforce_lakeflow_connect
+
+include:
+  - resources/*.yml
+
+variables:
+  # Target catalogs and schemas
+  dest_catalog:
+    description: "Catalog for Salesforce data"
+    default: salesforce_connector
+
+  dest_schema:
+    description: "Schema for Salesforce tables"
+    default: salesforce
+
+  # Connection details (must be created manually via UI)
+  sfdc_connection_name:
+    description: "Name of existing Salesforce connection (created via Databricks UI)"
+    default: sfdc_connection
+
+targets:
+  dev:
+    mode: development
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/salesforce_lakeflow_connect/dev
+    variables:
+      dest_catalog: salesforce_connector
+      dest_schema: salesforce_dev
+
+  prod:
+    mode: production
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/salesforce_lakeflow_connect/prod
+    variables:
+      dest_catalog: salesforce_connector
+      dest_schema: salesforce_prod

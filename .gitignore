@@ -81,3 +81,7 @@ terraform.rc
 .bundle/
 resources/gateways/
 resources/pipelines/
+
+# Salesforce generated resources and customer configs
+sfdc/dab/resources/*.yml
+sfdc/dab/databricks.yml
