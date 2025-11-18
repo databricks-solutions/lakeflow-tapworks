@@ -1,0 +1,74 @@
+variables:
+  dest_catalog:
+    default: salesforce_connector
+  dest_schema:
+    default: salesforce
+resources:
+  pipelines:
+    pipeline_sfdc_ingestion_group_1:
+      name: sfdc_ingestion_pipeline_group_1
+      catalog: ${var.dest_catalog}
+      ingestion_definition:
+        connection_name: ${var.sfdc_connection_name}
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Account
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            table_configuration:
+              include_columns:
+              - Id
+              - Name
+              - Type
+              - Industry
+              - AnnualRevenue
+        - table:
+            source_schema: objects
+            source_table: Contact
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+        - table:
+            source_schema: objects
+            source_table: Opportunity
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            table_configuration:
+              exclude_columns:
+              - Description
+              - SystemModstamp
+    pipeline_sfdc_ingestion_group_2:
+      name: sfdc_ingestion_pipeline_group_2
+      catalog: ${var.dest_catalog}
+      ingestion_definition:
+        connection_name: ${var.sfdc_connection_name}
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Lead
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+        - table:
+            source_schema: objects
+            source_table: Case
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+  jobs:
+    job_sfdc_pipeline_group_1:
+      name: sfdc_pipeline_scheduler_group_1
+      schedule:
+        quartz_cron_expression: 0 */15 * * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_sfdc_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_sfdc_ingestion_group_1.id}
+    job_sfdc_pipeline_group_2:
+      name: sfdc_pipeline_scheduler_group_2
+      schedule:
+        quartz_cron_expression: 0 */30 * * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_sfdc_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_sfdc_ingestion_group_2.id}
