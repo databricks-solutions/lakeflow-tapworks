@@ -1,6 +1,6 @@
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,pipeline_group,connection_name,schedule,include_columns,exclude_columns
-Salesforce,standard,Account,salesforce_connector,salesforce,Account,1,sfdc_connection,*/15 * * * *,"Id,Name,Type,Industry,AnnualRevenue",
-Salesforce,standard,Contact,salesforce_connector,salesforce,Contact,1,sfdc_connection,*/15 * * * *,,
-Salesforce,standard,Opportunity,salesforce_connector,salesforce,Opportunity,1,sfdc_connection,*/15 * * * *,,"Description,SystemModstamp"
-Salesforce,standard,Lead,salesforce_connector,salesforce,Lead,2,sfdc_connection,*/30 * * * *,,
-Salesforce,standard,Case,salesforce_connector,salesforce,Case,2,sfdc_connection,*/30 * * * *,,
+source_schema,source_table_name,target_catalog,target_schema,target_table_name,pipeline_group,connection_name,schedule,include_columns,exclude_columns
+standard,Account,salesforce_catalog,salesforce_schema,Account,1,sfdc_connection,*/15 * * * *,"Id,Name,Type,Industry,AnnualRevenue",
+standard,Contact,salesforce_catalog,salesforce_schema,Contact,1,sfdc_connection,*/15 * * * *,,
+standard,Opportunity,salesforce_catalog,salesforce_schema,Opportunity,1,sfdc_connection,*/15 * * * *,,"Description,SystemModstamp"
+standard,Lead,salesforce_catalog,salesforce_schema,Lead,2,sfdc_connection,*/30 * * * *,,
+standard,Case,salesforce_catalog,salesforce_schema,Case,2,sfdc_connection,*/30 * * * *,,
