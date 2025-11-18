@@ -1,0 +1,6 @@
+source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,pipeline_group,connection_name,schedule,include_columns,exclude_columns
+Salesforce,standard,Account,salesforce_connector,salesforce,Account,1,sfdc_connection,*/15 * * * *,"Id,Name,Type,Industry,AnnualRevenue",
+Salesforce,standard,Contact,salesforce_connector,salesforce,Contact,1,sfdc_connection,*/15 * * * *,,
+Salesforce,standard,Opportunity,salesforce_connector,salesforce,Opportunity,1,sfdc_connection,*/15 * * * *,,"Description,SystemModstamp"
+Salesforce,standard,Lead,salesforce_connector,salesforce,Lead,2,sfdc_connection,*/30 * * * *,,
+Salesforce,standard,Case,salesforce_connector,salesforce,Case,2,sfdc_connection,*/30 * * * *,,
