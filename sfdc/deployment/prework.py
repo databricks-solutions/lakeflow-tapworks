@@ -86,11 +86,10 @@ def create_salesforce_catalog(catalog_name: str = "salesforce_connector",
 
     return True
 
-
-if __name__ == "__main__":
-    # Parse command-line arguments
-    catalog_name = sys.argv[1] if len(sys.argv) > 1 else "salesforce_connector"
-    schema_name = sys.argv[2] if len(sys.argv) > 2 else "salesforce"
+def main():
+        # Parse command-line arguments
+    catalog_name = sys.argv[0] if len(sys.argv) > 0 else "salesforce_catalog"
+    schema_name = sys.argv[1] if len(sys.argv) > 1 else "salesforce"
 
     print(f"\nCreating catalog: {catalog_name}")
     print(f"Creating schema: {catalog_name}.{schema_name}")
@@ -111,11 +110,14 @@ if __name__ == "__main__":
         print(f"     target_catalog: {catalog_name}")
         print(f"     target_schema: {schema_name}")
         print("\n3. REGENERATE YAML:")
-        print("   python generate_salesforce_pipeline.py salesforce_config.csv")
+        print("   python generate_dab_yaml.py salesforce_config.csv")
         print("\n4. DEPLOY PIPELINE:")
         print("   cd salesforce_dab")
         print("   databricks bundle deploy -t dev")
-        exit(0)
+        sys.exit(0)
     else:
         print("\n[ERROR] Catalog setup failed!")
-        exit(1)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

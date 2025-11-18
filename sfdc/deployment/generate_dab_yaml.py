@@ -146,11 +146,11 @@ def main():
         print(f"  {sys.argv[0]} /path/to/config.csv /path/to/output")
         sys.exit(1)
 
-    csv_path = sys.argv[1]
+    csv_path = sys.argv[0]
 
     # If output_dir not provided, auto-detect based on CSV location
-    if len(sys.argv) >= 3:
-        output_dir = Path(sys.argv[2])
+    if len(sys.argv) == 2:
+        output_dir = Path(sys.argv[1])
     else:
         # Auto-detect: assume structure is project_root/csv_file and output is project_root/dab/resources
         csv_file = Path(csv_path)
@@ -215,6 +215,7 @@ def main():
         "variables": {
             "dest_catalog": {"default": target_catalog},
             "dest_schema": {"default": target_schema},
+            "sfdc_connection_name": {"default": connection_name},
         },
         "resources": {
             "pipelines": {},
