@@ -114,7 +114,7 @@ def main():
         print("\n4. DEPLOY PIPELINE:")
         print("   cd salesforce_dab")
         print("   databricks bundle deploy -t dev")
-        sys.exit(0)
+        # sys.exit(0)
     else:
         print("\n[ERROR] Catalog setup failed!")
         sys.exit(1)
