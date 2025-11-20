@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
-Salesforce Lakeflow Connect Pipeline Generator
-
 Generates Databricks Asset Bundle (DAB) YAML for Salesforce ingestion pipelines.
-Reads table configuration from CSV and creates serverless Lakeflow Connect pipelines.
+based on the configuration defined in a CSV file
 
 Usage:
     python generate_salesforce_pipeline.py <csv_path> [output_dir] [--connection <name>]
@@ -13,6 +11,7 @@ Example:
     python generate_salesforce_pipeline.py salesforce_config.csv --connection my-sfdc-conn
     python generate_salesforce_pipeline.py /path/to/config.csv /path/to/output --connection my-sfdc-conn
 """
+
 import csv
 import yaml
 import json
@@ -150,7 +149,7 @@ def main():
     csv_path = sys.argv[1]
 
     # If output_dir not provided, auto-detect based on CSV location
-    if len(sys.argv) >= 3:
+    if len(sys.argv) == 3:
         output_dir = Path(sys.argv[2])
     else:
         # Auto-detect: assume structure is project_root/csv_file and output is project_root/dab/resources
@@ -216,6 +215,7 @@ def main():
         "variables": {
             "dest_catalog": {"default": target_catalog},
             "dest_schema": {"default": target_schema},
+            "sfdc_connection_name": {"default": connection_name},
         },
         "resources": {
             "pipelines": {},
