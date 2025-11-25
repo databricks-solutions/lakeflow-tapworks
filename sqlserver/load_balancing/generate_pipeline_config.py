@@ -2,8 +2,7 @@ import pandas as pd
 
 
 def generate_pipeline_config(
-    input_csv: str,
-    output_csv: str,
+    df: pd.DataFrame,
     max_tables_per_group: int = 1000,
     default_connection_name: str = "conn_1",
     default_schedule: str = "*/15 * * * *"
@@ -17,29 +16,27 @@ def generate_pipeline_config(
     - Priority tables (priority_flag=1) are placed in separate pipeline_groups from non-priority tables
 
     Args:
-        input_csv (str): Path to input CSV with columns:
+        df (pd.DataFrame): Input dataframe with columns:
             - source_database: Source database name
             - source_schema: Source schema name
             - source_table_name: Source table name
             - target_catalog: Target Databricks catalog
             - target_schema: Target Databricks schema
             - target_table_name: Target table name
-            - priority_flag: 1 for priority tables, 0 for normal tables
-        output_csv (str): Path to output CSV with additional columns:
-            - pipeline_group: Pipeline group identifier
-            - gateway: Gateway identifier
-            - connection_name: Databricks connection name
-            - schedule: Cron schedule expression
+            - priority_flag: 1 for priority tables, 0 for normal tables (optional)
         max_tables_per_group (int): Maximum tables per pipeline group (default: 1000)
         default_connection_name (str): Default connection name (default: "conn_1")
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
 
     Returns:
-        pd.DataFrame: The generated configuration dataframe
+        pd.DataFrame: The generated configuration dataframe with additional columns:
+            - pipeline_group: Pipeline group identifier
+            - gateway: Gateway identifier
+            - connection_name: Databricks connection name
+            - schedule: Cron schedule expression
     """
-    # Read input CSV
-    print(f"Reading input CSV from: {input_csv}")
-    df = pd.read_csv(input_csv)
+    # Make a copy to avoid modifying the original dataframe
+    df = df.copy()
 
     # Validate required columns
     required_columns = ['source_database', 'source_schema', 'source_table_name',
@@ -113,10 +110,6 @@ def generate_pipeline_config(
                      'pipeline_group', 'gateway', 'connection_name', 'schedule']
     df_output = df[output_columns]
 
-    # Save to output CSV
-    print(f"\nSaving output CSV to: {output_csv}")
-    df_output.to_csv(output_csv, index=False)
-
     # Print summary statistics
     print("\n" + "="*60)
     print("SUMMARY")
@@ -139,10 +132,19 @@ def generate_pipeline_config(
 
 if __name__ == "__main__":
     # Example usage - modify these parameters as needed
-    generate_pipeline_config(
-        input_csv='examples/example_config.csv',
-        output_csv='examples/output_config.csv',
+
+    # Load input CSV into a dataframe
+    input_df = pd.read_csv('examples/example_config.csv')
+
+    # Generate pipeline configuration
+    output_df = generate_pipeline_config(
+        df=input_df,
         max_tables_per_group=1000,
         default_connection_name='conn_1',
         default_schedule='*/15 * * * *'
     )
+
+    # Write output to CSV
+    output_csv_path = 'examples/output_config.csv'
+    output_df.to_csv(output_csv_path, index=False)
+    print(f"\nOutput written to: {output_csv_path}")
