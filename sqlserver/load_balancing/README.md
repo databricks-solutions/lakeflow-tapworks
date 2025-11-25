@@ -32,13 +32,22 @@ Edit the parameters in the `if __name__ == "__main__"` block at the bottom of th
 ```python
 if __name__ == "__main__":
     # Example usage - modify these parameters as needed
-    generate_pipeline_config(
-        input_csv='examples/example_config.csv',
-        output_csv='examples/output_config.csv',
+
+    # Load input CSV into a dataframe
+    input_df = pd.read_csv('examples/example_config.csv')
+
+    # Generate pipeline configuration
+    output_df = generate_pipeline_config(
+        df=input_df,
         max_tables_per_group=1000,
         default_connection_name='conn_1',
         default_schedule='*/15 * * * *'
     )
+
+    # Write output to CSV
+    output_csv_path = 'examples/output_config.csv'
+    output_df.to_csv(output_csv_path, index=False)
+    print(f"\nOutput written to: {output_csv_path}")
 ```
 
 Then run:
@@ -51,8 +60,7 @@ python generate_pipeline_config.py
 
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
-| `input_csv` | Yes | - | Input CSV file path with source table list |
-| `output_csv` | Yes | - | Output CSV file path for pipeline configuration |
+| `df` | Yes | - | Input pandas DataFrame with source table list |
 | `max_tables_per_group` | No | 1000 | Maximum tables per pipeline group |
 | `default_connection_name` | No | conn_1 | Default Databricks connection name |
 | `default_schedule` | No | */15 * * * * | Default cron schedule expression |
@@ -208,11 +216,14 @@ Complete example from source tables to deployed pipelines:
 # input_tables.csv should list all tables you want to ingest
 
 # 2. Edit generate_pipeline_config.py to configure your parameters:
-#    input_csv='input_tables.csv'
-#    output_csv='../deployment/examples/production_config.csv'
-#    max_tables_per_group=800
-#    default_connection_name='sql_prod_connection'
-#    default_schedule='0 */4 * * *'
+#    input_df = pd.read_csv('input_tables.csv')
+#    output_df = generate_pipeline_config(
+#        df=input_df,
+#        max_tables_per_group=800,
+#        default_connection_name='sql_prod_connection',
+#        default_schedule='0 */4 * * *'
+#    )
+#    output_df.to_csv('../deployment/examples/production_config.csv', index=False)
 
 # 3. Generate pipeline configuration
 cd sqlserver/load_balancing
