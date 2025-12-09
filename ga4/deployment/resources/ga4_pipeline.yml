@@ -1,0 +1,145 @@
+variables:
+  dest_catalog:
+    default: ga4_connector
+  dest_schema:
+    default: google_analytics
+resources:
+  pipelines:
+    pipeline_ga4_business_unit1_01:
+      name: GA4 Ingestion - business_unit1_01
+      catalog: ${var.dest_catalog}
+      ingestion_definition:
+        connection_name: ga4_connection
+        objects:
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_123456789
+            source_table: events
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            destination_table: analytics_123456789_events
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_123456789
+            source_table: events_intraday
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            destination_table: analytics_123456789_events_intraday
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_123456789
+            source_table: users
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            destination_table: analytics_123456789_users
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_987654321
+            source_table: events
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            destination_table: analytics_987654321_events
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_987654321
+            source_table: events_intraday
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            destination_table: analytics_987654321_events_intraday
+    pipeline_ga4_business_unit1_02:
+      name: GA4 Ingestion - business_unit1_02
+      catalog: ${var.dest_catalog}
+      ingestion_definition:
+        connection_name: ga4_connection
+        objects:
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_111222333
+            source_table: events
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            destination_table: analytics_111222333_events
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_111222333
+            source_table: users
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            destination_table: analytics_111222333_users
+    pipeline_ga4_business_unit2_01:
+      name: GA4 Ingestion - business_unit2_01
+      catalog: ${var.dest_catalog}
+      ingestion_definition:
+        connection_name: ga4_connection
+        objects:
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_444555666
+            source_table: events
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            destination_table: analytics_444555666_events
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_444555666
+            source_table: events_intraday
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            destination_table: analytics_444555666_events_intraday
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_444555666
+            source_table: users
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            destination_table: analytics_444555666_users
+    pipeline_ga4_business_unit2_02:
+      name: GA4 Ingestion - business_unit2_02
+      catalog: ${var.dest_catalog}
+      ingestion_definition:
+        connection_name: ga4_connection
+        objects:
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_777888999
+            source_table: events
+            destination_catalog: ${var.dest_catalog}
+            destination_schema: ${var.dest_schema}
+            destination_table: analytics_777888999_events
+  jobs:
+    job_ga4_business_unit1_01:
+      name: GA4 Pipeline Scheduler - business_unit1_01
+      schedule:
+        quartz_cron_expression: 0 0 */6 * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_ga4_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_ga4_business_unit1_01.id}
+    job_ga4_business_unit1_02:
+      name: GA4 Pipeline Scheduler - business_unit1_02
+      schedule:
+        quartz_cron_expression: 0 0 */6 * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_ga4_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_ga4_business_unit1_02.id}
+    job_ga4_business_unit2_01:
+      name: GA4 Pipeline Scheduler - business_unit2_01
+      schedule:
+        quartz_cron_expression: 0 0 */12 * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_ga4_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_ga4_business_unit2_01.id}
+    job_ga4_business_unit2_02:
+      name: GA4 Pipeline Scheduler - business_unit2_02
+      schedule:
+        quartz_cron_expression: 0 0 */12 * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_ga4_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_ga4_business_unit2_02.id}

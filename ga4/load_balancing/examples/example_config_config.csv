@@ -1,0 +1,6 @@
+source_catalog,source_schema,tables,target_catalog,target_schema,prefix,priority,schedule,pipeline_group
+my-gcp-project,analytics_123456789,"events,events_intraday,users",ga4_connector,google_analytics,business_unit1,01,0 */6 * * *,business_unit1_01
+my-gcp-project,analytics_987654321,"events,events_intraday",ga4_connector,google_analytics,business_unit1,01,0 */6 * * *,business_unit1_01
+my-gcp-project,analytics_111222333,"events,users",ga4_connector,google_analytics,business_unit1,02,0 */6 * * *,business_unit1_02
+my-gcp-project,analytics_444555666,"events,events_intraday,users",ga4_connector,google_analytics,business_unit2,01,0 */12 * * *,business_unit2_01
+my-gcp-project,analytics_777888999,events,ga4_connector,google_analytics,business_unit2,02,0 */12 * * *,business_unit2_02
