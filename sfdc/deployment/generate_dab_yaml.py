@@ -1,52 +1,29 @@
 #!/usr/bin/env python3
 """
 Generates Databricks Asset Bundle (DAB) YAML for Salesforce ingestion pipelines.
-based on the configuration defined in a CSV file
+
+Groups pipelines by pipeline_group (which uses prefix_priority format).
 
 Usage:
-    python generate_salesforce_pipeline.py <csv_path> [output_dir] [--connection <name>]
+    # As a module
+    from deployment.generate_dab_yaml import generate_salesforce_yaml
+    generate_salesforce_yaml(df, connection_name, output_path)
+
+    # Command-line
+    python generate_dab_yaml.py <csv_path> [--output <path>] [--connection <name>]
 
 Example:
-    python generate_salesforce_pipeline.py salesforce_config.csv
-    python generate_salesforce_pipeline.py salesforce_config.csv --connection my-sfdc-conn
-    python generate_salesforce_pipeline.py /path/to/config.csv /path/to/output --connection my-sfdc-conn
+    python generate_dab_yaml.py ../load_balancing/examples/output_config.csv
+    python generate_dab_yaml.py config.csv --output resources/pipelines.yml --connection my_sfdc_conn
 """
 
-import csv
+import pandas as pd
 import yaml
-import json
 import sys
+import argparse
 from pathlib import Path
+from collections import defaultdict
 
-def read_config_csv(csv_path: str) -> list:
-    """Read configuration from CSV file."""
-    config_data = []
-    with open(csv_path, 'r') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            item = {
-                'group': int(row['pipeline_group']),
-                'source_table': row['source_table_name'],
-                'target_table': row['target_table_name'],
-                'target_catalog': row['target_catalog'],
-                'target_schema': row['target_schema'],
-                'connection_name': row['connection_name']
-            }
-
-            # Parse schedule if present
-            if 'schedule' in row and row['schedule'].strip():
-                item['schedule'] = row['schedule'].strip()
-
-            # Parse include_columns if present
-            if 'include_columns' in row and row['include_columns'].strip():
-                item['include_columns'] = [col.strip() for col in row['include_columns'].split(',')]
-
-            # Parse exclude_columns if present
-            if 'exclude_columns' in row and row['exclude_columns'].strip():
-                item['exclude_columns'] = [col.strip() for col in row['exclude_columns'].split(',')]
-
-            config_data.append(item)
-    return config_data
 
 def convert_cron_to_quartz(cron_expression: str) -> str:
     """
@@ -82,139 +59,69 @@ def convert_cron_to_quartz(cron_expression: str) -> str:
     quartz_cron = f"0 {minute} {hour} {day} {month} {dow}"
     return quartz_cron
 
-def json_to_yaml(json_data: list, pipeline_name: str, pipeline_display: str,
-                 connection_name: str) -> str:
+
+def generate_salesforce_yaml(
+    df: pd.DataFrame,
+    connection_name: str,
+    output_path: str = "resources/sfdc_pipeline.yml"
+) -> None:
     """
-    Convert JSON config to YAML format for Databricks Asset Bundles.
-    Based on test_dabs_SFDC.py implementation.
+    Generate Databricks Asset Bundle YAML for Salesforce ingestion pipelines.
+
+    Creates one pipeline per unique pipeline_group value, with scheduled jobs
+    for each pipeline based on the schedule column.
+
+    Args:
+        df (pd.DataFrame): Pipeline configuration dataframe with columns:
+            - source_table_name: Salesforce object name
+            - target_catalog: Target Databricks catalog
+            - target_schema: Target Databricks schema
+            - target_table_name: Target table name
+            - pipeline_group: Pipeline group identifier (e.g., "business_unit1_01")
+            - connection_name: Salesforce connection name
+            - schedule: Cron schedule expression
+            - include_columns: (optional) Comma-separated list of columns to include
+            - exclude_columns: (optional) Comma-separated list of columns to exclude
+        connection_name (str): Salesforce connection name in Databricks
+        output_path (str): Output path for YAML file
+
+    Returns:
+        None (writes YAML file to disk)
     """
+    print("\n" + "="*80)
+    print("GENERATING DATABRICKS ASSET BUNDLE YAML")
+    print("="*80)
+
+    # Validate required columns
+    required_columns = [
+        'source_table_name', 'target_catalog', 'target_schema',
+        'target_table_name', 'pipeline_group', 'connection_name', 'schedule'
+    ]
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
     # Get default catalog and schema from first entry
-    default_catalog = json_data[0].get("target_catalog", "bronze")
-    default_schema = json_data[0].get("target_schema", "salesforce")
+    default_catalog = df['target_catalog'].iloc[0]
+    default_schema = df['target_schema'].iloc[0]
 
-    yaml_dict = {
-        "variables": {
-            "dest_catalog": {"default": default_catalog},
-            "dest_schema": {"default": default_schema},
-        },
-        "resources": {
-            "pipelines": {
-                pipeline_name: {
-                    "name": pipeline_display,
-                    "catalog": "${var.dest_catalog}",
-                    "ingestion_definition": {
-                        "connection_name": connection_name,
-                        "objects": []
-                    }
-                }
-            }
-        }
-    }
-
-    # Add each table as an object in the ingestion definition
-    for item in json_data:
-        table_entry = {
-            "table": {
-                "source_schema": "objects",  # Salesforce uses 'objects' as source schema
-                "source_table": item["source_table"],
-                "destination_catalog": "${var.dest_catalog}",
-                "destination_schema": "${var.dest_schema}",
-            }
-        }
-
-        # If columns present, add include_columns
-        if "columns" in item and item["columns"]:
-            table_entry["table"]["table_configuration"] = {
-                "include_columns": item["columns"]
-            }
-
-        yaml_dict["resources"]["pipelines"][pipeline_name]["ingestion_definition"]["objects"].append(table_entry)
-
-    return yaml.dump(yaml_dict, sort_keys=False, default_flow_style=False)
-
-def main():
-    """Main execution function."""
-    print("\nSalesforce Lakeflow Connect - Pipeline Generator\n")
-
-    # Parse command-line arguments
-    if len(sys.argv) < 2:
-        print("[ERROR] CSV path required")
-        print("\nUsage:")
-        print(f"  {sys.argv[0]} <csv_path> [output_dir]")
-        print("\nExample:")
-        print(f"  {sys.argv[0]} salesforce_sample_config.csv")
-        print(f"  {sys.argv[0]} /path/to/config.csv /path/to/output")
-        sys.exit(1)
-
-    csv_path = sys.argv[1]
-
-    # If output_dir not provided, auto-detect based on CSV location
-    if len(sys.argv) == 3:
-        output_dir = Path(sys.argv[2])
-    else:
-        # Auto-detect: assume structure is project_root/csv_file and output is project_root/dab/resources
-        csv_file = Path(csv_path)
-        if csv_file.is_absolute():
-            project_root = csv_file.parent
-        else:
-            project_root = Path.cwd()
-        output_dir = project_root / "salesforce_dab" / "resources"
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Read config
-    print(f"Reading configuration from {csv_path}...")
-    try:
-        config_data = read_config_csv(csv_path)
-        print(f"✓ Loaded {len(config_data)} tables")
-    except FileNotFoundError:
-        print(f"✗ File not found: {csv_path}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"✗ Error reading CSV: {e}")
-        sys.exit(1)
-
-    # Extract common parameters and validate consistency
-    connection_name = config_data[0]['connection_name']
-    target_catalog = config_data[0]['target_catalog']
-    target_schema = config_data[0]['target_schema']
-
-    # Validate all rows use same connection and target
-    inconsistent_rows = []
-    for idx, row in enumerate(config_data, start=2):  # Start at 2 for CSV line number
-        if row['connection_name'] != connection_name:
-            inconsistent_rows.append(f"Line {idx}: Different connection_name '{row['connection_name']}'")
-        if row['target_catalog'] != target_catalog:
-            inconsistent_rows.append(f"Line {idx}: Different target_catalog '{row['target_catalog']}'")
-        if row['target_schema'] != target_schema:
-            inconsistent_rows.append(f"Line {idx}: Different target_schema '{row['target_schema']}'")
-
-    if inconsistent_rows:
-        print("\n⚠ Warning: Inconsistent configuration detected:")
-        for warning in inconsistent_rows[:5]:  # Show first 5 warnings
-            print(f"  {warning}")
-        if len(inconsistent_rows) > 5:
-            print(f"  ... and {len(inconsistent_rows) - 5} more")
-        print("  Using values from first row.\n")
-
-    print(f"Target: {target_catalog}.{target_schema}")
-    print(f"Connection: ${{var.sfdc_connection_name}} (from CSV: {connection_name})")
+    print(f"\nConfiguration:")
+    print(f"  Target: {default_catalog}.{default_schema}")
+    print(f"  Connection: {connection_name}")
+    print(f"  Total tables: {len(df)}")
 
     # Group tables by pipeline_group
-    from collections import defaultdict
     groups = defaultdict(list)
-    for item in config_data:
-        groups[item['group']].append(item)
+    for idx, row in df.iterrows():
+        groups[row['pipeline_group']].append(row)
 
-    print(f"\nGenerating {len(groups)} pipeline(s)...")
-    for group_id, tables in sorted(groups.items()):
-        print(f"  Pipeline {group_id}: {len(tables)} tables")
+    print(f"  Unique pipelines: {len(groups)}")
 
     # Build combined YAML with all pipeline groups
     combined_yaml = {
         "variables": {
-            "dest_catalog": {"default": target_catalog},
-            "dest_schema": {"default": target_schema},
+            "dest_catalog": {"default": default_catalog},
+            "dest_schema": {"default": default_schema},
             "sfdc_connection_name": {"default": connection_name},
         },
         "resources": {
@@ -223,27 +130,33 @@ def main():
         }
     }
 
-    # Collect schedules per group (use first table's schedule)
-    group_schedules = {}
+    print("\n" + "-"*80)
+    print("Pipeline Details:")
+    print("-"*80)
 
     # Generate a pipeline for each group
-    for group_id in sorted(groups.keys()):
-        group_tables = groups[group_id]
-        pipeline_name = f"pipeline_sfdc_ingestion_group_{group_id}"
-        pipeline_display = f"sfdc_ingestion_pipeline_group_{group_id}"
+    for pipeline_group in sorted(groups.keys()):
+        group_tables = groups[pipeline_group]
+
+        # Create safe pipeline name (replace underscores/hyphens if needed for resource naming)
+        pipeline_name = f"pipeline_sfdc_{pipeline_group}"
+        pipeline_display = f"SFDC Ingestion - {pipeline_group}"
 
         # Get schedule from first table in group
-        schedule = group_tables[0].get('schedule')
-        if schedule:
-            group_schedules[group_id] = schedule
+        schedule = group_tables[0]['schedule']
 
-            # Warn if schedules differ within same group
-            schedules_in_group = set(item.get('schedule') for item in group_tables if item.get('schedule'))
-            if len(schedules_in_group) > 1:
-                print(f"\n⚠ Warning: Pipeline group {group_id} has different schedules:")
-                for s in schedules_in_group:
-                    print(f"    {s}")
-                print(f"  Using schedule from first table: {schedule}")
+        print(f"\nPipeline: {pipeline_group}")
+        print(f"  Name: {pipeline_name}")
+        print(f"  Schedule: {schedule}")
+        print(f"  Tables: {len(group_tables)}")
+
+        # Warn if schedules differ within same group
+        schedules_in_group = set(item['schedule'] for item in group_tables if pd.notna(item['schedule']))
+        if len(schedules_in_group) > 1:
+            print(f"  ⚠ Warning: Different schedules detected in group:")
+            for s in schedules_in_group:
+                print(f"      {s}")
+            print(f"  Using schedule from first table: {schedule}")
 
         # Create pipeline definition
         pipeline_def = {
@@ -259,31 +172,46 @@ def main():
         for item in group_tables:
             table_entry = {
                 "table": {
-                    "source_schema": "objects",
-                    "source_table": item["source_table"],
+                    "source_schema": "objects",  # Salesforce uses 'objects' as source schema
+                    "source_table": item["source_table_name"],
                     "destination_catalog": "${var.dest_catalog}",
                     "destination_schema": "${var.dest_schema}",
+                    "destination_table": item["target_table_name"]
                 }
             }
 
             # Add table_configuration if include_columns or exclude_columns are specified
             table_config = {}
-            if 'include_columns' in item:
-                table_config['include_columns'] = item['include_columns']
-            if 'exclude_columns' in item:
-                table_config['exclude_columns'] = item['exclude_columns']
+
+            if 'include_columns' in item and pd.notna(item['include_columns']) and item['include_columns'].strip():
+                include_cols = [col.strip() for col in str(item['include_columns']).split(',')]
+                table_config['include_columns'] = include_cols
+
+            if 'exclude_columns' in item and pd.notna(item['exclude_columns']) and item['exclude_columns'].strip():
+                exclude_cols = [col.strip() for col in str(item['exclude_columns']).split(',')]
+                table_config['exclude_columns'] = exclude_cols
 
             if table_config:
                 table_entry["table"]["table_configuration"] = table_config
 
             pipeline_def["ingestion_definition"]["objects"].append(table_entry)
 
+            # Show table in output
+            table_name = item["source_table_name"]
+            dest = f"{item['target_table_name']}"
+            col_info = ""
+            if 'include_columns' in table_config:
+                col_info = f" [includes: {len(table_config['include_columns'])} cols]"
+            elif 'exclude_columns' in table_config:
+                col_info = f" [excludes: {len(table_config['exclude_columns'])} cols]"
+            print(f"    - {table_name} → {dest}{col_info}")
+
         combined_yaml["resources"]["pipelines"][pipeline_name] = pipeline_def
 
         # Create job to schedule this pipeline
-        if schedule:
-            job_name = f"job_sfdc_pipeline_group_{group_id}"
-            job_display = f"sfdc_pipeline_scheduler_group_{group_id}"
+        if pd.notna(schedule) and schedule.strip():
+            job_name = f"job_sfdc_{pipeline_group}"
+            job_display = f"SFDC Pipeline Scheduler - {pipeline_group}"
             quartz_schedule = convert_cron_to_quartz(schedule)
 
             job_def = {
@@ -305,38 +233,103 @@ def main():
             combined_yaml["resources"]["jobs"][job_name] = job_def
 
     # Write combined YAML
-    pipeline_file = output_dir / "sfdc_pipeline.yml"
-    with open(pipeline_file, 'w') as f:
+    output_file = Path(output_path)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(output_file, 'w') as f:
         f.write(yaml.dump(combined_yaml, sort_keys=False, default_flow_style=False))
-    print(f"\n✓ Generated: {pipeline_file}")
 
-    # Display summary
-    print(f"\nPipeline summary:")
-    for group_id in sorted(groups.keys()):
-        group_tables = groups[group_id]
-        table_names = ', '.join([item['source_table'] for item in group_tables])
-        schedule_info = f" [scheduled: {group_schedules[group_id]}]" if group_id in group_schedules else ""
-        print(f"  Pipeline {group_id}: {table_names}{schedule_info}")
-
-    if group_schedules:
-        print(f"\n✓ Generated {len(group_schedules)} scheduled job(s)")
-        print("  Jobs will automatically trigger pipelines based on cron schedules")
-    else:
-        print("\n⚠ No schedules found in CSV - pipelines created without jobs")
-        print("  Add 'schedule' column to CSV to enable automatic scheduling")
+    print("\n" + "="*80)
+    print("YAML GENERATION COMPLETE")
+    print("="*80)
+    print(f"\nGenerated file:")
+    print(f"  ✓ {output_path}")
+    print(f"\nSummary:")
+    print(f"  - Pipelines: {len(combined_yaml['resources']['pipelines'])}")
+    print(f"  - Scheduled jobs: {len(combined_yaml['resources']['jobs'])}")
+    print(f"  - Total tables: {len(df)}")
 
     print("\nNext steps:")
-    print("  1. Set sfdc_connection_name in dab/databricks.yml")
-    print("  2. Create Salesforce connection in Databricks UI (OAuth required)")
+    print("  1. Ensure Salesforce connection exists in Databricks UI:")
     print("     → Catalog → Connections → Create → Type: Salesforce")
-    dab_dir = output_dir.parent.parent if output_dir.parent.name == "resources" else output_dir.parent
-    print(f"  3. Deploy: cd {dab_dir} && databricks bundle deploy -t dev")
-    if group_schedules:
-        print("  4. Jobs will run automatically on schedule")
-        print("     (or manually trigger: databricks pipelines start-update <pipeline_id>)")
-    else:
-        print("  4. Start pipeline: databricks pipelines start-update <pipeline_id>")
-    print()
+    print(f"     → Connection name: {connection_name}")
+    print("  2. Review the generated YAML file")
+    print("  3. Deploy using Databricks Asset Bundles:")
+    print("     cd deployment")
+    print("     databricks bundle validate -t dev")
+    print("     databricks bundle deploy -t dev")
+    print("="*80 + "\n")
+
+
+def main():
+    """Main function for command-line usage."""
+    parser = argparse.ArgumentParser(
+        description="Generate Databricks Asset Bundle YAML for Salesforce pipelines",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Generate from pipeline config CSV
+  python generate_dab_yaml.py ../load_balancing/examples/output_config.csv
+
+  # With custom output path
+  python generate_dab_yaml.py config.csv --output resources/my_pipeline.yml
+
+  # With custom connection name
+  python generate_dab_yaml.py config.csv --connection my_sfdc_connection
+        """
+    )
+
+    parser.add_argument(
+        'csv_path',
+        type=str,
+        help='Path to pipeline configuration CSV file'
+    )
+    parser.add_argument(
+        '--output',
+        type=str,
+        default='resources/sfdc_pipeline.yml',
+        help='Output path for YAML file (default: resources/sfdc_pipeline.yml)'
+    )
+    parser.add_argument(
+        '--connection',
+        type=str,
+        default=None,
+        help='Salesforce connection name (default: use value from CSV)'
+    )
+
+    args = parser.parse_args()
+
+    # Check if input file exists
+    csv_path = Path(args.csv_path)
+    if not csv_path.exists():
+        print(f"Error: File not found: {args.csv_path}")
+        sys.exit(1)
+
+    print(f"Reading configuration from: {args.csv_path}")
+
+    try:
+        # Load CSV
+        df = pd.read_csv(args.csv_path)
+
+        # Get connection name from CSV or command-line argument
+        if args.connection:
+            connection_name = args.connection
+        else:
+            connection_name = df['connection_name'].iloc[0]
+
+        # Generate YAML
+        generate_salesforce_yaml(
+            df=df,
+            connection_name=connection_name,
+            output_path=args.output
+        )
+
+    except Exception as e:
+        print(f"\n✗ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
