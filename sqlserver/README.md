@@ -23,6 +23,8 @@ The toolkit automates the creation of load-balanced, production-ready ingestion 
 
 ### Option 1: Unified Workflow (Recommended)
 
+#### Option 1a: Python Script
+
 Use the unified script to run the complete pipeline generation process:
 
 ```bash
@@ -30,13 +32,20 @@ cd sqlserver
 python run_pipeline_generation.py
 ```
 
-This single script will:
+#### Option 1b: Databricks Notebook
+
+Upload `run_pipeline_generation.ipynb` to your Databricks workspace and run it interactively. The notebook provides:
+- Interactive widgets for configuration
+- Step-by-step execution with visual feedback
+- Built-in summary statistics and file verification
+
+This single workflow will:
 1. Load your source table list
 2. Generate optimized pipeline configurations with load balancing
 3. Create Databricks Asset Bundle YAML files
 4. Output ready-to-deploy gateway and pipeline configurations
 
-**Edit the script** to customize your parameters:
+**Edit the script/notebook** to customize your parameters:
 
 ```python
 if __name__ == "__main__":
@@ -48,8 +57,7 @@ if __name__ == "__main__":
         max_tables_per_group=1000,
         default_connection_name='your_connection',
         default_schedule='*/15 * * * *',
-        output_gateway='deployment/resources/gateways.yml',
-        output_pipeline='deployment/resources/pipelines.yml'
+        output_dir='dab_project'  # Configurable output directory for DAB project
     )
 ```
 
@@ -76,9 +84,14 @@ cd ../deployment
 python generate_dab_yaml.py
 ```
 
-This will create:
-- `resources/gateways.yml` - Gateway configurations
-- `resources/pipelines.yml` - Pipeline configurations
+This will create a proper Databricks Asset Bundle structure:
+```
+dab_project/
+├── databricks.yml           # Main bundle configuration
+└── resources/
+    ├── gateways.yml         # Gateway configurations
+    └── pipelines.yml        # Pipeline configurations
+```
 
 ### Option 3: Programmatic Usage
 
@@ -104,7 +117,7 @@ config_df = generate_pipeline_config(
 # Optional: Save intermediate config
 config_df.to_csv('pipeline_config.csv', index=False)
 
-# Step 2: Generate YAML files
+# Step 2: Generate YAML files in proper DAB structure
 workspace_client = WorkspaceClient()
 generate_yaml_files(
     df=config_df,
@@ -112,8 +125,7 @@ generate_yaml_files(
     gateway_schema='your_schema',
     workspace_client=workspace_client,
     project_name='your_project',
-    output_gateway='gateways.yml',
-    output_pipeline='pipelines.yml'
+    output_dir='dab_project'  # Creates proper DAB directory structure
 )
 ```
 
@@ -268,12 +280,11 @@ def generate_yaml_files(
     project_name: str,
     node_type_id: str = 'm5d.large',
     driver_node_type_id: str = 'c5a.8xlarge',
-    output_gateway: str = 'gateways.yml',
-    output_pipeline: str = 'pipelines.yml'
+    output_dir: str = 'dab_project'
 ) -> None:
 ```
 
-**Description**: Generates Databricks Asset Bundle YAML files from pipeline configuration.
+**Description**: Generates Databricks Asset Bundle YAML files from pipeline configuration in a proper DAB structure.
 
 **Parameters**:
 - `df` (pd.DataFrame): Pipeline configuration dataframe (output from generate_pipeline_config)
@@ -283,10 +294,9 @@ def generate_yaml_files(
 - `project_name` (str): Project name prefix for all resources
 - `node_type_id` (str): Worker node type for clusters
 - `driver_node_type_id` (str): Driver node type for clusters
-- `output_gateway` (str): Output path for gateway YAML file
-- `output_pipeline` (str): Output path for pipeline YAML file
+- `output_dir` (str): Output directory for DAB project (creates `databricks.yml` and `resources/` subdirectory)
 
-**Returns**: None (writes YAML files to disk)
+**Returns**: None (writes YAML files to disk in proper DAB structure)
 
 **Location**: `deployment/generate_dab_yaml.py`
 
@@ -303,8 +313,7 @@ def run_complete_pipeline_generation(
     default_schedule: str = "*/15 * * * *",
     node_type_id: str = "m5d.large",
     driver_node_type_id: str = "c5a.8xlarge",
-    output_gateway: str = "deployment/resources/gateways.yml",
-    output_pipeline: str = "deployment/resources/pipelines.yml"
+    output_dir: str = "dab_project"
 ) -> pd.DataFrame:
 ```
 
@@ -322,17 +331,26 @@ def run_complete_pipeline_generation(
 
 - `deployment/examples/generated_config.csv` - Pipeline configuration with groupings
 
-### Final Output
+### Final Output (Databricks Asset Bundle Structure)
 
-- `deployment/resources/gateways.yml` - Gateway configurations for Databricks Asset Bundles
-- `deployment/resources/pipelines.yml` - Pipeline configurations for Databricks Asset Bundles
+The tool generates a proper Databricks Asset Bundle structure:
+
+```
+dab_project/                              # Configurable output directory
+├── databricks.yml                        # Main bundle configuration (includes resources/*.yml)
+└── resources/                            # Resources subdirectory
+    ├── gateways.yml                      # Gateway configurations
+    └── pipelines.yml                     # Pipeline configurations
+```
+
+The `databricks.yml` file uses the `include: ['resources/*.yml']` pattern to automatically include all resource definitions from the resources directory.
 
 ## Deployment
 
-After generating YAML files, deploy using Databricks Asset Bundles CLI:
+After generating the DAB project structure, deploy using Databricks Asset Bundles CLI:
 
 ```bash
-cd deployment
+cd dab_project  # Or your configured output directory
 databricks bundle validate
 databricks bundle deploy -t dev
 databricks bundle deploy -t prod
