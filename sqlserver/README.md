@@ -345,6 +345,26 @@ dab_project/                              # Configurable output directory
 
 The `databricks.yml` file uses the `include: ['resources/*.yml']` pattern to automatically include all resource definitions from the resources directory.
 
+### databricks.yml Structure
+
+The generated `databricks.yml` includes:
+- **Bundle name**: Your project name
+- **Include pattern**: Automatically includes all YAML files from the resources directory
+- **Prod target**: Pre-configured production target with production mode enabled
+
+Example structure:
+```yaml
+bundle:
+  name: my_project
+include:
+  - resources/*.yml
+targets:
+  prod:
+    mode: production
+    workspace:
+      host: ${workspace.host}
+```
+
 ## Deployment
 
 After generating the DAB project structure, deploy using Databricks Asset Bundles CLI:
@@ -352,9 +372,10 @@ After generating the DAB project structure, deploy using Databricks Asset Bundle
 ```bash
 cd dab_project  # Or your configured output directory
 databricks bundle validate
-databricks bundle deploy -t dev
 databricks bundle deploy -t prod
 ```
+
+The prod target is pre-configured with `mode: production`, which enables additional safeguards for production deployments.
 
 ## Example Workflow
 

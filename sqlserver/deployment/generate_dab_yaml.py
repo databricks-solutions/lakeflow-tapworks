@@ -90,7 +90,15 @@ def create_databricks_yml(project_name):
         },
         'include': [
             'resources/*.yml'
-        ]
+        ],
+        'targets': {
+            'prod': {
+                'mode': 'production',
+                'workspace': {
+                    'host': '${workspace.host}'
+                }
+            }
+        }
     }
 
 
