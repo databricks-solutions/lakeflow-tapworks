@@ -75,8 +75,35 @@ def create_pipelines(df, project_name):
     return {'resources': {'pipelines': pipelines}}
 
 
-def generate_yaml_files(df, gateway_catalog, gateway_schema, workspace_client, project_name, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge', output_gateway='gateways.yml', output_pipeline='pipelines.yml'):
-    """Generate gateway and pipeline YAML files from dataframe.
+def create_databricks_yml(project_name):
+    """Create the main databricks.yml file for the DAB project.
+
+    Args:
+        project_name (str): Project name for the bundle
+
+    Returns:
+        dict: The databricks.yml structure
+    """
+    return {
+        'bundle': {
+            'name': project_name
+        },
+        'include': [
+            'resources/*.yml'
+        ],
+        'targets': {
+            'prod': {
+                'mode': 'production',
+                'workspace': {
+                    'host': '${workspace.host}'
+                }
+            }
+        }
+    }
+
+
+def generate_yaml_files(df, gateway_catalog, gateway_schema, workspace_client, project_name, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge', output_dir='dab_project'):
+    """Generate gateway and pipeline YAML files from dataframe in a proper DAB structure.
 
     Args:
         df (pd.DataFrame): Input dataframe with the following required columns:
@@ -96,42 +123,58 @@ def generate_yaml_files(df, gateway_catalog, gateway_schema, workspace_client, p
         project_name (str): Project name prefix for all resources to avoid naming clashes
         node_type_id (str): Worker node type for cluster (default: 'm5d.large')
         driver_node_type_id (str): Driver node type for cluster (default: 'c5a.8xlarge')
-        output_gateway (str): Output path for gateway YAML file
-        output_pipeline (str): Output path for pipeline YAML file
+        output_dir (str): Output directory for the DAB project (default: 'dab_project')
 
     Note:
+        - Creates a proper DAB structure with root databricks.yml and resources subdirectory
         - Pipelines use target_catalog and target_schema from the dataframe for each table
         - The gateway_catalog and gateway_schema parameters are only for gateway storage location
     """
+    # Create directory structure
+    resources_dir = os.path.join(output_dir, 'resources')
+    os.makedirs(resources_dir, exist_ok=True)
+
+    # Generate YAML content
     gateways_yaml = create_gateways(df, gateway_catalog, gateway_schema, workspace_client, project_name, node_type_id, driver_node_type_id)
     pipelines_yaml = create_pipelines(df, project_name)
+    databricks_yaml = create_databricks_yml(project_name)
 
-    with open(output_gateway, 'w') as f:
+    # Define output paths
+    databricks_yml_path = os.path.join(output_dir, 'databricks.yml')
+    gateway_yml_path = os.path.join(resources_dir, 'gateways.yml')
+    pipeline_yml_path = os.path.join(resources_dir, 'pipelines.yml')
+
+    # Write databricks.yml
+    with open(databricks_yml_path, 'w') as f:
+        yaml.dump(databricks_yaml, f, default_flow_style=False, sort_keys=False)
+
+    # Write gateway resources
+    with open(gateway_yml_path, 'w') as f:
         yaml.dump(gateways_yaml, f, default_flow_style=False, sort_keys=False)
 
-    with open(output_pipeline, 'w') as f:
+    # Write pipeline resources
+    with open(pipeline_yml_path, 'w') as f:
         yaml.dump(pipelines_yaml, f, default_flow_style=False, sort_keys=False)
 
-    print(f"Generated {output_gateway} and {output_pipeline}")
+    print(f"Generated DAB project structure in: {output_dir}")
+    print(f"  - {databricks_yml_path}")
+    print(f"  - {gateway_yml_path}")
+    print(f"  - {pipeline_yml_path}")
 
 
 if __name__ == "__main__":
     # Load config from CSV
     df = pd.read_csv('examples/example_config.csv')
 
-    # Create resources directory if it doesn't exist
-    os.makedirs('resources', exist_ok=True)
-
     # Initialize Databricks workspace client
     workspace_client = WorkspaceClient()
 
-    # Generate YAML files
+    # Generate YAML files with proper DAB structure
     generate_yaml_files(
         df=df,
         gateway_catalog='jack_demos',
         gateway_schema='ingestion_schema',
         workspace_client=workspace_client,
         project_name='my_project',
-        output_gateway='resources/gateways.yml',
-        output_pipeline='resources/pipelines.yml'
+        output_dir='dab_project'
     )

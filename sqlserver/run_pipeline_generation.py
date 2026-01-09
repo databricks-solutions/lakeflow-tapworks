@@ -25,8 +25,7 @@ def run_complete_pipeline_generation(
     default_schedule: str = "*/15 * * * *",
     node_type_id: str = "m5d.large",
     driver_node_type_id: str = "c5a.8xlarge",
-    output_gateway: str = "deployment/resources/gateways.yml",
-    output_pipeline: str = "deployment/resources/pipelines.yml"
+    output_dir: str = "dab_project"
 ):
     """
     Complete pipeline generation process from source table list to YAML files.
@@ -41,8 +40,7 @@ def run_complete_pipeline_generation(
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
         node_type_id (str): Worker node type (default: "m5d.large")
         driver_node_type_id (str): Driver node type (default: "c5a.8xlarge")
-        output_gateway (str): Output path for gateway YAML
-        output_pipeline (str): Output path for pipeline YAML
+        output_dir (str): Output directory for DAB project (default: "dab_project")
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
@@ -79,11 +77,7 @@ def run_complete_pipeline_generation(
     print(f"  - Gateway catalog: {gateway_catalog}")
     print(f"  - Gateway schema: {gateway_schema}")
     print(f"  - Project name: {project_name}")
-    print(f"  - Output gateway: {output_gateway}")
-    print(f"  - Output pipeline: {output_pipeline}")
-
-    # Create output directory if it doesn't exist
-    os.makedirs(os.path.dirname(output_gateway), exist_ok=True)
+    print(f"  - Output directory: {output_dir}")
 
     generate_yaml_files(
         df=pipeline_config_df,
@@ -93,18 +87,19 @@ def run_complete_pipeline_generation(
         project_name=project_name,
         node_type_id=node_type_id,
         driver_node_type_id=driver_node_type_id,
-        output_gateway=output_gateway,
-        output_pipeline=output_pipeline
+        output_dir=output_dir
     )
 
     print("\n" + "="*80)
     print("PIPELINE GENERATION COMPLETE!")
     print("="*80)
     print(f"\nNext steps:")
-    print(f"  1. Review the generated YAML files:")
-    print(f"     - {output_gateway}")
-    print(f"     - {output_pipeline}")
+    print(f"  1. Review the generated DAB project:")
+    print(f"     - {output_dir}/databricks.yml")
+    print(f"     - {output_dir}/resources/gateways.yml")
+    print(f"     - {output_dir}/resources/pipelines.yml")
     print(f"  2. Deploy using Databricks Asset Bundles:")
+    print(f"     cd {output_dir}")
     print(f"     databricks bundle deploy -t <environment>")
     print("="*80)
 
@@ -124,8 +119,7 @@ if __name__ == "__main__":
         default_schedule='*/15 * * * *',
         node_type_id='m5d.large',
         driver_node_type_id='c5a.8xlarge',
-        output_gateway='deployment/resources/gateways.yml',
-        output_pipeline='deployment/resources/pipelines.yml'
+        output_dir='dab_project'
     )
 
     # Optional: Save the intermediate pipeline configuration for reference
