@@ -14,7 +14,7 @@ import sys
 
 # Import from local modules
 from load_balancing.generate_pipeline_config import generate_pipeline_config
-from deployment.generate_dab_yaml import generate_salesforce_yaml
+from deployment.generate_dab_yaml import generate_yaml_files
 
 
 def run_complete_pipeline_generation(
@@ -81,7 +81,7 @@ def run_complete_pipeline_generation(
     # Get connection name from first row (assumes all use same connection)
     connection_name = pipeline_config_df['connection_name'].iloc[0]
 
-    generate_salesforce_yaml(
+    generate_yaml_files(
         df=pipeline_config_df,
         connection_name=connection_name,
         output_path=output_yaml
