@@ -1,0 +1,10 @@
+source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,priority,pipeline_group,connection_name,schedule,include_columns,exclude_columns
+Salesforce,standard,Account,salesforce_connector,salesforce,Account,business_unit1,1,business_unit1_1,sfdc_connection,*/15 * * * *,"Id,Name,Type,Industry,AnnualRevenue",
+Salesforce,standard,Contact,salesforce_connector,salesforce,Contact,business_unit1,1,business_unit1_1,sfdc_connection,*/15 * * * *,,
+Salesforce,standard,Campaign,salesforce_connector,salesforce,Campaign,business_unit1,1,business_unit1_1,sfdc_connection,*/15 * * * *,,
+Salesforce,standard,Opportunity,salesforce_connector,salesforce,Opportunity,business_unit1,2,business_unit1_2,sfdc_connection,*/15 * * * *,,"Description,SystemModstamp"
+Salesforce,standard,Lead,salesforce_connector,salesforce,Lead,business_unit2,1,business_unit2_1,sfdc_connection,*/30 * * * *,,
+Salesforce,standard,Case,salesforce_connector,salesforce,Case,business_unit2,1,business_unit2_1,sfdc_connection,*/30 * * * *,,
+Salesforce,custom,CustomObject__c,salesforce_connector,salesforce,CustomObject,business_unit2,2,business_unit2_2,sfdc_connection,*/30 * * * *,,
+Salesforce,standard,Task,salesforce_connector,salesforce,Task,business_unit3,1,business_unit3_1,sfdc_connection,*/60 * * * *,,
+Salesforce,standard,Event,salesforce_connector,salesforce,Event,business_unit3,1,business_unit3_1,sfdc_connection,*/60 * * * *,,
