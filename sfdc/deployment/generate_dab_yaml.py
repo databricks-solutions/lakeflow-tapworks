@@ -6,8 +6,8 @@ Groups pipelines by pipeline_group (which uses prefix_priority format).
 
 Usage:
     # As a module
-    from deployment.generate_dab_yaml import generate_salesforce_yaml
-    generate_salesforce_yaml(df, connection_name, output_path)
+    from deployment.generate_dab_yaml import generate_yaml_files
+    generate_yaml_files(df, connection_name, output_path)
 
     # Command-line
     python generate_dab_yaml.py <csv_path> [--output <path>] [--connection <name>]
@@ -60,7 +60,7 @@ def convert_cron_to_quartz(cron_expression: str) -> str:
     return quartz_cron
 
 
-def generate_salesforce_yaml(
+def generate_yaml_files(
     df: pd.DataFrame,
     connection_name: str,
     output_path: str = "resources/sfdc_pipeline.yml"
@@ -318,7 +318,7 @@ Examples:
             connection_name = df['connection_name'].iloc[0]
 
         # Generate YAML
-        generate_salesforce_yaml(
+        generate_yaml_files(
             df=df,
             connection_name=connection_name,
             output_path=args.output
