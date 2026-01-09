@@ -6,8 +6,8 @@ Groups pipelines by pipeline_group (which uses prefix_priority format).
 
 Usage:
     # As a module
-    from deployment.generate_dab_yaml import generate_ga4_yaml
-    generate_ga4_yaml(df, output_path)
+    from deployment.generate_dab_yaml import generate_yaml_files
+    generate_yaml_files(df, output_path)
 
     # Command-line
     python generate_dab_yaml.py <csv_path> [--output <path>]
@@ -60,7 +60,7 @@ def convert_cron_to_quartz(cron_expression: str) -> str:
     return quartz_cron
 
 
-def generate_ga4_yaml(
+def generate_yaml_files(
     df: pd.DataFrame,
     output_path: str = "resources/ga4_pipeline.yml"
 ) -> None:
@@ -269,7 +269,7 @@ Input CSV must have columns:
         print(f"Loaded {len(df)} properties")
 
         # Generate YAML
-        generate_ga4_yaml(df, args.output)
+        generate_yaml_files(df, args.output)
 
         print("Next steps:")
         print(f"  1. Review YAML: {args.output}")
