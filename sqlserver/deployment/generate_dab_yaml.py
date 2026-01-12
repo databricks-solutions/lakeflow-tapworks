@@ -91,17 +91,17 @@ def create_pipelines(df, project_name):
     return {'resources': {'pipelines': pipelines}}
 
 
-def create_databricks_yml(project_name,workspace_host):
+def create_databricks_yml(project_name, workspace_host, root_path):
     """Create the main databricks.yml file for the DAB project.
 
     Args:
         project_name (str): Project name for the bundle
+        workspace_host (str): Workspace host URL
+        root_path (str): Root path for bundle deployment
 
     Returns:
         dict: The databricks.yml structure
     """
-
-    # workspace_host = "${workspace.host}"
 
     return {
         'bundle': {
@@ -114,14 +114,15 @@ def create_databricks_yml(project_name,workspace_host):
             'prod': {
                 'mode': 'production',
                 'workspace': {
-                    'host': f'{workspace_host}'
+                    'host': f'{workspace_host}',
+                    'root_path': f'{root_path}'
                 }
             }
         }
     }
 
 
-def generate_yaml_files(df, gateway_catalog, gateway_schema, project_name, node_type_id, driver_node_type_id, output_dir, workspace_host):
+def generate_yaml_files(df, gateway_catalog, gateway_schema, project_name, node_type_id, driver_node_type_id, output_dir, workspace_host, root_path):
 
 # def generate_yaml_files(df, gateway_catalog, gateway_schema, workspace_client, project_name, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge', output_dir='dab_project'):
     """Generate gateway and pipeline YAML files from dataframe in a proper DAB structure.
@@ -145,6 +146,8 @@ def generate_yaml_files(df, gateway_catalog, gateway_schema, project_name, node_
         node_type_id (str): Worker node type for cluster (default: 'm5d.large')
         driver_node_type_id (str): Driver node type for cluster (default: 'c5a.8xlarge')
         output_dir (str): Output directory for the DAB project (default: 'dab_project')
+        workspace_host (str): Workspace host URL
+        root_path (str): Root path for bundle deployment
 
     Note:
         - Creates a proper DAB structure with root databricks.yml and resources subdirectory
@@ -159,7 +162,7 @@ def generate_yaml_files(df, gateway_catalog, gateway_schema, project_name, node_
     # gateways_yaml = create_gateways(df, gateway_catalog, gateway_schema, workspace_client, project_name, node_type_id, driver_node_type_id)
     gateways_yaml = create_gateways(df, gateway_catalog, gateway_schema, project_name, node_type_id, driver_node_type_id)
     pipelines_yaml = create_pipelines(df, project_name)
-    databricks_yaml = create_databricks_yml(project_name, workspace_host)
+    databricks_yaml = create_databricks_yml(project_name, workspace_host, root_path)
 
     # Define output paths
     databricks_yml_path = os.path.join(output_dir, 'databricks.yml')
