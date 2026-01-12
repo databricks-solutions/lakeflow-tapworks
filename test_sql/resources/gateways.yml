@@ -1,0 +1,12 @@
+resources:
+  pipelines:
+    yas_project_pipeline_yas_project_gateway_1:
+      name: yas_project_gateway_1
+      gateway_definition:
+        connection_name: alinta_federation
+        gateway_storage_catalog: yas_catalog
+        gateway_storage_schema: alinta
+        gateway_storage_name: yas_project_gateway_1
+      target: alinta
+      continuous: true
+      catalog: yas_catalog
