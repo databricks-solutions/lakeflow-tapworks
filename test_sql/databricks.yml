@@ -1,0 +1,9 @@
+bundle:
+  name: yas_project
+include:
+- resources/*.yml
+targets:
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-7861826065021443.3.azuredatabricks.net/

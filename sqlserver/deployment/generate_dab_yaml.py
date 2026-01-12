@@ -10,35 +10,51 @@ def get_connection_id(workspace_client, connection_name):
     return connection.connection_id
 
 
-def create_gateways(df, catalog, schema, workspace_client, project_name, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge'):
+def create_gateways(df, catalog, schema, project_name, node_type, driver_node_type):
+    # def create_gateways(df, catalog, schema, workspace_client, project_name, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge'):
     """Create gateway YAML configuration from dataframe."""
     gateways = {}
     unique_gateways = df.groupby('gateway').first()
 
     for gateway_id, row in unique_gateways.iterrows():
-        connection_id = get_connection_id(workspace_client, row['connection_name'])
+        # connection_id = get_connection_id(workspace_client, row['connection_name'])
         gateway_name = f"{project_name}_gateway_{gateway_id}"
         pipeline_name = f"{project_name}_pipeline_{gateway_name}"
 
-        gateways[pipeline_name] = {
-            'name': gateway_name,
-            'clusters': [{
-                'node_type_id': node_type_id,
-                'driver_node_type_id': driver_node_type_id,
-                'num_workers': 1
-            }],
-            'gateway_definition': {
-                'connection_name': row['connection_name'],
-                'connection_id': connection_id,
-                'gateway_storage_catalog': catalog,
-                'gateway_storage_schema': schema,
-                'gateway_storage_name': gateway_name,
-                'source_type': 'SQLSERVER'
-            },
-            'target': schema,
-            'continuous': True,
-            'catalog': catalog
-        }
+        if node_type and driver_node_type:       
+            gateways[pipeline_name] = {
+                'name': gateway_name,
+                'clusters': [{
+                    'node_type_id': node_type_id,
+                    'driver_node_type_id': driver_node_type_id,
+                    'num_workers': 1
+                }],
+                'gateway_definition': {
+                    'connection_name': row['connection_name'],
+                    # 'connection_id': connection_id,
+                    'gateway_storage_catalog': catalog,
+                    'gateway_storage_schema': schema,
+                    'gateway_storage_name': gateway_name,
+                },
+                'target': schema,
+                'continuous': True,
+                'catalog': catalog
+            }
+        else:
+            gateways[pipeline_name] = {
+                'name': gateway_name,
+                'gateway_definition': {
+                    'connection_name': row['connection_name'],
+                    # 'connection_id': connection_id,
+                    'gateway_storage_catalog': catalog,
+                    'gateway_storage_schema': schema,
+                    'gateway_storage_name': gateway_name,
+                },
+                'target': schema,
+                'continuous': True,
+                'catalog': catalog
+            }
+
 
     return {'resources': {'pipelines': gateways}}
 
@@ -75,7 +91,7 @@ def create_pipelines(df, project_name):
     return {'resources': {'pipelines': pipelines}}
 
 
-def create_databricks_yml(project_name):
+def create_databricks_yml(project_name,workspace_host):
     """Create the main databricks.yml file for the DAB project.
 
     Args:
@@ -84,6 +100,9 @@ def create_databricks_yml(project_name):
     Returns:
         dict: The databricks.yml structure
     """
+
+    # workspace_host = "${workspace.host}"
+
     return {
         'bundle': {
             'name': project_name
@@ -95,14 +114,16 @@ def create_databricks_yml(project_name):
             'prod': {
                 'mode': 'production',
                 'workspace': {
-                    'host': '${workspace.host}'
+                    'host': f'{workspace_host}'
                 }
             }
         }
     }
 
 
-def generate_yaml_files(df, gateway_catalog, gateway_schema, workspace_client, project_name, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge', output_dir='dab_project'):
+def generate_yaml_files(df, gateway_catalog, gateway_schema, project_name, node_type_id, driver_node_type_id, output_dir, workspace_host):
+
+# def generate_yaml_files(df, gateway_catalog, gateway_schema, workspace_client, project_name, node_type_id='m5d.large', driver_node_type_id='c5a.8xlarge', output_dir='dab_project'):
     """Generate gateway and pipeline YAML files from dataframe in a proper DAB structure.
 
     Args:
@@ -119,7 +140,7 @@ def generate_yaml_files(df, gateway_catalog, gateway_schema, workspace_client, p
             - schedule: Cron schedule (optional, e.g., '0 0 * * *')
         gateway_catalog (str): Catalog for gateway storage metadata (not table destinations)
         gateway_schema (str): Schema for gateway storage metadata (not table destinations)
-        workspace_client (WorkspaceClient): Databricks workspace client instance
+        # workspace_client (WorkspaceClient): Databricks workspace client instance
         project_name (str): Project name prefix for all resources to avoid naming clashes
         node_type_id (str): Worker node type for cluster (default: 'm5d.large')
         driver_node_type_id (str): Driver node type for cluster (default: 'c5a.8xlarge')
@@ -135,9 +156,10 @@ def generate_yaml_files(df, gateway_catalog, gateway_schema, workspace_client, p
     os.makedirs(resources_dir, exist_ok=True)
 
     # Generate YAML content
-    gateways_yaml = create_gateways(df, gateway_catalog, gateway_schema, workspace_client, project_name, node_type_id, driver_node_type_id)
+    # gateways_yaml = create_gateways(df, gateway_catalog, gateway_schema, workspace_client, project_name, node_type_id, driver_node_type_id)
+    gateways_yaml = create_gateways(df, gateway_catalog, gateway_schema, project_name, node_type_id, driver_node_type_id)
     pipelines_yaml = create_pipelines(df, project_name)
-    databricks_yaml = create_databricks_yml(project_name)
+    databricks_yaml = create_databricks_yml(project_name, workspace_host)
 
     # Define output paths
     databricks_yml_path = os.path.join(output_dir, 'databricks.yml')
@@ -167,14 +189,14 @@ if __name__ == "__main__":
     df = pd.read_csv('examples/example_config.csv')
 
     # Initialize Databricks workspace client
-    workspace_client = WorkspaceClient()
+    # workspace_client = WorkspaceClient()
 
     # Generate YAML files with proper DAB structure
     generate_yaml_files(
         df=df,
         gateway_catalog='jack_demos',
         gateway_schema='ingestion_schema',
-        workspace_client=workspace_client,
+        # workspace_client=workspace_client,
         project_name='my_project',
         output_dir='dab_project'
     )
