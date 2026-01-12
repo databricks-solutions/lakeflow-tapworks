@@ -1,34 +1,34 @@
 resources:
   pipelines:
-    yas_project_pipeline_ingestion_1:
-      name: yas_project_ingestion_1
+    tapworks_project_pipeline_ingestion_1:
+      name: tapworks_project_ingestion_1
       configuration:
         pipelines.cdcApplierFetchMetadataTimeoutSeconds: '600'
       ingestion_definition:
-        ingestion_gateway_id: ${resources.pipelines.yas_project_pipeline_yas_project_gateway_1.id}
+        ingestion_gateway_id: ${resources.pipelines.tapworks_project_pipeline_tapworks_project_gateway_1.id}
         objects:
         - table:
             source_catalog: db1
             source_schema: dbo
-            source_table: transactions
-            destination_catalog: yas_catalog
-            destination_schema: alinta
-    yas_project_pipeline_ingestion_2:
-      name: yas_project_ingestion_2
+            source_table: orders
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks
+    tapworks_project_pipeline_ingestion_2:
+      name: tapworks_project_ingestion_2
       configuration:
         pipelines.cdcApplierFetchMetadataTimeoutSeconds: '600'
       ingestion_definition:
-        ingestion_gateway_id: ${resources.pipelines.yas_project_pipeline_yas_project_gateway_1.id}
+        ingestion_gateway_id: ${resources.pipelines.tapworks_project_pipeline_tapworks_project_gateway_1.id}
         objects:
         - table:
             source_catalog: db1
             source_schema: dbo
             source_table: products
-            destination_catalog: yas_catalog
-            destination_schema: alinta
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks
         - table:
             source_catalog: db1
             source_schema: dbo
             source_table: customers
-            destination_catalog: yas_catalog
-            destination_schema: alinta
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks

@@ -1,4 +1,0 @@
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,priority_flag
-db1,dbo,products,yas_catalog,alinta,products,0
-db1,dbo,customers,yas_catalog,alinta,customers,0
-db1,dbo,transactions,yas_catalog,alinta,transactions_clean,1

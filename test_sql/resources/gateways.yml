@@ -1,12 +1,12 @@
 resources:
   pipelines:
-    yas_project_pipeline_yas_project_gateway_1:
-      name: yas_project_gateway_1
+    tapworks_project_pipeline_tapworks_project_gateway_1:
+      name: tapworks_project_gateway_1
       gateway_definition:
-        connection_name: alinta_federation
-        gateway_storage_catalog: yas_catalog
-        gateway_storage_schema: alinta
-        gateway_storage_name: yas_project_gateway_1
-      target: alinta
+        connection_name: tapworks_sql_connection
+        gateway_storage_catalog: tapworks_catalog
+        gateway_storage_schema: tapworks
+        gateway_storage_name: tapworks_project_gateway_1
+      target: tapworks
       continuous: true
-      catalog: yas_catalog
+      catalog: tapworks_catalog
