@@ -20,12 +20,14 @@ def run_complete_pipeline_generation(
     gateway_catalog: str,
     gateway_schema: str,
     project_name: str,
-    max_tables_per_group: int = 1000,
-    default_connection_name: str = "conn_1",
+    output_dir: str,
+    workspace_host: str,
+    root_path: str,
+    default_connection_name: str,
+    max_tables_per_group: int = 250,
     default_schedule: str = "*/15 * * * *",
     node_type_id: str = None,
-    driver_node_type_id: str = None,
-    output_dir: str = "dab_project"
+    driver_node_type_id: str = None
 ):
     """
     Complete pipeline generation process from source table list to YAML files.
@@ -35,12 +37,14 @@ def run_complete_pipeline_generation(
         gateway_catalog (str): Catalog for gateway storage metadata
         gateway_schema (str): Schema for gateway storage metadata
         project_name (str): Project name prefix for all resources
-        max_tables_per_group (int): Maximum tables per pipeline group (default: 1000)
-        default_connection_name (str): Default connection name (default: "conn_1")
+        output_dir (str): Output directory for DAB project
+        workspace_host (str): Workspace host URL
+        root_path (str): Root path for bundle deployment
+        default_connection_name (str): Default connection name
+        max_tables_per_group (int): Maximum tables per pipeline group (default: 250)
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
         node_type_id (str): Worker node type (optional)
         driver_node_type_id (str): Driver node type (optional)
-        output_dir (str): Output directory for DAB project (default: "dab_project")
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
@@ -50,12 +54,12 @@ def run_complete_pipeline_generation(
     print("="*80)
 
     # Step 1: Load input CSV
-    print(f"\n[Step 1/5] Loading input CSV: {input_csv}")
+    print(f"\n[Step 1/3] Loading input CSV: {input_csv}")
     input_df = pd.read_csv(input_csv)
     print(f"  ✓ Loaded {len(input_df)} tables from {input_df['source_database'].nunique()} databases")
 
     # Step 2: Generate pipeline configuration (load balancing)
-    print(f"\n[Step 2/5] Generating pipeline configuration with load balancing")
+    print(f"\n[Step 2/3] Generating pipeline configuration with load balancing")
     print(f"  - Max tables per group: {max_tables_per_group}")
     print(f"  - Connection name: {default_connection_name}")
     print(f"  - Schedule: {default_schedule}")
@@ -67,26 +71,13 @@ def run_complete_pipeline_generation(
         default_schedule=default_schedule
     )
 
-    # Step 3: Initialize Databricks workspace client
-    print(f"\n[Step 3/5] Initializing Databricks workspace client")
-    workspace_client = WorkspaceClient()
-    print("  ✓ Workspace client initialized")
-
-    # Step 4: Auto-detect workspace settings
-    print(f"\n[Step 4/5] Auto-detecting workspace settings")
-    username = workspace_client.current_user.me().user_name
-    workspace_host = workspace_client.config.host
-    root_path = f'/Users/{username}/.bundle/${{bundle.name}}/${{bundle.target}}'
-    print(f"  ✓ Username: {username}")
-    print(f"  ✓ Workspace host: {workspace_host}")
-    print(f"  ✓ Root path: {root_path}")
-
-    # Step 5: Generate YAML files
-    print(f"\n[Step 5/5] Generating Databricks Asset Bundle YAML files")
+    # Step 3: Generate YAML files
+    print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
     print(f"  - Gateway catalog: {gateway_catalog}")
     print(f"  - Gateway schema: {gateway_schema}")
     print(f"  - Project name: {project_name}")
     print(f"  - Output directory: {output_dir}")
+    print(f"  - Root path: {root_path}")
 
     generate_yaml_files(
         df=pipeline_config_df,
