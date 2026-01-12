@@ -23,8 +23,8 @@ def run_complete_pipeline_generation(
     max_tables_per_group: int = 1000,
     default_connection_name: str = "conn_1",
     default_schedule: str = "*/15 * * * *",
-    node_type_id: str = "m5d.large",
-    driver_node_type_id: str = "c5a.8xlarge",
+    node_type_id: str = None,
+    driver_node_type_id: str = None,
     output_dir: str = "dab_project"
 ):
     """
@@ -38,8 +38,8 @@ def run_complete_pipeline_generation(
         max_tables_per_group (int): Maximum tables per pipeline group (default: 1000)
         default_connection_name (str): Default connection name (default: "conn_1")
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
-        node_type_id (str): Worker node type (default: "m5d.large")
-        driver_node_type_id (str): Driver node type (default: "c5a.8xlarge")
+        node_type_id (str): Worker node type (optional)
+        driver_node_type_id (str): Driver node type (optional)
         output_dir (str): Output directory for DAB project (default: "dab_project")
 
     Returns:
@@ -50,12 +50,12 @@ def run_complete_pipeline_generation(
     print("="*80)
 
     # Step 1: Load input CSV
-    print(f"\n[Step 1/4] Loading input CSV: {input_csv}")
+    print(f"\n[Step 1/5] Loading input CSV: {input_csv}")
     input_df = pd.read_csv(input_csv)
     print(f"  ✓ Loaded {len(input_df)} tables from {input_df['source_database'].nunique()} databases")
 
     # Step 2: Generate pipeline configuration (load balancing)
-    print(f"\n[Step 2/4] Generating pipeline configuration with load balancing")
+    print(f"\n[Step 2/5] Generating pipeline configuration with load balancing")
     print(f"  - Max tables per group: {max_tables_per_group}")
     print(f"  - Connection name: {default_connection_name}")
     print(f"  - Schedule: {default_schedule}")
@@ -68,12 +68,21 @@ def run_complete_pipeline_generation(
     )
 
     # Step 3: Initialize Databricks workspace client
-    print(f"\n[Step 3/4] Initializing Databricks workspace client")
+    print(f"\n[Step 3/5] Initializing Databricks workspace client")
     workspace_client = WorkspaceClient()
     print("  ✓ Workspace client initialized")
 
-    # Step 4: Generate YAML files
-    print(f"\n[Step 4/4] Generating Databricks Asset Bundle YAML files")
+    # Step 4: Auto-detect workspace settings
+    print(f"\n[Step 4/5] Auto-detecting workspace settings")
+    username = workspace_client.current_user.me().user_name
+    workspace_host = workspace_client.config.host
+    root_path = f'/Users/{username}/.bundle/${{bundle.name}}/${{bundle.target}}'
+    print(f"  ✓ Username: {username}")
+    print(f"  ✓ Workspace host: {workspace_host}")
+    print(f"  ✓ Root path: {root_path}")
+
+    # Step 5: Generate YAML files
+    print(f"\n[Step 5/5] Generating Databricks Asset Bundle YAML files")
     print(f"  - Gateway catalog: {gateway_catalog}")
     print(f"  - Gateway schema: {gateway_schema}")
     print(f"  - Project name: {project_name}")
@@ -83,11 +92,12 @@ def run_complete_pipeline_generation(
         df=pipeline_config_df,
         gateway_catalog=gateway_catalog,
         gateway_schema=gateway_schema,
-        workspace_client=workspace_client,
         project_name=project_name,
         node_type_id=node_type_id,
         driver_node_type_id=driver_node_type_id,
-        output_dir=output_dir
+        output_dir=output_dir,
+        workspace_host=workspace_host,
+        root_path=root_path
     )
 
     print("\n" + "="*80)
@@ -117,8 +127,8 @@ if __name__ == "__main__":
         max_tables_per_group=1000,
         default_connection_name='conn_1',
         default_schedule='*/15 * * * *',
-        node_type_id='m5d.large',
-        driver_node_type_id='c5a.8xlarge',
+        # node_type_id='m5d.large',          # Optional: specify if needed
+        # driver_node_type_id='c5a.8xlarge', # Optional: specify if needed
         output_dir='dab_project'
     )
 
