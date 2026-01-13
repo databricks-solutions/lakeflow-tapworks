@@ -67,6 +67,19 @@ def generate_pipeline_config(
     df['gateway'] = 0
     df['schedule'] = default_schedule
 
+    # Initialize gateway config columns if they don't exist
+    # This ensures df.loc assignments work properly inside the loop
+    if 'connection_name' not in df.columns:
+        df['connection_name'] = None
+    if 'gateway_catalog' not in df.columns:
+        df['gateway_catalog'] = None
+    if 'gateway_schema' not in df.columns:
+        df['gateway_schema'] = None
+    if 'gateway_worker_type' not in df.columns:
+        df['gateway_worker_type'] = None
+    if 'gateway_driver_type' not in df.columns:
+        df['gateway_driver_type'] = None
+
     # Track global gateway and pipeline group counters
     global_gateway_id = 1
     global_pipeline_group_id = 1
