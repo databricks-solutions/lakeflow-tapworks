@@ -30,6 +30,8 @@ def generate_pipeline_config(
 
     Returns:
         pd.DataFrame: The generated configuration dataframe with additional columns:
+            - gateway_catalog: Catalog for gateway storage (defaults to target_catalog if not in input)
+            - gateway_schema: Schema for gateway storage (defaults to target_schema if not in input)
             - pipeline_group: Pipeline group identifier
             - gateway: Gateway identifier
             - connection_name: Databricks connection name
@@ -49,6 +51,16 @@ def generate_pipeline_config(
     if 'priority_flag' not in df.columns:
         print("Warning: 'priority_flag' column not found. Setting all tables to priority_flag=0")
         df['priority_flag'] = 0
+
+    # Add gateway_catalog column if not present (default to target_catalog)
+    if 'gateway_catalog' not in df.columns:
+        print("Warning: 'gateway_catalog' column not found. Using target_catalog as default")
+        df['gateway_catalog'] = df['target_catalog']
+
+    # Add gateway_schema column if not present (default to target_schema)
+    if 'gateway_schema' not in df.columns:
+        print("Warning: 'gateway_schema' column not found. Using target_schema as default")
+        df['gateway_schema'] = df['target_schema']
 
     # Initialize new columns
     df['pipeline_group'] = 0
@@ -107,6 +119,7 @@ def generate_pipeline_config(
     # Reorder columns to match expected output format
     output_columns = ['source_database', 'source_schema', 'source_table_name',
                      'target_catalog', 'target_schema', 'target_table_name',
+                     'gateway_catalog', 'gateway_schema',
                      'pipeline_group', 'gateway', 'connection_name', 'schedule']
     df_output = df[output_columns]
 
