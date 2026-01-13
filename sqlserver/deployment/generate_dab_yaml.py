@@ -3,8 +3,11 @@ import pandas as pd
 import os
 
 
-def create_gateways(df, catalog, schema, project_name, node_type, driver_node_type):
-    """Create gateway YAML configuration from dataframe."""
+def create_gateways(df, project_name, node_type, driver_node_type):
+    """Create gateway YAML configuration from dataframe.
+
+    Note: gateway_catalog and gateway_schema are read from the dataframe columns.
+    """
     gateways = {}
     unique_gateways = df.groupby('gateway').first()
 
@@ -12,17 +15,21 @@ def create_gateways(df, catalog, schema, project_name, node_type, driver_node_ty
         gateway_name = f"{project_name}_gateway_{gateway_id}"
         pipeline_name = f"{project_name}_pipeline_{gateway_name}"
 
+        # Read gateway catalog and schema from the dataframe
+        gateway_catalog = row['gateway_catalog']
+        gateway_schema = row['gateway_schema']
+
         gateway_config = {
             'name': gateway_name,
             'gateway_definition': {
                 'connection_name': row['connection_name'],
-                'gateway_storage_catalog': catalog,
-                'gateway_storage_schema': schema,
+                'gateway_storage_catalog': gateway_catalog,
+                'gateway_storage_schema': gateway_schema,
                 'gateway_storage_name': gateway_name,
             },
-            'target': schema,
+            'target': gateway_schema,
             'continuous': True,
-            'catalog': catalog
+            'catalog': gateway_catalog
         }
 
         # Add cluster configuration if node types are provided
@@ -103,7 +110,7 @@ def create_databricks_yml(project_name, workspace_host, root_path):
     }
 
 
-def generate_yaml_files(df, gateway_catalog, gateway_schema, project_name, node_type_id, driver_node_type_id, output_dir, workspace_host, root_path):
+def generate_yaml_files(df, project_name, node_type_id, driver_node_type_id, output_dir, workspace_host, root_path):
     """Generate gateway and pipeline YAML files from dataframe in a proper DAB structure.
 
     Args:
@@ -114,15 +121,15 @@ def generate_yaml_files(df, gateway_catalog, gateway_schema, project_name, node_
             - target_catalog: Databricks catalog for destination tables (e.g., 'bronze')
             - target_schema: Databricks schema for destination tables (e.g., 'sales')
             - target_table_name: Destination table name (e.g., 'customers')
+            - gateway_catalog: Catalog for gateway storage metadata (e.g., 'bronze')
+            - gateway_schema: Schema for gateway storage metadata (e.g., 'ingestion')
             - pipeline_group: Groups tables into pipelines (e.g., 'sales_ingestion')
             - gateway: Gateway identifier (e.g., 'sqlserver_gateway_1')
             - connection_name: Databricks connection name (e.g., 'sql_server_prod')
             - schedule: Cron schedule (optional, e.g., '0 0 * * *')
-        gateway_catalog (str): Catalog for gateway storage metadata (not table destinations)
-        gateway_schema (str): Schema for gateway storage metadata (not table destinations)
         project_name (str): Project name prefix for all resources to avoid naming clashes
-        node_type_id (str): Worker node type for cluster (default: 'm5d.large')
-        driver_node_type_id (str): Driver node type for cluster (default: 'c5a.8xlarge')
+        node_type_id (str): Worker node type for cluster (optional, e.g., 'm5d.large')
+        driver_node_type_id (str): Driver node type for cluster (optional, e.g., 'c5a.8xlarge')
         output_dir (str): Output directory for the DAB project (default: 'dab_project')
         workspace_host (str): Workspace host URL
         root_path (str): Root path for bundle deployment
@@ -130,14 +137,14 @@ def generate_yaml_files(df, gateway_catalog, gateway_schema, project_name, node_
     Note:
         - Creates a proper DAB structure with root databricks.yml and resources subdirectory
         - Pipelines use target_catalog and target_schema from the dataframe for each table
-        - The gateway_catalog and gateway_schema parameters are only for gateway storage location
+        - Gateway catalog and schema are read from the dataframe and can vary per gateway
     """
     # Create directory structure
     resources_dir = os.path.join(output_dir, 'resources')
     os.makedirs(resources_dir, exist_ok=True)
 
     # Generate YAML content
-    gateways_yaml = create_gateways(df, gateway_catalog, gateway_schema, project_name, node_type_id, driver_node_type_id)
+    gateways_yaml = create_gateways(df, project_name, node_type_id, driver_node_type_id)
     pipelines_yaml = create_pipelines(df, project_name)
     databricks_yaml = create_databricks_yml(project_name, workspace_host, root_path)
 
@@ -170,10 +177,9 @@ if __name__ == "__main__":
 
     # Generate YAML files with proper DAB structure
     # Note: This example is incomplete - workspace_host and root_path are required
+    # Also note: gateway_catalog and gateway_schema should be in the dataframe
     # generate_yaml_files(
     #     df=df,
-    #     gateway_catalog='jack_demos',
-    #     gateway_schema='ingestion_schema',
     #     project_name='my_project',
     #     node_type_id=None,
     #     driver_node_type_id=None,

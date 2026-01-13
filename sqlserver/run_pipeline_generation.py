@@ -16,8 +16,6 @@ from deployment.generate_dab_yaml import generate_yaml_files
 
 def run_complete_pipeline_generation(
     input_csv: str,
-    gateway_catalog: str,
-    gateway_schema: str,
     project_name: str,
     output_dir: str,
     workspace_host: str,
@@ -33,8 +31,6 @@ def run_complete_pipeline_generation(
 
     Args:
         input_csv (str): Path to input CSV with source table list
-        gateway_catalog (str): Catalog for gateway storage metadata
-        gateway_schema (str): Schema for gateway storage metadata
         project_name (str): Project name prefix for all resources
         output_dir (str): Output directory for DAB project
         workspace_host (str): Workspace host URL
@@ -47,6 +43,10 @@ def run_complete_pipeline_generation(
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
+
+    Note:
+        - gateway_catalog and gateway_schema are read from the input CSV
+        - If not present in CSV, they default to target_catalog and target_schema
     """
     print("="*80)
     print("STARTING COMPLETE PIPELINE GENERATION PROCESS")
@@ -72,16 +72,12 @@ def run_complete_pipeline_generation(
 
     # Step 3: Generate YAML files
     print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
-    print(f"  - Gateway catalog: {gateway_catalog}")
-    print(f"  - Gateway schema: {gateway_schema}")
     print(f"  - Project name: {project_name}")
     print(f"  - Output directory: {output_dir}")
     print(f"  - Root path: {root_path}")
 
     generate_yaml_files(
         df=pipeline_config_df,
-        gateway_catalog=gateway_catalog,
-        gateway_schema=gateway_schema,
         project_name=project_name,
         node_type_id=node_type_id,
         driver_node_type_id=driver_node_type_id,
@@ -108,18 +104,19 @@ def run_complete_pipeline_generation(
 
 if __name__ == "__main__":
     # Example usage - modify these parameters as needed
+    # Note: This example is incomplete - workspace_host and root_path are required
 
     result_df = run_complete_pipeline_generation(
         input_csv='load_balancing/examples/example_config.csv',
-        gateway_catalog='jack_demos',
-        gateway_schema='ingestion_schema',
         project_name='my_project',
         max_tables_per_group=1000,
         default_connection_name='conn_1',
         default_schedule='*/15 * * * *',
         # node_type_id='m5d.large',          # Optional: specify if needed
         # driver_node_type_id='c5a.8xlarge', # Optional: specify if needed
-        output_dir='dab_project'
+        output_dir='dab_project',
+        workspace_host='https://your-workspace.cloud.databricks.com',
+        root_path='/Users/your-email/.bundle/${bundle.name}/${bundle.target}'
     )
 
     # Optional: Save the intermediate pipeline configuration for reference
