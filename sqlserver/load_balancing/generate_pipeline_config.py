@@ -67,17 +67,24 @@ def generate_pipeline_config(
     df['gateway'] = 0
     df['schedule'] = default_schedule
 
+    # Check which columns exist in the original CSV before we start modifying
+    has_connection_name = 'connection_name' in df.columns
+    has_gateway_catalog = 'gateway_catalog' in df.columns
+    has_gateway_schema = 'gateway_schema' in df.columns
+    has_gateway_worker_type = 'gateway_worker_type' in df.columns
+    has_gateway_driver_type = 'gateway_driver_type' in df.columns
+
     # Initialize gateway config columns if they don't exist
     # This ensures df.loc assignments work properly inside the loop
-    if 'connection_name' not in df.columns:
+    if not has_connection_name:
         df['connection_name'] = None
-    if 'gateway_catalog' not in df.columns:
+    if not has_gateway_catalog:
         df['gateway_catalog'] = None
-    if 'gateway_schema' not in df.columns:
+    if not has_gateway_schema:
         df['gateway_schema'] = None
-    if 'gateway_worker_type' not in df.columns:
+    if not has_gateway_worker_type:
         df['gateway_worker_type'] = None
-    if 'gateway_driver_type' not in df.columns:
+    if not has_gateway_driver_type:
         df['gateway_driver_type'] = None
 
     # Track global gateway and pipeline group counters
@@ -92,10 +99,10 @@ def generate_pipeline_config(
         db_indices = db_group.index
 
         # For each gateway configuration column, use the first row's value for this group
-        # or fill with defaults if column doesn't exist
+        # or fill with defaults if column doesn't exist in original CSV
 
         # Connection name
-        if 'connection_name' not in df.columns:
+        if not has_connection_name:
             if global_gateway_id == 1:  # Only print warning once
                 print(f"Warning: 'connection_name' column not found. Using default: {default_connection_name}")
             df.loc[db_indices, 'connection_name'] = default_connection_name
@@ -105,7 +112,7 @@ def generate_pipeline_config(
             df.loc[db_indices, 'connection_name'] = group_connection
 
         # Gateway catalog
-        if 'gateway_catalog' not in df.columns:
+        if not has_gateway_catalog:
             if global_gateway_id == 1:
                 print("Warning: 'gateway_catalog' column not found. Using target_catalog as default")
             df.loc[db_indices, 'gateway_catalog'] = df.loc[db_indices, 'target_catalog']
@@ -114,7 +121,7 @@ def generate_pipeline_config(
             df.loc[db_indices, 'gateway_catalog'] = group_gateway_catalog
 
         # Gateway schema
-        if 'gateway_schema' not in df.columns:
+        if not has_gateway_schema:
             if global_gateway_id == 1:
                 print("Warning: 'gateway_schema' column not found. Using target_schema as default")
             df.loc[db_indices, 'gateway_schema'] = df.loc[db_indices, 'target_schema']
@@ -123,7 +130,7 @@ def generate_pipeline_config(
             df.loc[db_indices, 'gateway_schema'] = group_gateway_schema
 
         # Gateway worker type
-        if 'gateway_worker_type' not in df.columns:
+        if not has_gateway_worker_type:
             if global_gateway_id == 1 and default_gateway_worker_type:
                 print(f"Warning: 'gateway_worker_type' column not found. Using default: {default_gateway_worker_type}")
             df.loc[db_indices, 'gateway_worker_type'] = default_gateway_worker_type
@@ -132,7 +139,7 @@ def generate_pipeline_config(
             df.loc[db_indices, 'gateway_worker_type'] = group_worker_type
 
         # Gateway driver type
-        if 'gateway_driver_type' not in df.columns:
+        if not has_gateway_driver_type:
             if global_gateway_id == 1 and default_gateway_driver_type:
                 print(f"Warning: 'gateway_driver_type' column not found. Using default: {default_gateway_driver_type}")
             df.loc[db_indices, 'gateway_driver_type'] = default_gateway_driver_type
