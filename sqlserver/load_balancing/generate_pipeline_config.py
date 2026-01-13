@@ -109,7 +109,11 @@ def generate_pipeline_config(
         else:
             # Use first row's value for this source_database group
             group_connection = db_group.iloc[0]['connection_name']
-            df.loc[db_indices, 'connection_name'] = group_connection
+            # If value is null/empty, use default
+            if pd.isna(group_connection) or group_connection == '':
+                df.loc[db_indices, 'connection_name'] = default_connection_name
+            else:
+                df.loc[db_indices, 'connection_name'] = group_connection
 
         # Gateway catalog
         if not has_gateway_catalog:
@@ -118,7 +122,11 @@ def generate_pipeline_config(
             df.loc[db_indices, 'gateway_catalog'] = df.loc[db_indices, 'target_catalog']
         else:
             group_gateway_catalog = db_group.iloc[0]['gateway_catalog']
-            df.loc[db_indices, 'gateway_catalog'] = group_gateway_catalog
+            # If value is null/empty, use target_catalog as default
+            if pd.isna(group_gateway_catalog) or group_gateway_catalog == '':
+                df.loc[db_indices, 'gateway_catalog'] = df.loc[db_indices, 'target_catalog']
+            else:
+                df.loc[db_indices, 'gateway_catalog'] = group_gateway_catalog
 
         # Gateway schema
         if not has_gateway_schema:
@@ -127,7 +135,11 @@ def generate_pipeline_config(
             df.loc[db_indices, 'gateway_schema'] = df.loc[db_indices, 'target_schema']
         else:
             group_gateway_schema = db_group.iloc[0]['gateway_schema']
-            df.loc[db_indices, 'gateway_schema'] = group_gateway_schema
+            # If value is null/empty, use target_schema as default
+            if pd.isna(group_gateway_schema) or group_gateway_schema == '':
+                df.loc[db_indices, 'gateway_schema'] = df.loc[db_indices, 'target_schema']
+            else:
+                df.loc[db_indices, 'gateway_schema'] = group_gateway_schema
 
         # Gateway worker type
         if not has_gateway_worker_type:
@@ -136,7 +148,11 @@ def generate_pipeline_config(
             df.loc[db_indices, 'gateway_worker_type'] = default_gateway_worker_type
         else:
             group_worker_type = db_group.iloc[0]['gateway_worker_type']
-            df.loc[db_indices, 'gateway_worker_type'] = group_worker_type
+            # If value is null/empty, use default
+            if pd.isna(group_worker_type) or group_worker_type == '':
+                df.loc[db_indices, 'gateway_worker_type'] = default_gateway_worker_type
+            else:
+                df.loc[db_indices, 'gateway_worker_type'] = group_worker_type
 
         # Gateway driver type
         if not has_gateway_driver_type:
@@ -145,7 +161,11 @@ def generate_pipeline_config(
             df.loc[db_indices, 'gateway_driver_type'] = default_gateway_driver_type
         else:
             group_driver_type = db_group.iloc[0]['gateway_driver_type']
-            df.loc[db_indices, 'gateway_driver_type'] = group_driver_type
+            # If value is null/empty, use default
+            if pd.isna(group_driver_type) or group_driver_type == '':
+                df.loc[db_indices, 'gateway_driver_type'] = default_gateway_driver_type
+            else:
+                df.loc[db_indices, 'gateway_driver_type'] = group_driver_type
 
         # Assign gateway ID for this database
         gateway_id = global_gateway_id
