@@ -12,37 +12,29 @@ def create_gateways(df, catalog, schema, project_name, node_type, driver_node_ty
         gateway_name = f"{project_name}_gateway_{gateway_id}"
         pipeline_name = f"{project_name}_pipeline_{gateway_name}"
 
-        if node_type and driver_node_type:
-            gateways[pipeline_name] = {
-                'name': gateway_name,
-                'clusters': [{
-                    'node_type_id': node_type_id,
-                    'driver_node_type_id': driver_node_type_id,
-                    'num_workers': 1
-                }],
-                'gateway_definition': {
-                    'connection_name': row['connection_name'],
-                    'gateway_storage_catalog': catalog,
-                    'gateway_storage_schema': schema,
-                    'gateway_storage_name': gateway_name,
-                },
-                'target': schema,
-                'continuous': True,
-                'catalog': catalog
-            }
-        else:
-            gateways[pipeline_name] = {
-                'name': gateway_name,
-                'gateway_definition': {
-                    'connection_name': row['connection_name'],
-                    'gateway_storage_catalog': catalog,
-                    'gateway_storage_schema': schema,
-                    'gateway_storage_name': gateway_name,
-                },
-                'target': schema,
-                'continuous': True,
-                'catalog': catalog
-            }
+        gateway_config = {
+            'name': gateway_name,
+            'gateway_definition': {
+                'connection_name': row['connection_name'],
+                'gateway_storage_catalog': catalog,
+                'gateway_storage_schema': schema,
+                'gateway_storage_name': gateway_name,
+            },
+            'target': schema,
+            'continuous': True,
+            'catalog': catalog
+        }
+
+        # Add cluster configuration if node types are provided
+        if node_type or driver_node_type:
+            cluster_config = {'num_workers': 1}
+            if node_type:
+                cluster_config['node_type_id'] = node_type
+            if driver_node_type:
+                cluster_config['driver_node_type_id'] = driver_node_type
+            gateway_config['clusters'] = [cluster_config]
+
+        gateways[pipeline_name] = gateway_config
 
 
     return {'resources': {'pipelines': gateways}}
