@@ -4,9 +4,9 @@ resources:
       name: tapworks_project_gateway_1
       gateway_definition:
         connection_name: tapworks_sql_connection
-        gateway_storage_catalog: tapworks_catalog
-        gateway_storage_schema: tapworks
+        gateway_storage_catalog: tapworks_catalog_gw
+        gateway_storage_schema: tapworks_gw
         gateway_storage_name: tapworks_project_gateway_1
-      target: tapworks
+      schema: tapworks_gw
       continuous: true
-      catalog: tapworks_catalog
+      catalog: tapworks_catalog_gw
