@@ -119,12 +119,12 @@ def generate_pipeline_config(
         if not has_gateway_catalog:
             if global_gateway_id == 1:
                 print("Warning: 'gateway_catalog' column not found. Using target_catalog as default")
-            df.loc[db_indices, 'gateway_catalog'] = df.loc[db_indices, 'target_catalog']
+            df.loc[db_indices, 'gateway_catalog'] = df.loc[db_indices, 'target_catalog'].values
         else:
             group_gateway_catalog = db_group.iloc[0]['gateway_catalog']
             # If value is null/empty, use target_catalog as default
             if pd.isna(group_gateway_catalog) or group_gateway_catalog == '':
-                df.loc[db_indices, 'gateway_catalog'] = df.loc[db_indices, 'target_catalog']
+                df.loc[db_indices, 'gateway_catalog'] = df.loc[db_indices, 'target_catalog'].values
             else:
                 df.loc[db_indices, 'gateway_catalog'] = group_gateway_catalog
 
@@ -132,12 +132,12 @@ def generate_pipeline_config(
         if not has_gateway_schema:
             if global_gateway_id == 1:
                 print("Warning: 'gateway_schema' column not found. Using target_schema as default")
-            df.loc[db_indices, 'gateway_schema'] = df.loc[db_indices, 'target_schema']
+            df.loc[db_indices, 'gateway_schema'] = df.loc[db_indices, 'target_schema'].values
         else:
             group_gateway_schema = db_group.iloc[0]['gateway_schema']
             # If value is null/empty, use target_schema as default
             if pd.isna(group_gateway_schema) or group_gateway_schema == '':
-                df.loc[db_indices, 'gateway_schema'] = df.loc[db_indices, 'target_schema']
+                df.loc[db_indices, 'gateway_schema'] = df.loc[db_indices, 'target_schema'].values
             else:
                 df.loc[db_indices, 'gateway_schema'] = group_gateway_schema
 
