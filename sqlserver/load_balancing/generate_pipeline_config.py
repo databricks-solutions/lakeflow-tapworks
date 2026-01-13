@@ -187,6 +187,17 @@ def generate_pipeline_config(
                 print(f"    Created pipeline_group {global_pipeline_group_id} with {len(group_indices)} tables")
                 global_pipeline_group_id += 1
 
+    # Debug: Print connection_name values before creating output
+    print("\n" + "="*60)
+    print("DEBUG: connection_name values by gateway")
+    print("="*60)
+    for gateway_id in sorted(df['gateway'].unique()):
+        gateway_rows = df[df['gateway'] == gateway_id]
+        print(f"Gateway {gateway_id}:")
+        print(f"  connection_name values: {gateway_rows['connection_name'].unique()}")
+        print(f"  First row connection_name: {gateway_rows.iloc[0]['connection_name']}")
+    print("="*60)
+
     # Reorder columns to match expected output format
     output_columns = ['source_database', 'source_schema', 'source_table_name',
                      'target_catalog', 'target_schema', 'target_table_name',
