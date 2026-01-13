@@ -5,7 +5,9 @@ def generate_pipeline_config(
     df: pd.DataFrame,
     max_tables_per_group: int = 1000,
     default_connection_name: str = "conn_1",
-    default_schedule: str = "*/15 * * * *"
+    default_schedule: str = "*/15 * * * *",
+    default_gateway_worker_type: str = None,
+    default_gateway_driver_type: str = None
 ):
     """
     Generate pipeline configuration from a list of source tables.
@@ -24,14 +26,23 @@ def generate_pipeline_config(
             - target_schema: Target Databricks schema
             - target_table_name: Target table name
             - priority_flag: 1 for priority tables, 0 for normal tables (optional)
+            - connection_name: Databricks connection name (optional, will use default if not present)
+            - gateway_catalog: Catalog for gateway storage (optional, defaults to target_catalog)
+            - gateway_schema: Schema for gateway storage (optional, defaults to target_schema)
+            - gateway_worker_type: Worker node type (optional, defaults to None for serverless)
+            - gateway_driver_type: Driver node type (optional, defaults to None for serverless)
         max_tables_per_group (int): Maximum tables per pipeline group (default: 1000)
-        default_connection_name (str): Default connection name (default: "conn_1")
+        default_connection_name (str): Default connection name if not in CSV (default: "conn_1")
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
+        default_gateway_worker_type (str): Default worker node type if not in CSV (default: None)
+        default_gateway_driver_type (str): Default driver node type if not in CSV (default: None)
 
     Returns:
         pd.DataFrame: The generated configuration dataframe with additional columns:
-            - gateway_catalog: Catalog for gateway storage (defaults to target_catalog if not in input)
-            - gateway_schema: Schema for gateway storage (defaults to target_schema if not in input)
+            - gateway_catalog: Catalog for gateway storage
+            - gateway_schema: Schema for gateway storage
+            - gateway_worker_type: Worker node type for cluster
+            - gateway_driver_type: Driver node type for cluster
             - pipeline_group: Pipeline group identifier
             - gateway: Gateway identifier
             - connection_name: Databricks connection name
@@ -52,6 +63,11 @@ def generate_pipeline_config(
         print("Warning: 'priority_flag' column not found. Setting all tables to priority_flag=0")
         df['priority_flag'] = 0
 
+    # Add connection_name column if not present
+    if 'connection_name' not in df.columns:
+        print(f"Warning: 'connection_name' column not found. Using default: {default_connection_name}")
+        df['connection_name'] = default_connection_name
+
     # Add gateway_catalog column if not present (default to target_catalog)
     if 'gateway_catalog' not in df.columns:
         print("Warning: 'gateway_catalog' column not found. Using target_catalog as default")
@@ -62,10 +78,21 @@ def generate_pipeline_config(
         print("Warning: 'gateway_schema' column not found. Using target_schema as default")
         df['gateway_schema'] = df['target_schema']
 
+    # Add gateway_worker_type column if not present
+    if 'gateway_worker_type' not in df.columns:
+        if default_gateway_worker_type:
+            print(f"Warning: 'gateway_worker_type' column not found. Using default: {default_gateway_worker_type}")
+        df['gateway_worker_type'] = default_gateway_worker_type
+
+    # Add gateway_driver_type column if not present
+    if 'gateway_driver_type' not in df.columns:
+        if default_gateway_driver_type:
+            print(f"Warning: 'gateway_driver_type' column not found. Using default: {default_gateway_driver_type}")
+        df['gateway_driver_type'] = default_gateway_driver_type
+
     # Initialize new columns
     df['pipeline_group'] = 0
     df['gateway'] = 0
-    df['connection_name'] = default_connection_name
     df['schedule'] = default_schedule
 
     # Track global gateway and pipeline group counters
@@ -120,6 +147,7 @@ def generate_pipeline_config(
     output_columns = ['source_database', 'source_schema', 'source_table_name',
                      'target_catalog', 'target_schema', 'target_table_name',
                      'gateway_catalog', 'gateway_schema',
+                     'gateway_worker_type', 'gateway_driver_type',
                      'pipeline_group', 'gateway', 'connection_name', 'schedule']
     df_output = df[output_columns]
 
@@ -150,11 +178,15 @@ if __name__ == "__main__":
     input_df = pd.read_csv('examples/example_config.csv')
 
     # Generate pipeline configuration
+    # Note: CSV can contain connection_name, gateway_catalog, gateway_schema,
+    #       gateway_worker_type, gateway_driver_type per row
     output_df = generate_pipeline_config(
         df=input_df,
         max_tables_per_group=1000,
         default_connection_name='conn_1',
-        default_schedule='*/15 * * * *'
+        default_schedule='*/15 * * * *',
+        default_gateway_worker_type=None,      # None for serverless
+        default_gateway_driver_type=None       # None for serverless
     )
 
     # Write output to CSV

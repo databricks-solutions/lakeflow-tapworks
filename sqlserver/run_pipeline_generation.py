@@ -20,11 +20,11 @@ def run_complete_pipeline_generation(
     output_dir: str,
     workspace_host: str,
     root_path: str,
-    default_connection_name: str,
+    default_connection_name: str = "conn_1",
     max_tables_per_group: int = 250,
     default_schedule: str = "*/15 * * * *",
-    worker_type: str = None,
-    driver_type: str = None
+    default_gateway_worker_type: str = None,
+    default_gateway_driver_type: str = None
 ):
     """
     Complete pipeline generation process from source table list to YAML files.
@@ -35,18 +35,20 @@ def run_complete_pipeline_generation(
         output_dir (str): Output directory for DAB project
         workspace_host (str): Workspace host URL
         root_path (str): Root path for bundle deployment
-        default_connection_name (str): Default connection name
+        default_connection_name (str): Default connection name if not in CSV (default: "conn_1")
         max_tables_per_group (int): Maximum tables per pipeline group (default: 250)
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
-        worker_type (str): Worker node type (optional)
-        driver_type (str): Driver node type (optional)
+        default_gateway_worker_type (str): Default worker node type if not in CSV (default: None)
+        default_gateway_driver_type (str): Default driver node type if not in CSV (default: None)
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
 
     Note:
-        - gateway_catalog and gateway_schema are read from the input CSV
-        - If not present in CSV, they default to target_catalog and target_schema
+        - All gateway settings are read from the input CSV:
+          connection_name, gateway_catalog, gateway_schema, gateway_worker_type, gateway_driver_type
+        - If not present in CSV, defaults are used
+        - Settings can vary per source_database group
     """
     print("="*80)
     print("STARTING COMPLETE PIPELINE GENERATION PROCESS")
@@ -60,14 +62,16 @@ def run_complete_pipeline_generation(
     # Step 2: Generate pipeline configuration (load balancing)
     print(f"\n[Step 2/3] Generating pipeline configuration with load balancing")
     print(f"  - Max tables per group: {max_tables_per_group}")
-    print(f"  - Connection name: {default_connection_name}")
-    print(f"  - Schedule: {default_schedule}")
+    print(f"  - Default connection name: {default_connection_name}")
+    print(f"  - Default schedule: {default_schedule}")
 
     pipeline_config_df = generate_pipeline_config(
         df=input_df,
         max_tables_per_group=max_tables_per_group,
         default_connection_name=default_connection_name,
-        default_schedule=default_schedule
+        default_schedule=default_schedule,
+        default_gateway_worker_type=default_gateway_worker_type,
+        default_gateway_driver_type=default_gateway_driver_type
     )
 
     # Step 3: Generate YAML files
@@ -79,8 +83,6 @@ def run_complete_pipeline_generation(
     generate_yaml_files(
         df=pipeline_config_df,
         project_name=project_name,
-        worker_type=worker_type,
-        driver_type=driver_type,
         output_dir=output_dir,
         workspace_host=workspace_host,
         root_path=root_path
@@ -104,7 +106,8 @@ def run_complete_pipeline_generation(
 
 if __name__ == "__main__":
     # Example usage - modify these parameters as needed
-    # Note: This example is incomplete - workspace_host and root_path are required
+    # Note: workspace_host and root_path are required
+    # Note: CSV should contain connection_name, gateway_catalog, gateway_schema, etc.
 
     result_df = run_complete_pipeline_generation(
         input_csv='load_balancing/examples/example_config.csv',
@@ -112,8 +115,8 @@ if __name__ == "__main__":
         max_tables_per_group=1000,
         default_connection_name='conn_1',
         default_schedule='*/15 * * * *',
-        # worker_type='m5d.large',          # Optional: specify if needed
-        # driver_type='c5a.8xlarge', # Optional: specify if needed
+        # default_gateway_worker_type='m5d.large',    # Optional: specify if not in CSV
+        # default_gateway_driver_type='c5a.8xlarge',  # Optional: specify if not in CSV
         output_dir='dab_project',
         workspace_host='https://your-workspace.cloud.databricks.com',
         root_path='/Users/your-email/.bundle/${bundle.name}/${bundle.target}'
