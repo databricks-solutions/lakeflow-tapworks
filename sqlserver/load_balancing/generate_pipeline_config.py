@@ -63,33 +63,6 @@ def generate_pipeline_config(
         print("Warning: 'priority_flag' column not found. Setting all tables to priority_flag=0")
         df['priority_flag'] = 0
 
-    # Add connection_name column if not present
-    if 'connection_name' not in df.columns:
-        print(f"Warning: 'connection_name' column not found. Using default: {default_connection_name}")
-        df['connection_name'] = default_connection_name
-
-    # Add gateway_catalog column if not present (default to target_catalog)
-    if 'gateway_catalog' not in df.columns:
-        print("Warning: 'gateway_catalog' column not found. Using target_catalog as default")
-        df['gateway_catalog'] = df['target_catalog']
-
-    # Add gateway_schema column if not present (default to target_schema)
-    if 'gateway_schema' not in df.columns:
-        print("Warning: 'gateway_schema' column not found. Using target_schema as default")
-        df['gateway_schema'] = df['target_schema']
-
-    # Add gateway_worker_type column if not present
-    if 'gateway_worker_type' not in df.columns:
-        if default_gateway_worker_type:
-            print(f"Warning: 'gateway_worker_type' column not found. Using default: {default_gateway_worker_type}")
-        df['gateway_worker_type'] = default_gateway_worker_type
-
-    # Add gateway_driver_type column if not present
-    if 'gateway_driver_type' not in df.columns:
-        if default_gateway_driver_type:
-            print(f"Warning: 'gateway_driver_type' column not found. Using default: {default_gateway_driver_type}")
-        df['gateway_driver_type'] = default_gateway_driver_type
-
     # Initialize new columns
     df['pipeline_group'] = 0
     df['gateway'] = 0
@@ -102,6 +75,58 @@ def generate_pipeline_config(
     # Group by source_database to ensure each database gets its own pipeline/gateway
     for source_db, db_group in df.groupby('source_database'):
         print(f"\nProcessing database: {source_db} ({len(db_group)} tables)")
+
+        # Get indices for this database group
+        db_indices = db_group.index
+
+        # For each gateway configuration column, use the first row's value for this group
+        # or fill with defaults if column doesn't exist
+
+        # Connection name
+        if 'connection_name' not in df.columns:
+            if global_gateway_id == 1:  # Only print warning once
+                print(f"Warning: 'connection_name' column not found. Using default: {default_connection_name}")
+            df.loc[db_indices, 'connection_name'] = default_connection_name
+        else:
+            # Use first row's value for this source_database group
+            group_connection = db_group.iloc[0]['connection_name']
+            df.loc[db_indices, 'connection_name'] = group_connection
+
+        # Gateway catalog
+        if 'gateway_catalog' not in df.columns:
+            if global_gateway_id == 1:
+                print("Warning: 'gateway_catalog' column not found. Using target_catalog as default")
+            df.loc[db_indices, 'gateway_catalog'] = df.loc[db_indices, 'target_catalog']
+        else:
+            group_gateway_catalog = db_group.iloc[0]['gateway_catalog']
+            df.loc[db_indices, 'gateway_catalog'] = group_gateway_catalog
+
+        # Gateway schema
+        if 'gateway_schema' not in df.columns:
+            if global_gateway_id == 1:
+                print("Warning: 'gateway_schema' column not found. Using target_schema as default")
+            df.loc[db_indices, 'gateway_schema'] = df.loc[db_indices, 'target_schema']
+        else:
+            group_gateway_schema = db_group.iloc[0]['gateway_schema']
+            df.loc[db_indices, 'gateway_schema'] = group_gateway_schema
+
+        # Gateway worker type
+        if 'gateway_worker_type' not in df.columns:
+            if global_gateway_id == 1 and default_gateway_worker_type:
+                print(f"Warning: 'gateway_worker_type' column not found. Using default: {default_gateway_worker_type}")
+            df.loc[db_indices, 'gateway_worker_type'] = default_gateway_worker_type
+        else:
+            group_worker_type = db_group.iloc[0]['gateway_worker_type']
+            df.loc[db_indices, 'gateway_worker_type'] = group_worker_type
+
+        # Gateway driver type
+        if 'gateway_driver_type' not in df.columns:
+            if global_gateway_id == 1 and default_gateway_driver_type:
+                print(f"Warning: 'gateway_driver_type' column not found. Using default: {default_gateway_driver_type}")
+            df.loc[db_indices, 'gateway_driver_type'] = default_gateway_driver_type
+        else:
+            group_driver_type = db_group.iloc[0]['gateway_driver_type']
+            df.loc[db_indices, 'gateway_driver_type'] = group_driver_type
 
         # Assign gateway ID for this database
         gateway_id = global_gateway_id
