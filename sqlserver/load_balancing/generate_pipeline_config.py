@@ -1,13 +1,12 @@
 import pandas as pd
 
-
 def generate_pipeline_config(
     df: pd.DataFrame,
-    default_connection_name: str,
-    default_gateway_worker_type: str,
-    default_gateway_driver_type: str,
     max_tables_per_group: int = 250,
-    default_schedule: str = "*/15 * * * *"
+    default_connection_name: str,
+    default_schedule: str = "*/15 * * * *",
+    default_gateway_worker_type: str,
+    default_gateway_driver_type: str
 ):
     """
     Generate pipeline configuration from a list of source tables.
@@ -31,11 +30,11 @@ def generate_pipeline_config(
             - gateway_schema: Schema for gateway storage (optional, defaults to target_schema)
             - gateway_worker_type: Worker node type (optional, defaults to None for serverless)
             - gateway_driver_type: Driver node type (optional, defaults to None for serverless)
-        default_connection_name (str): Default connection name if not in CSV
-        default_gateway_worker_type (str): Default worker node type if not in CSV (None for serverless)
-        default_gateway_driver_type (str): Default driver node type if not in CSV (None for serverless)
-        max_tables_per_group (int): Maximum tables per pipeline group (default: 250)
+        max_tables_per_group (int): Maximum tables per pipeline group (default: 1000)
+        default_connection_name (str): Default connection name if not in CSV (default: "conn_1")
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
+        default_gateway_worker_type (str): Default worker node type if not in CSV (default: None)
+        default_gateway_driver_type (str): Default driver node type if not in CSV (default: None)
 
     Returns:
         pd.DataFrame: The generated configuration dataframe with additional columns:
@@ -207,11 +206,11 @@ if __name__ == "__main__":
     #       gateway_worker_type, gateway_driver_type per row
     output_df = generate_pipeline_config(
         df=input_df,
-        default_connection_name='conn_1',
-        default_gateway_worker_type=None,      # None for serverless
-        default_gateway_driver_type=None,      # None for serverless
         max_tables_per_group=1000,
-        default_schedule='*/15 * * * *'
+        default_connection_name='conn_1',
+        default_schedule='*/15 * * * *',
+        default_gateway_worker_type=None,      # None for serverless
+        default_gateway_driver_type=None       # None for serverless
     )
 
     # Write output to CSV
