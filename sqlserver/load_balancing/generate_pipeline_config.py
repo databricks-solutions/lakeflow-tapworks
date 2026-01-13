@@ -3,11 +3,11 @@ import pandas as pd
 
 def generate_pipeline_config(
     df: pd.DataFrame,
-    max_tables_per_group: int = 1000,
-    default_connection_name: str = "conn_1",
+    max_tables_per_group: int = 250,
+    default_connection_name: str,
     default_schedule: str = "*/15 * * * *",
-    default_gateway_worker_type: str = None,
-    default_gateway_driver_type: str = None
+    default_gateway_worker_type: str,
+    default_gateway_driver_type: str
 ):
     """
     Generate pipeline configuration from a list of source tables.
