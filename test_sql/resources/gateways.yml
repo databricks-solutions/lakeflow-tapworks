@@ -3,10 +3,38 @@ resources:
     tapworks_project_pipeline_tapworks_project_gateway_1:
       name: tapworks_project_gateway_1
       gateway_definition:
-        connection_name: tapworks_sql_connection
+        connection_name: sqlserver_conn_1
         gateway_storage_catalog: tapworks_catalog_gw
         gateway_storage_schema: tapworks_gw
         gateway_storage_name: tapworks_project_gateway_1
       schema: tapworks_gw
       continuous: true
       catalog: tapworks_catalog_gw
+      clusters:
+      - num_workers: 1
+        node_type_id: m5d.large
+        driver_node_type_id: c5a.8xlarge
+    tapworks_project_pipeline_tapworks_project_gateway_2:
+      name: tapworks_project_gateway_2
+      gateway_definition:
+        connection_name: sqlserver_conn_2
+        gateway_storage_catalog: bronze_catalog_gw
+        gateway_storage_schema: sales_gw
+        gateway_storage_name: tapworks_project_gateway_2
+      schema: sales_gw
+      continuous: true
+      catalog: bronze_catalog_gw
+      clusters:
+      - num_workers: 1
+        node_type_id: c5a.xlarge
+        driver_node_type_id: c5a.2xlarge
+    tapworks_project_pipeline_tapworks_project_gateway_3:
+      name: tapworks_project_gateway_3
+      gateway_definition:
+        connection_name: sqlserver_conn_3
+        gateway_storage_catalog: silver_catalog_gw
+        gateway_storage_schema: logs_gw
+        gateway_storage_name: tapworks_project_gateway_3
+      schema: logs_gw
+      continuous: true
+      catalog: silver_catalog_gw
