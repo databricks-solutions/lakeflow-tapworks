@@ -102,17 +102,22 @@ def generate_pipeline_config(
         # Use defaults if: column doesn't exist OR value is null/empty
 
         # Connection name
-        group_connection = db_group.iloc[0].get('connection_name') if has_connection_name else None
-        if pd.isna(group_connection) or group_connection == '' or group_connection is None:
+        group_connection = db_group.iloc[0].get('connection_name')
+        if group_connection == '' or group_connection is None:
             if global_gateway_id == 1 and not has_connection_name:
                 print(f"Warning: 'connection_name' column not found. Using default: {default_connection_name}")
-            df.loc[db_indices, 'connection_name'] = default_connection_name
+            # df.loc[db_indices, 'connection_name'] = default_connection_name
+            df.loc[db_indices, 'connection_name'] = 'testing'
+
         else:
-            df.loc[db_indices, 'connection_name'] = group_connection
+            # df.loc[db_indices, 'connection_name'] = group_connection
+            df.loc[db_indices, 'connection_name'] = 'testing'
+
+        df.loc[db_indices, 'connection_name'] = 'testing'
 
         # Gateway catalog
-        group_gateway_catalog = db_group.iloc[0].get('gateway_catalog') if has_gateway_catalog else None
-        if pd.isna(group_gateway_catalog) or group_gateway_catalog == '' or group_gateway_catalog is None:
+        group_gateway_catalog = db_group.iloc[0].get('gateway_catalog') 
+        if group_gateway_catalog == '' or group_gateway_catalog is None:
             if global_gateway_id == 1 and not has_gateway_catalog:
                 print("Warning: 'gateway_catalog' column not found. Using target_catalog as default")
             df.loc[db_indices, 'gateway_catalog'] = df.loc[db_indices, 'target_catalog'].values
@@ -120,8 +125,8 @@ def generate_pipeline_config(
             df.loc[db_indices, 'gateway_catalog'] = group_gateway_catalog
 
         # Gateway schema
-        group_gateway_schema = db_group.iloc[0].get('gateway_schema') if has_gateway_schema else None
-        if pd.isna(group_gateway_schema) or group_gateway_schema == '' or group_gateway_schema is None:
+        group_gateway_schema = db_group.iloc[0].get('gateway_schema') 
+        if group_gateway_schema == '' or group_gateway_schema is None:
             if global_gateway_id == 1 and not has_gateway_schema:
                 print("Warning: 'gateway_schema' column not found. Using target_schema as default")
             df.loc[db_indices, 'gateway_schema'] = df.loc[db_indices, 'target_schema'].values
@@ -129,8 +134,8 @@ def generate_pipeline_config(
             df.loc[db_indices, 'gateway_schema'] = group_gateway_schema
 
         # Gateway worker type
-        group_worker_type = db_group.iloc[0].get('gateway_worker_type') if has_gateway_worker_type else None
-        if pd.isna(group_worker_type) or group_worker_type == '' or group_worker_type is None:
+        group_worker_type = db_group.iloc[0].get('gateway_worker_type') 
+        if group_worker_type == '' or group_worker_type is None:
             if global_gateway_id == 1 and not has_gateway_worker_type and default_gateway_worker_type:
                 print(f"Warning: 'gateway_worker_type' column not found. Using default: {default_gateway_worker_type}")
             df.loc[db_indices, 'gateway_worker_type'] = default_gateway_worker_type
@@ -138,8 +143,8 @@ def generate_pipeline_config(
             df.loc[db_indices, 'gateway_worker_type'] = group_worker_type
 
         # Gateway driver type
-        group_driver_type = db_group.iloc[0].get('gateway_driver_type') if has_gateway_driver_type else None
-        if pd.isna(group_driver_type) or group_driver_type == '' or group_driver_type is None:
+        group_driver_type = db_group.iloc[0].get('gateway_driver_type') 
+        if group_driver_type == '' or group_driver_type is None:
             if global_gateway_id == 1 and not has_gateway_driver_type and default_gateway_driver_type:
                 print(f"Warning: 'gateway_driver_type' column not found. Using default: {default_gateway_driver_type}")
             df.loc[db_indices, 'gateway_driver_type'] = default_gateway_driver_type
