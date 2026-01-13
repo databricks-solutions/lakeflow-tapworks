@@ -8,7 +8,6 @@ This script demonstrates the complete two-part process:
 
 import pandas as pd
 import os
-from databricks.sdk import WorkspaceClient
 
 # Import from local modules
 from load_balancing.generate_pipeline_config import generate_pipeline_config
