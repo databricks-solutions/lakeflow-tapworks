@@ -27,7 +27,7 @@ def create_gateways(df, project_name, worker_type, driver_type):
                 'gateway_storage_schema': gateway_schema,
                 'gateway_storage_name': gateway_name,
             },
-            'target': gateway_schema,
+            'schema': gateway_schema,
             'continuous': True,
             'catalog': gateway_catalog
         }
