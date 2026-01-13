@@ -23,8 +23,8 @@ def run_complete_pipeline_generation(
     default_connection_name: str,
     max_tables_per_group: int = 250,
     default_schedule: str = "*/15 * * * *",
-    node_type_id: str = None,
-    driver_node_type_id: str = None
+    worker_type: str = None,
+    driver_type: str = None
 ):
     """
     Complete pipeline generation process from source table list to YAML files.
@@ -38,8 +38,8 @@ def run_complete_pipeline_generation(
         default_connection_name (str): Default connection name
         max_tables_per_group (int): Maximum tables per pipeline group (default: 250)
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
-        node_type_id (str): Worker node type (optional)
-        driver_node_type_id (str): Driver node type (optional)
+        worker_type (str): Worker node type (optional)
+        driver_type (str): Driver node type (optional)
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
@@ -79,8 +79,8 @@ def run_complete_pipeline_generation(
     generate_yaml_files(
         df=pipeline_config_df,
         project_name=project_name,
-        node_type_id=node_type_id,
-        driver_node_type_id=driver_node_type_id,
+        worker_type=worker_type,
+        driver_type=driver_type,
         output_dir=output_dir,
         workspace_host=workspace_host,
         root_path=root_path
@@ -112,8 +112,8 @@ if __name__ == "__main__":
         max_tables_per_group=1000,
         default_connection_name='conn_1',
         default_schedule='*/15 * * * *',
-        # node_type_id='m5d.large',          # Optional: specify if needed
-        # driver_node_type_id='c5a.8xlarge', # Optional: specify if needed
+        # worker_type='m5d.large',          # Optional: specify if needed
+        # driver_type='c5a.8xlarge', # Optional: specify if needed
         output_dir='dab_project',
         workspace_host='https://your-workspace.cloud.databricks.com',
         root_path='/Users/your-email/.bundle/${bundle.name}/${bundle.target}'
