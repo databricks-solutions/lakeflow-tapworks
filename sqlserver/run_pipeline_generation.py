@@ -67,11 +67,11 @@ def run_complete_pipeline_generation(
 
     pipeline_config_df = generate_pipeline_config(
         df=input_df,
-        max_tables_per_group=max_tables_per_group,
         default_connection_name=default_connection_name,
-        default_schedule=default_schedule,
         default_gateway_worker_type=default_gateway_worker_type,
-        default_gateway_driver_type=default_gateway_driver_type
+        default_gateway_driver_type=default_gateway_driver_type,
+        max_tables_per_group=max_tables_per_group,
+        default_schedule=default_schedule
     )
 
     # Step 3: Generate YAML files
