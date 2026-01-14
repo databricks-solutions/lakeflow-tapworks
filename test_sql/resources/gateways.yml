@@ -12,5 +12,5 @@ resources:
       catalog: tapworks_catalog
       clusters:
       - num_workers: 1
-        node_type_id: m5d.large
-        driver_node_type_id: c5a.8xlarge
+        node_type_id: .nan
+        driver_node_type_id: .nan
