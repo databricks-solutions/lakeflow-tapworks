@@ -3,6 +3,35 @@ import pandas as pd
 import os
 
 
+def convert_to_quartz_cron(cron_expression):
+    """Convert standard 5-field cron to Quartz 6-field format.
+
+    Standard cron format: minute hour day_of_month month day_of_week
+    Quartz format: second minute hour day_of_month month day_of_week
+
+    In Quartz, one of day_of_month or day_of_week must be '?' instead of '*'.
+    This function replaces the last field (day_of_week) with '?' if it's '*'.
+
+    Args:
+        cron_expression (str): Standard cron expression (5 fields)
+                               Example: "*/15 * * * *"
+
+    Returns:
+        str: Quartz cron expression (6 fields)
+             Example: "0 */15 * * * ?"
+    """
+    fields = cron_expression.strip().split()
+    if len(fields) == 5:
+        # Replace day_of_week (last field) with '?' if it's '*'
+        if fields[4] == '*':
+            fields[4] = '?'
+        # Prepend seconds field
+        return f"0 {' '.join(fields)}"
+    else:
+        # If already in different format, just prepend 0
+        return f"0 {cron_expression}"
+
+
 def create_gateways(df, project_name):
     """Create gateway YAML configuration from dataframe.
 
@@ -37,12 +66,16 @@ def create_gateways(df, project_name):
         }
 
         # Add cluster configuration if node types are provided
-        # If both are None/empty, use serverless (no cluster config)
-        if worker_type or driver_type:
+        # If both are None/empty/NaN, use serverless (no cluster config)
+        # Check for valid non-NaN values using pd.notna()
+        has_worker_type = pd.notna(worker_type) and worker_type != '' and worker_type is not None
+        has_driver_type = pd.notna(driver_type) and driver_type != '' and driver_type is not None
+
+        if has_worker_type or has_driver_type:
             cluster_config = {'num_workers': 1}
-            if worker_type:
+            if has_worker_type:
                 cluster_config['node_type_id'] = worker_type
-            if driver_type:
+            if has_driver_type:
                 cluster_config['driver_node_type_id'] = driver_type
             gateway_config['clusters'] = [cluster_config]
 
@@ -66,7 +99,8 @@ def create_pipelines(df, project_name):
                 'source_schema': row['source_schema'],
                 'source_table': row['source_table_name'],
                 'destination_catalog': row['target_catalog'],
-                'destination_schema': row['target_schema']
+                'destination_schema': row['target_schema'],
+                'destination_table': row['target_table_name']
             }
         } for _, row in group_df.iterrows()]
 
@@ -82,6 +116,45 @@ def create_pipelines(df, project_name):
         }
 
     return {'resources': {'pipelines': pipelines}}
+
+
+def create_jobs(df, project_name):
+    """Create job YAML configuration from dataframe.
+
+    Creates a scheduled job for each pipeline that triggers the pipeline on a cron schedule.
+
+    Args:
+        df (pd.DataFrame): Input dataframe containing pipeline_group and schedule columns
+        project_name (str): Project name prefix for all resources
+
+    Returns:
+        dict: Jobs YAML structure
+    """
+    jobs = {}
+
+    for pipeline_group, group_df in df.groupby('pipeline_group'):
+        schedule = group_df.iloc[0]['schedule']
+        job_name = f"job_{project_name}_ingestion_{pipeline_group}"
+        pipeline_resource_name = f"{project_name}_pipeline_ingestion_{pipeline_group}"
+
+        # Convert standard cron to Quartz format
+        quartz_cron = convert_to_quartz_cron(schedule)
+
+        jobs[job_name] = {
+            'name': f"{project_name} Pipeline Scheduler - {pipeline_group}",
+            'schedule': {
+                'quartz_cron_expression': quartz_cron,
+                'timezone_id': 'UTC'
+            },
+            'tasks': [{
+                'task_key': f'run_{project_name}_pipeline',
+                'pipeline_task': {
+                    'pipeline_id': f"${{resources.pipelines.{pipeline_resource_name}.id}}"
+                }
+            }]
+        }
+
+    return {'resources': {'jobs': jobs}}
 
 
 def create_databricks_yml(project_name, workspace_host, root_path):
@@ -151,12 +224,14 @@ def generate_yaml_files(df, project_name, output_dir, workspace_host, root_path)
     # Generate YAML content
     gateways_yaml = create_gateways(df, project_name)
     pipelines_yaml = create_pipelines(df, project_name)
+    jobs_yaml = create_jobs(df, project_name)
     databricks_yaml = create_databricks_yml(project_name, workspace_host, root_path)
 
     # Define output paths
     databricks_yml_path = os.path.join(output_dir, 'databricks.yml')
     gateway_yml_path = os.path.join(resources_dir, 'gateways.yml')
     pipeline_yml_path = os.path.join(resources_dir, 'pipelines.yml')
+    jobs_yml_path = os.path.join(resources_dir, 'jobs.yml')
 
     # Write databricks.yml
     with open(databricks_yml_path, 'w') as f:
@@ -170,10 +245,15 @@ def generate_yaml_files(df, project_name, output_dir, workspace_host, root_path)
     with open(pipeline_yml_path, 'w') as f:
         yaml.dump(pipelines_yaml, f, default_flow_style=False, sort_keys=False)
 
+    # Write job resources
+    with open(jobs_yml_path, 'w') as f:
+        yaml.dump(jobs_yaml, f, default_flow_style=False, sort_keys=False)
+
     print(f"Generated DAB project structure in: {output_dir}")
     print(f"  - {databricks_yml_path}")
     print(f"  - {gateway_yml_path}")
     print(f"  - {pipeline_yml_path}")
+    print(f"  - {jobs_yml_path}")
 
 
 if __name__ == "__main__":
