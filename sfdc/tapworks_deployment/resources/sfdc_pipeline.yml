@@ -1,14 +1,7 @@
-variables:
-  dest_catalog:
-    default: main
-  dest_schema:
-    default: sfdc_test
-  sfdc_connection_name:
-    default: sfdc-pravin-dabs
 resources:
   pipelines:
-    pipeline_sfdc_business_unit1_1:
-      name: SFDC Ingestion - business_unit1_1
+    pipeline_sfdc_tapworks_business_unit1_1:
+      name: SFDC Ingestion - tapworks_business_unit1_1
       catalog: ${var.dest_catalog}
       ingestion_definition:
         connection_name: ${var.sfdc_connection_name}
@@ -26,6 +19,8 @@ resources:
               - Type
               - Industry
               - AnnualRevenue
+              - SystemModstamp
+              - IsDeleted
         - table:
             source_schema: objects
             source_table: Contact
@@ -38,8 +33,8 @@ resources:
             destination_catalog: ${var.dest_catalog}
             destination_schema: ${var.dest_schema}
             destination_table: Campaign
-    pipeline_sfdc_business_unit1_2:
-      name: SFDC Ingestion - business_unit1_2
+    pipeline_sfdc_tapworks_business_unit1_2:
+      name: SFDC Ingestion - tapworks_business_unit1_2
       catalog: ${var.dest_catalog}
       ingestion_definition:
         connection_name: ${var.sfdc_connection_name}
@@ -53,9 +48,8 @@ resources:
             table_configuration:
               exclude_columns:
               - Description
-              - SystemModstamp
-    pipeline_sfdc_business_unit2_1:
-      name: SFDC Ingestion - business_unit2_1
+    pipeline_sfdc_tapworks_business_unit2_1:
+      name: SFDC Ingestion - tapworks_business_unit2_1
       catalog: ${var.dest_catalog}
       ingestion_definition:
         connection_name: ${var.sfdc_connection_name}
@@ -72,20 +66,8 @@ resources:
             destination_catalog: ${var.dest_catalog}
             destination_schema: ${var.dest_schema}
             destination_table: Case
-    pipeline_sfdc_business_unit2_2:
-      name: SFDC Ingestion - business_unit2_2
-      catalog: ${var.dest_catalog}
-      ingestion_definition:
-        connection_name: ${var.sfdc_connection_name}
-        objects:
-        - table:
-            source_schema: objects
-            source_table: CustomObject__c
-            destination_catalog: ${var.dest_catalog}
-            destination_schema: ${var.dest_schema}
-            destination_table: CustomObject
-    pipeline_sfdc_business_unit3_1:
-      name: SFDC Ingestion - business_unit3_1
+    pipeline_sfdc_tapworks_business_unit3_1:
+      name: SFDC Ingestion - tapworks_business_unit3_1
       catalog: ${var.dest_catalog}
       ingestion_definition:
         connection_name: ${var.sfdc_connection_name}
@@ -103,48 +85,39 @@ resources:
             destination_schema: ${var.dest_schema}
             destination_table: Event
   jobs:
-    job_sfdc_business_unit1_1:
-      name: SFDC Pipeline Scheduler - business_unit1_1
+    job_sfdc_tapworks_business_unit1_1:
+      name: SFDC Pipeline Scheduler - tapworks_business_unit1_1
       schedule:
         quartz_cron_expression: 0 */15 * * * ?
         timezone_id: UTC
       tasks:
       - task_key: run_sfdc_pipeline
         pipeline_task:
-          pipeline_id: ${resources.pipelines.pipeline_sfdc_business_unit1_1.id}
-    job_sfdc_business_unit1_2:
-      name: SFDC Pipeline Scheduler - business_unit1_2
+          pipeline_id: ${resources.pipelines.pipeline_sfdc_tapworks_business_unit1_1.id}
+    job_sfdc_tapworks_business_unit1_2:
+      name: SFDC Pipeline Scheduler - tapworks_business_unit1_2
       schedule:
         quartz_cron_expression: 0 */15 * * * ?
         timezone_id: UTC
       tasks:
       - task_key: run_sfdc_pipeline
         pipeline_task:
-          pipeline_id: ${resources.pipelines.pipeline_sfdc_business_unit1_2.id}
-    job_sfdc_business_unit2_1:
-      name: SFDC Pipeline Scheduler - business_unit2_1
+          pipeline_id: ${resources.pipelines.pipeline_sfdc_tapworks_business_unit1_2.id}
+    job_sfdc_tapworks_business_unit2_1:
+      name: SFDC Pipeline Scheduler - tapworks_business_unit2_1
       schedule:
         quartz_cron_expression: 0 */30 * * * ?
         timezone_id: UTC
       tasks:
       - task_key: run_sfdc_pipeline
         pipeline_task:
-          pipeline_id: ${resources.pipelines.pipeline_sfdc_business_unit2_1.id}
-    job_sfdc_business_unit2_2:
-      name: SFDC Pipeline Scheduler - business_unit2_2
-      schedule:
-        quartz_cron_expression: 0 */30 * * * ?
-        timezone_id: UTC
-      tasks:
-      - task_key: run_sfdc_pipeline
-        pipeline_task:
-          pipeline_id: ${resources.pipelines.pipeline_sfdc_business_unit2_2.id}
-    job_sfdc_business_unit3_1:
-      name: SFDC Pipeline Scheduler - business_unit3_1
+          pipeline_id: ${resources.pipelines.pipeline_sfdc_tapworks_business_unit2_1.id}
+    job_sfdc_tapworks_business_unit3_1:
+      name: SFDC Pipeline Scheduler - tapworks_business_unit3_1
       schedule:
         quartz_cron_expression: 0 0 * * * ?
         timezone_id: UTC
       tasks:
       - task_key: run_sfdc_pipeline
         pipeline_task:
-          pipeline_id: ${resources.pipelines.pipeline_sfdc_business_unit3_1.id}
+          pipeline_id: ${resources.pipelines.pipeline_sfdc_tapworks_business_unit3_1.id}
