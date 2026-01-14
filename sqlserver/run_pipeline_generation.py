@@ -105,23 +105,122 @@ def run_complete_pipeline_generation(
 
 
 if __name__ == "__main__":
-    # Example usage - modify these parameters as needed
-    # Note: workspace_host and root_path are required
-    # Note: CSV should contain connection_name, gateway_catalog, gateway_schema, etc.
+    import argparse
 
+    parser = argparse.ArgumentParser(
+        description="Generate SQL Server ingestion pipelines with gateway configuration",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Basic usage with default example
+  python run_pipeline_generation.py \\
+    --input-csv load_balancing/examples/example_config.csv \\
+    --project-name my_project \\
+    --workspace-host https://my-workspace.cloud.databricks.com \\
+    --root-path '/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}'
+
+  # With custom connection and node types
+  python run_pipeline_generation.py \\
+    --input-csv my_config.csv \\
+    --project-name prod_ingestion \\
+    --connection my_sql_conn \\
+    --workspace-host https://workspace.cloud.databricks.com \\
+    --root-path '/Users/user/.bundle/${bundle.name}/${bundle.target}' \\
+    --worker-type m5d.large \\
+    --driver-type c5a.8xlarge
+
+  # With custom output and table limits
+  python run_pipeline_generation.py \\
+    --input-csv my_config.csv \\
+    --project-name my_project \\
+    --workspace-host https://workspace.cloud.databricks.com \\
+    --root-path '/Users/user/.bundle/${bundle.name}/${bundle.target}' \\
+    --output-dir custom_output \\
+    --max-tables 500
+        """
+    )
+
+    # Required arguments
+    parser.add_argument(
+        '--input-csv',
+        type=str,
+        required=True,
+        help='Path to input CSV with source table list (required)'
+    )
+    parser.add_argument(
+        '--project-name',
+        type=str,
+        required=True,
+        help='Project name prefix for all resources (required)'
+    )
+    parser.add_argument(
+        '--workspace-host',
+        type=str,
+        required=True,
+        help='Workspace host URL (required, e.g., https://workspace.cloud.databricks.com)'
+    )
+    parser.add_argument(
+        '--root-path',
+        type=str,
+        required=True,
+        help='Root path for bundle deployment (required, e.g., /Users/user/.bundle/${bundle.name}/${bundle.target})'
+    )
+
+    # Optional arguments
+    parser.add_argument(
+        '--connection',
+        type=str,
+        default='conn_1',
+        help='Default connection name if not in CSV (default: conn_1)'
+    )
+    parser.add_argument(
+        '--max-tables',
+        type=int,
+        default=250,
+        help='Maximum tables per pipeline group (default: 250)'
+    )
+    parser.add_argument(
+        '--schedule',
+        type=str,
+        default='*/15 * * * *',
+        help='Default cron schedule (default: */15 * * * *)'
+    )
+    parser.add_argument(
+        '--worker-type',
+        type=str,
+        default=None,
+        help='Default gateway worker node type if not in CSV (default: None for serverless)'
+    )
+    parser.add_argument(
+        '--driver-type',
+        type=str,
+        default=None,
+        help='Default gateway driver node type if not in CSV (default: None for serverless)'
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=str,
+        default='dab_project',
+        help='Output directory for DAB project (default: dab_project)'
+    )
+
+    args = parser.parse_args()
+
+    # Run the complete pipeline generation
     result_df = run_complete_pipeline_generation(
-        input_csv='load_balancing/examples/example_config.csv',
-        project_name='my_project',
-        max_tables_per_group=1000,
-        default_connection_name='conn_1',
-        default_schedule='*/15 * * * *',
-        # default_gateway_worker_type='m5d.large',    # Optional: specify if not in CSV
-        # default_gateway_driver_type='c5a.8xlarge',  # Optional: specify if not in CSV
-        output_dir='dab_project',
-        workspace_host='https://your-workspace.cloud.databricks.com',
-        root_path='/Users/your-email/.bundle/${bundle.name}/${bundle.target}'
+        input_csv=args.input_csv,
+        project_name=args.project_name,
+        output_dir=args.output_dir,
+        workspace_host=args.workspace_host,
+        root_path=args.root_path,
+        default_connection_name=args.connection,
+        max_tables_per_group=args.max_tables,
+        default_schedule=args.schedule,
+        default_gateway_worker_type=args.worker_type,
+        default_gateway_driver_type=args.driver_type
     )
 
     # Optional: Save the intermediate pipeline configuration for reference
-    result_df.to_csv('deployment/examples/generated_config.csv', index=False)
-    print(f"\n✓ Intermediate configuration saved to: deployment/examples/generated_config.csv")
+    output_csv = os.path.join(args.output_dir, 'generated_config.csv')
+    result_df.to_csv(output_csv, index=False)
+    print(f"\n✓ Intermediate configuration saved to: {output_csv}")
