@@ -10,7 +10,3 @@ resources:
       schema: tapworks
       continuous: true
       catalog: tapworks_catalog
-      clusters:
-      - num_workers: 1
-        node_type_id: .nan
-        driver_node_type_id: .nan
