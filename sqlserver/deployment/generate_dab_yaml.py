@@ -93,6 +93,10 @@ def create_pipelines(df, project_name):
         gateway_id = group_df.iloc[0]['gateway']
         pipeline_name = f"{project_name}_pipeline_ingestion_{pipeline_group}"
 
+        # Get target catalog and schema from first row (all tables in group should have same target)
+        target_catalog = group_df.iloc[0]['target_catalog']
+        target_schema = group_df.iloc[0]['target_schema']
+
         tables = [{
             'table': {
                 'source_catalog': row['source_database'],
@@ -112,7 +116,9 @@ def create_pipelines(df, project_name):
             'ingestion_definition': {
                 'ingestion_gateway_id': f"${{resources.pipelines.{project_name}_pipeline_{project_name}_gateway_{gateway_id}.id}}",
                 'objects': tables
-            }
+            },
+            'schema': target_schema,
+            'catalog': target_catalog
         }
 
     return {'resources': {'pipelines': pipelines}}
