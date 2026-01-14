@@ -66,12 +66,16 @@ def create_gateways(df, project_name):
         }
 
         # Add cluster configuration if node types are provided
-        # If both are None/empty, use serverless (no cluster config)
-        if worker_type or driver_type:
+        # If both are None/empty/NaN, use serverless (no cluster config)
+        # Check for valid non-NaN values using pd.notna()
+        has_worker_type = pd.notna(worker_type) and worker_type != '' and worker_type is not None
+        has_driver_type = pd.notna(driver_type) and driver_type != '' and driver_type is not None
+
+        if has_worker_type or has_driver_type:
             cluster_config = {'num_workers': 1}
-            if worker_type:
+            if has_worker_type:
                 cluster_config['node_type_id'] = worker_type
-            if driver_type:
+            if has_driver_type:
                 cluster_config['driver_node_type_id'] = driver_type
             gateway_config['clusters'] = [cluster_config]
 
