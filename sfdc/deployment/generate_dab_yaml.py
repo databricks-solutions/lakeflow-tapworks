@@ -60,16 +60,72 @@ def convert_cron_to_quartz(cron_expression: str) -> str:
     return quartz_cron
 
 
+def create_databricks_yml(project_name: str, workspace_host: str, default_catalog: str,
+                          default_schema: str, connection_name: str) -> dict:
+    """
+    Create the main databricks.yml file for the SFDC DAB project.
+
+    Args:
+        project_name (str): Project name for the bundle
+        workspace_host (str): Workspace host URL
+        default_catalog (str): Default target catalog for Salesforce data
+        default_schema (str): Default target schema for Salesforce data
+        connection_name (str): Salesforce connection name
+
+    Returns:
+        dict: The databricks.yml structure
+
+    Note:
+        SFDC databricks.yml includes variables at the root level (unlike SQL Server).
+        This allows the same bundle to be deployed to different environments by
+        overriding variables.
+    """
+    return {
+        'bundle': {
+            'name': project_name
+        },
+        'include': [
+            'resources/*.yml'
+        ],
+        'targets': {
+            'dev': {
+                'mode': 'development',
+                'default': True,
+                'workspace': {
+                    'host': workspace_host
+                }
+            }
+        },
+        'variables': {
+            'dest_catalog': {
+                'description': 'Target catalog for Salesforce data',
+                'default': default_catalog
+            },
+            'dest_schema': {
+                'description': 'Target schema for Salesforce data',
+                'default': default_schema
+            },
+            'sfdc_connection_name': {
+                'description': 'Salesforce connection name in Databricks',
+                'default': connection_name
+            }
+        }
+    }
+
+
 def generate_yaml_files(
     df: pd.DataFrame,
     connection_name: str,
-    output_path: str = "resources/sfdc_pipeline.yml"
+    project_name: str = "sfdc_ingestion",
+    workspace_host: str = None,
+    output_dir: str = "dab_deployment"
 ) -> None:
     """
-    Generate Databricks Asset Bundle YAML for Salesforce ingestion pipelines.
+    Generate Databricks Asset Bundle YAML files for Salesforce ingestion pipelines.
 
-    Creates one pipeline per unique pipeline_group value, with scheduled jobs
-    for each pipeline based on the schedule column.
+    Creates a complete DAB structure with:
+    - databricks.yml (root configuration)
+    - resources/sfdc_pipeline.yml (pipeline and job definitions)
 
     Args:
         df (pd.DataFrame): Pipeline configuration dataframe with columns:
@@ -83,10 +139,12 @@ def generate_yaml_files(
             - include_columns: (optional) Comma-separated list of columns to include
             - exclude_columns: (optional) Comma-separated list of columns to exclude
         connection_name (str): Salesforce connection name in Databricks
-        output_path (str): Output path for YAML file
+        project_name (str): Project name for the bundle (default: "sfdc_ingestion")
+        workspace_host (str): Workspace host URL (optional, can be set later)
+        output_dir (str): Output directory for DAB project (default: "dab_deployment")
 
     Returns:
-        None (writes YAML file to disk)
+        None (writes YAML files to disk)
     """
     print("\n" + "="*80)
     print("GENERATING DATABRICKS ASSET BUNDLE YAML")
@@ -117,13 +175,8 @@ def generate_yaml_files(
 
     print(f"  Unique pipelines: {len(groups)}")
 
-    # Build combined YAML with all pipeline groups
-    combined_yaml = {
-        "variables": {
-            "dest_catalog": {"default": default_catalog},
-            "dest_schema": {"default": default_schema},
-            "sfdc_connection_name": {"default": connection_name},
-        },
+    # Build pipeline resources YAML (variables will be in databricks.yml)
+    pipeline_resources_yaml = {
         "resources": {
             "pipelines": {},
             "jobs": {}
@@ -206,7 +259,7 @@ def generate_yaml_files(
                 col_info = f" [excludes: {len(table_config['exclude_columns'])} cols]"
             print(f"    - {table_name} → {dest}{col_info}")
 
-        combined_yaml["resources"]["pipelines"][pipeline_name] = pipeline_def
+        pipeline_resources_yaml["resources"]["pipelines"][pipeline_name] = pipeline_def
 
         # Create job to schedule this pipeline
         if pd.notna(schedule) and schedule.strip():
@@ -230,32 +283,52 @@ def generate_yaml_files(
                 ]
             }
 
-            combined_yaml["resources"]["jobs"][job_name] = job_def
+            pipeline_resources_yaml["resources"]["jobs"][job_name] = job_def
 
-    # Write combined YAML
-    output_file = Path(output_path)
-    output_file.parent.mkdir(parents=True, exist_ok=True)
+    # Create directory structure
+    resources_dir = Path(output_dir) / 'resources'
+    resources_dir.mkdir(parents=True, exist_ok=True)
 
-    with open(output_file, 'w') as f:
-        f.write(yaml.dump(combined_yaml, sort_keys=False, default_flow_style=False))
+    # Generate databricks.yml
+    databricks_yaml = create_databricks_yml(
+        project_name=project_name,
+        workspace_host=workspace_host or "https://your-workspace.cloud.databricks.com",
+        default_catalog=default_catalog,
+        default_schema=default_schema,
+        connection_name=connection_name
+    )
+
+    # Define output paths
+    databricks_yml_path = Path(output_dir) / 'databricks.yml'
+    pipeline_yml_path = resources_dir / 'sfdc_pipeline.yml'
+
+    # Write databricks.yml
+    with open(databricks_yml_path, 'w') as f:
+        yaml.dump(databricks_yaml, f, sort_keys=False, default_flow_style=False)
+
+    # Write pipeline resources
+    with open(pipeline_yml_path, 'w') as f:
+        yaml.dump(pipeline_resources_yaml, f, sort_keys=False, default_flow_style=False)
 
     print("\n" + "="*80)
     print("YAML GENERATION COMPLETE")
     print("="*80)
-    print(f"\nGenerated file:")
-    print(f"  ✓ {output_path}")
+    print(f"\nGenerated DAB project structure in: {output_dir}")
+    print(f"  ✓ {databricks_yml_path}")
+    print(f"  ✓ {pipeline_yml_path}")
     print(f"\nSummary:")
-    print(f"  - Pipelines: {len(combined_yaml['resources']['pipelines'])}")
-    print(f"  - Scheduled jobs: {len(combined_yaml['resources']['jobs'])}")
+    print(f"  - Pipelines: {len(pipeline_resources_yaml['resources']['pipelines'])}")
+    print(f"  - Scheduled jobs: {len(pipeline_resources_yaml['resources']['jobs'])}")
     print(f"  - Total tables: {len(df)}")
 
     print("\nNext steps:")
-    print("  1. Ensure Salesforce connection exists in Databricks UI:")
+    print("  1. Update workspace_host in databricks.yml if needed")
+    print("  2. Ensure Salesforce connection exists in Databricks UI:")
     print("     → Catalog → Connections → Create → Type: Salesforce")
     print(f"     → Connection name: {connection_name}")
-    print("  2. Review the generated YAML file")
-    print("  3. Deploy using Databricks Asset Bundles:")
-    print("     cd deployment")
+    print("  3. Review the generated YAML files")
+    print("  4. Deploy using Databricks Asset Bundles:")
+    print(f"     cd {output_dir}")
     print("     databricks bundle validate -t dev")
     print("     databricks bundle deploy -t dev")
     print("="*80 + "\n")

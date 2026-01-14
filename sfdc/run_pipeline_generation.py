@@ -19,10 +19,12 @@ from deployment.generate_dab_yaml import generate_yaml_files
 
 def run_complete_pipeline_generation(
     input_csv: str,
+    project_name: str = "sfdc_ingestion",
     default_connection_name: str = "sfdc_connection",
     default_schedule: str = "*/15 * * * *",
-    output_yaml: str = "deployment/resources/sfdc_pipeline.yml",
-    output_config: str = "deployment/examples/generated_config.csv"
+    workspace_host: str = None,
+    output_dir: str = "dab_deployment",
+    output_config: str = "dab_deployment/generated_config.csv"
 ):
     """
     Complete pipeline generation process from Salesforce objects to YAML files.
@@ -30,14 +32,20 @@ def run_complete_pipeline_generation(
     Pipeline grouping is based on prefix + priority combinations from the input CSV.
     Each unique (prefix, priority) pair becomes a separate pipeline.
 
+    Creates a complete DAB structure with:
+    - databricks.yml (root configuration with variables)
+    - resources/sfdc_pipeline.yml (pipeline and job definitions)
+
     Args:
         input_csv (str): Path to input CSV with Salesforce objects (required)
             Must contain: source_database, source_schema, source_table_name,
                          target_catalog, target_schema, target_table_name,
                          prefix, priority
+        project_name (str): Project name for the bundle (default: "sfdc_ingestion")
         default_connection_name (str): Default Salesforce connection name (default: "sfdc_connection")
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
-        output_yaml (str): Output path for pipeline YAML
+        workspace_host (str): Workspace host URL (optional, can be updated later in databricks.yml)
+        output_dir (str): Output directory for DAB project (default: "dab_deployment")
         output_config (str): Output path for intermediate configuration CSV
 
     Returns:
@@ -71,12 +79,12 @@ def run_complete_pipeline_generation(
     pipeline_config_df.to_csv(output_config, index=False)
     print(f"  ✓ Saved configuration to: {output_config}")
 
-    # Step 3: Generate YAML file
-    print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML file")
-    print(f"  - Output YAML: {output_yaml}")
-
-    # Create output directory if it doesn't exist
-    os.makedirs(os.path.dirname(output_yaml), exist_ok=True)
+    # Step 3: Generate YAML files (databricks.yml + resources/sfdc_pipeline.yml)
+    print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
+    print(f"  - Project name: {project_name}")
+    print(f"  - Output directory: {output_dir}")
+    if workspace_host:
+        print(f"  - Workspace host: {workspace_host}")
 
     # Get connection name from first row (assumes all use same connection)
     connection_name = pipeline_config_df['connection_name'].iloc[0]
@@ -84,21 +92,13 @@ def run_complete_pipeline_generation(
     generate_yaml_files(
         df=pipeline_config_df,
         connection_name=connection_name,
-        output_path=output_yaml
+        project_name=project_name,
+        workspace_host=workspace_host,
+        output_dir=output_dir
     )
 
     print("\n" + "="*80)
     print("SALESFORCE PIPELINE GENERATION COMPLETE!")
-    print("="*80)
-    print(f"\nGenerated files:")
-    print(f"  ✓ {output_yaml}")
-    print(f"\nNext steps:")
-    print(f"  1. Review the generated YAML file")
-    print(f"  2. Ensure Salesforce connection '{connection_name}' exists in Databricks")
-    print(f"  3. Deploy using Databricks Asset Bundles:")
-    print(f"     cd deployment")
-    print(f"     databricks bundle validate -t dev")
-    print(f"     databricks bundle deploy -t dev")
     print("="*80)
 
     return pipeline_config_df
@@ -121,10 +121,12 @@ Examples:
     --connection my_sfdc_conn \\
     --schedule "*/30 * * * *"
 
-  # With custom output paths
+  # With custom project name and workspace
   python run_pipeline_generation.py \\
     --input-csv my_config.csv \\
-    --output deployment/resources/prod_pipeline.yml
+    --project-name my_sfdc_project \\
+    --workspace-host https://my-workspace.cloud.databricks.com \\
+    --output-dir dab_project
         """
     )
     parser.add_argument(
@@ -132,6 +134,12 @@ Examples:
         type=str,
         required=True,
         help='Path to input CSV with Salesforce objects (required)'
+    )
+    parser.add_argument(
+        '--project-name',
+        type=str,
+        default='sfdc_ingestion',
+        help='Project name for the bundle (default: sfdc_ingestion)'
     )
     parser.add_argument(
         '--connection',
@@ -146,16 +154,22 @@ Examples:
         help='Default cron schedule (default: */15 * * * *)'
     )
     parser.add_argument(
-        '--output',
+        '--workspace-host',
         type=str,
-        default='deployment/resources/sfdc_pipeline.yml',
-        help='Output path for pipeline YAML (default: deployment/resources/sfdc_pipeline.yml)'
+        default=None,
+        help='Workspace host URL (optional, can be updated later in databricks.yml)'
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=str,
+        default='dab_deployment',
+        help='Output directory for DAB project (default: dab_deployment)'
     )
     parser.add_argument(
         '--output-config',
         type=str,
-        default='deployment/examples/generated_config.csv',
-        help='Output path for intermediate config CSV (default: deployment/examples/generated_config.csv)'
+        default='dab_deployment/generated_config.csv',
+        help='Output path for intermediate config CSV (default: dab_deployment/generated_config.csv)'
     )
 
     args = parser.parse_args()
@@ -163,8 +177,10 @@ Examples:
     # Run the complete pipeline generation
     result_df = run_complete_pipeline_generation(
         input_csv=args.input_csv,
+        project_name=args.project_name,
         default_connection_name=args.connection,
         default_schedule=args.schedule,
-        output_yaml=args.output,
+        workspace_host=args.workspace_host,
+        output_dir=args.output_dir,
         output_config=args.output_config
     )
