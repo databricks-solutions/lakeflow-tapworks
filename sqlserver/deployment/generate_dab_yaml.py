@@ -3,6 +3,18 @@ import pandas as pd
 import os
 
 
+def convert_to_quartz_cron(cron_expression):
+    """Convert standard 5-field cron to Quartz 6-field format.
+
+    Args:
+        cron_expression (str): Standard cron expression (5 fields)
+
+    Returns:
+        str: Quartz cron expression (6 fields with seconds prepended)
+    """
+    return f"0 {cron_expression}"
+
+
 def create_gateways(df, project_name):
     """Create gateway YAML configuration from dataframe.
 
@@ -66,7 +78,8 @@ def create_pipelines(df, project_name):
                 'source_schema': row['source_schema'],
                 'source_table': row['source_table_name'],
                 'destination_catalog': row['target_catalog'],
-                'destination_schema': row['target_schema']
+                'destination_schema': row['target_schema'],
+                'destination_table': row['target_table_name']
             }
         } for _, row in group_df.iterrows()]
 
@@ -82,6 +95,45 @@ def create_pipelines(df, project_name):
         }
 
     return {'resources': {'pipelines': pipelines}}
+
+
+def create_jobs(df, project_name):
+    """Create job YAML configuration from dataframe.
+
+    Creates a scheduled job for each pipeline that triggers the pipeline on a cron schedule.
+
+    Args:
+        df (pd.DataFrame): Input dataframe containing pipeline_group and schedule columns
+        project_name (str): Project name prefix for all resources
+
+    Returns:
+        dict: Jobs YAML structure
+    """
+    jobs = {}
+
+    for pipeline_group, group_df in df.groupby('pipeline_group'):
+        schedule = group_df.iloc[0]['schedule']
+        job_name = f"job_{project_name}_ingestion_{pipeline_group}"
+        pipeline_resource_name = f"{project_name}_pipeline_ingestion_{pipeline_group}"
+
+        # Convert standard cron to Quartz format
+        quartz_cron = convert_to_quartz_cron(schedule)
+
+        jobs[job_name] = {
+            'name': f"{project_name} Pipeline Scheduler - {pipeline_group}",
+            'schedule': {
+                'quartz_cron_expression': quartz_cron,
+                'timezone_id': 'UTC'
+            },
+            'tasks': [{
+                'task_key': f'run_{project_name}_pipeline',
+                'pipeline_task': {
+                    'pipeline_id': f"${{resources.pipelines.{pipeline_resource_name}.id}}"
+                }
+            }]
+        }
+
+    return {'resources': {'jobs': jobs}}
 
 
 def create_databricks_yml(project_name, workspace_host, root_path):
@@ -151,12 +203,14 @@ def generate_yaml_files(df, project_name, output_dir, workspace_host, root_path)
     # Generate YAML content
     gateways_yaml = create_gateways(df, project_name)
     pipelines_yaml = create_pipelines(df, project_name)
+    jobs_yaml = create_jobs(df, project_name)
     databricks_yaml = create_databricks_yml(project_name, workspace_host, root_path)
 
     # Define output paths
     databricks_yml_path = os.path.join(output_dir, 'databricks.yml')
     gateway_yml_path = os.path.join(resources_dir, 'gateways.yml')
     pipeline_yml_path = os.path.join(resources_dir, 'pipelines.yml')
+    jobs_yml_path = os.path.join(resources_dir, 'jobs.yml')
 
     # Write databricks.yml
     with open(databricks_yml_path, 'w') as f:
@@ -170,10 +224,15 @@ def generate_yaml_files(df, project_name, output_dir, workspace_host, root_path)
     with open(pipeline_yml_path, 'w') as f:
         yaml.dump(pipelines_yaml, f, default_flow_style=False, sort_keys=False)
 
+    # Write job resources
+    with open(jobs_yml_path, 'w') as f:
+        yaml.dump(jobs_yaml, f, default_flow_style=False, sort_keys=False)
+
     print(f"Generated DAB project structure in: {output_dir}")
     print(f"  - {databricks_yml_path}")
     print(f"  - {gateway_yml_path}")
     print(f"  - {pipeline_yml_path}")
+    print(f"  - {jobs_yml_path}")
 
 
 if __name__ == "__main__":
