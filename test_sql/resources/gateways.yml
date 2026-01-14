@@ -1,0 +1,16 @@
+resources:
+  pipelines:
+    tapworks_project_pipeline_tapworks_project_gateway_1:
+      name: tapworks_project_gateway_1
+      gateway_definition:
+        connection_name: tapworks_sql_connection
+        gateway_storage_catalog: tapworks_catalog
+        gateway_storage_schema: tapworks
+        gateway_storage_name: tapworks_project_gateway_1
+      schema: tapworks
+      continuous: true
+      catalog: tapworks_catalog
+      clusters:
+      - num_workers: 1
+        node_type_id: m5d.large
+        driver_node_type_id: c5a.8xlarge
