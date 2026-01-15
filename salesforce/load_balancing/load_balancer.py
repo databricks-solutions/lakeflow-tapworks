@@ -65,6 +65,99 @@ def load_input_csv(
     return df
 
 
+def read_input_config(
+    df: pd.DataFrame,
+    default_connection_name: str = "sfdc_connection",
+    default_schedule: str = "*/15 * * * *"
+) -> pd.DataFrame:
+    """
+    Validate and normalize input configuration DataFrame.
+
+    This function ensures all required columns are present, adds optional columns
+    with defaults if missing, and fills empty/NaN values appropriately.
+
+    The input DataFrame can come from any source (CSV, Delta table, or code).
+    The output DataFrame will have all required and optional columns with clean values
+    (no NaN, empty strings replaced with defaults).
+
+    Required Columns:
+        - source_database: Source database (usually "Salesforce")
+        - source_schema: Source schema (e.g., "standard", "custom")
+        - source_table_name: Source Salesforce object name
+        - target_catalog: Target Databricks catalog
+        - target_schema: Target Databricks schema
+        - target_table_name: Target table name
+        - prefix: Pipeline prefix (e.g., "business_unit1", "business_unit2")
+        - priority: Priority level (e.g., "01", "02", "03")
+
+    Optional Columns (added with defaults if missing):
+        - connection_name: Databricks Salesforce connection name
+        - schedule: Cron schedule expression
+        - include_columns: Comma-separated columns to include
+        - exclude_columns: Comma-separated columns to exclude
+
+    Args:
+        df (pd.DataFrame): Input DataFrame from any source (CSV, Delta, code)
+        default_connection_name (str): Default connection name (default: "sfdc_connection")
+        default_schedule (str): Default cron schedule (default: "*/15 * * * *")
+
+    Returns:
+        pd.DataFrame: Normalized DataFrame with all required and optional columns,
+                     NaN values filled, empty strings replaced with defaults
+
+    Raises:
+        ValueError: If required columns are missing
+        ValueError: If DataFrame is empty
+    """
+    # Make a copy to avoid modifying the original dataframe
+    df = df.copy()
+
+    # Check if dataframe is empty
+    if df.empty:
+        raise ValueError("Input DataFrame is empty")
+
+    # Define required columns
+    required_columns = [
+        'source_database', 'source_schema', 'source_table_name',
+        'target_catalog', 'target_schema', 'target_table_name',
+        'prefix', 'priority'
+    ]
+
+    # Validate required columns exist
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        raise ValueError(
+            f"Missing required columns: {missing_columns}\n"
+            f"Required columns: {', '.join(required_columns)}"
+        )
+
+    # Define optional columns with their defaults
+    optional_columns = {
+        'connection_name': default_connection_name,
+        'schedule': default_schedule,
+        'include_columns': '',
+        'exclude_columns': ''
+    }
+
+    # Add optional columns if not present and handle NaN/empty values
+    for col_name, default_value in optional_columns.items():
+        if col_name not in df.columns:
+            print(f"Info: '{col_name}' column not found. Adding with default: {default_value}")
+            df[col_name] = default_value
+        else:
+            # Fill NaN values with default
+            df[col_name] = df[col_name].fillna(default_value)
+
+            # Replace empty strings with default (for string columns)
+            if isinstance(default_value, str):
+                mask = df[col_name].astype(str).str.strip() == ''
+                df.loc[mask, col_name] = default_value
+
+    print(f"\n✓ Configuration validated: {len(df)} rows with all required and optional columns")
+
+    return df
+
+
 def generate_pipeline_config(
     df: pd.DataFrame,
     default_connection_name: str = "sfdc_connection",
@@ -73,6 +166,8 @@ def generate_pipeline_config(
     """
     Generate pipeline configuration from Salesforce table list using prefix + priority grouping.
 
+    This function expects a clean DataFrame (output from read_input_config).
+
     Logic:
     - Each unique combination of (prefix, priority) becomes one pipeline
     - Pipeline name format: {prefix}_{priority}
@@ -80,25 +175,18 @@ def generate_pipeline_config(
     - No load balancing - grouping is explicit via prefix+priority
 
     Args:
-        df (pd.DataFrame): Input dataframe with columns:
-            - source_database: Source database (usually "Salesforce")
-            - source_schema: Source schema (e.g., "standard", "custom")
-            - source_table_name: Source Salesforce object name
-            - target_catalog: Target Databricks catalog
-            - target_schema: Target Databricks schema
-            - target_table_name: Target table name
-            - prefix: Pipeline prefix (e.g., "business_unit1", "business_unit2")
-            - priority: Priority level (e.g., "01", "02", "03")
-            - connection_name: Databricks Salesforce connection name (optional)
-            - schedule: Cron schedule expression (optional)
-        default_connection_name (str): Default connection name if not in CSV
-        default_schedule (str): Default schedule if not in CSV
+        df (pd.DataFrame): Clean input dataframe (from read_input_config) with columns:
+            - source_database, source_schema, source_table_name
+            - target_catalog, target_schema, target_table_name
+            - prefix, priority
+            - connection_name, schedule (already validated)
+            - include_columns, exclude_columns (optional, already present)
+        default_connection_name (str): Default connection name (used by read_input_config)
+        default_schedule (str): Default schedule (used by read_input_config)
 
     Returns:
-        pd.DataFrame: Configuration dataframe with additional columns:
+        pd.DataFrame: Configuration dataframe with additional column:
             - pipeline_group: Pipeline group identifier (prefix_priority)
-            - connection_name: Salesforce connection name
-            - schedule: Cron schedule expression
 
     Raises:
         ValueError: If required columns are missing
@@ -106,36 +194,18 @@ def generate_pipeline_config(
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
 
-    # Validate required columns
+    # Validate DataFrame has been normalized (check for required columns)
     required_columns = [
         'source_database', 'source_schema', 'source_table_name',
         'target_catalog', 'target_schema', 'target_table_name',
-        'prefix', 'priority'
+        'prefix', 'priority', 'connection_name', 'schedule'
     ]
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
         raise ValueError(
-            f"Missing required columns: {missing_columns}\n"
-            f"Required columns: {', '.join(required_columns)}"
+            f"DataFrame not properly normalized. Missing columns: {missing_columns}\n"
+            f"Please run read_input_config() first to normalize the input DataFrame."
         )
-
-    # Add connection_name if not present
-    if 'connection_name' not in df.columns:
-        print(f"Warning: 'connection_name' column not found. Using default: {default_connection_name}")
-        df['connection_name'] = default_connection_name
-    else:
-        # Fill empty connection_name values with default
-        df['connection_name'] = df['connection_name'].fillna(default_connection_name)
-        df.loc[df['connection_name'].str.strip() == '', 'connection_name'] = default_connection_name
-
-    # Add schedule if not present
-    if 'schedule' not in df.columns:
-        print(f"Warning: 'schedule' column not found. Using default: {default_schedule}")
-        df['schedule'] = default_schedule
-    else:
-        # Fill empty schedule values with default
-        df['schedule'] = df['schedule'].fillna(default_schedule)
-        df.loc[df['schedule'].str.strip() == '', 'schedule'] = default_schedule
 
     # Generate pipeline_group by combining prefix + priority
     df['pipeline_group'] = df['prefix'].astype(str) + '_' + df['priority'].astype(str)
@@ -262,9 +332,16 @@ Examples:
         # Load input CSV using dedicated function
         input_df = load_input_csv(args.input_csv)
 
+        # Normalize and validate configuration
+        normalized_df = read_input_config(
+            df=input_df,
+            default_connection_name=args.connection,
+            default_schedule=args.schedule
+        )
+
         # Generate pipeline configuration
         output_df = generate_pipeline_config(
-            df=input_df,
+            df=normalized_df,
             default_connection_name=args.connection,
             default_schedule=args.schedule
         )
