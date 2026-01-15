@@ -1,0 +1,119 @@
+resources:
+  pipelines:
+    my_project_pipeline_ingestion_1:
+      name: my_project_ingestion_1
+      configuration:
+        pipelines.cdcApplierFetchMetadataTimeoutSeconds: '600'
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_1.id}
+        objects:
+        - table:
+            source_catalog: db1
+            source_schema: dbo
+            source_table: orders
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks
+            destination_table: orders
+      schema: tapworks
+      catalog: tapworks_catalog
+    my_project_pipeline_ingestion_2:
+      name: my_project_ingestion_2
+      configuration:
+        pipelines.cdcApplierFetchMetadataTimeoutSeconds: '600'
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_1.id}
+        objects:
+        - table:
+            source_catalog: db1
+            source_schema: dbo
+            source_table: products
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks
+            destination_table: products
+        - table:
+            source_catalog: db1
+            source_schema: dbo
+            source_table: customers
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks
+            destination_table: customers
+      schema: tapworks
+      catalog: tapworks_catalog
+    my_project_pipeline_ingestion_3:
+      name: my_project_ingestion_3
+      configuration:
+        pipelines.cdcApplierFetchMetadataTimeoutSeconds: '600'
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_2.id}
+        objects:
+        - table:
+            source_catalog: db2
+            source_schema: dbo
+            source_table: transactions
+            destination_catalog: bronze_catalog
+            destination_schema: sales
+            destination_table: transactions
+      schema: sales
+      catalog: bronze_catalog
+    my_project_pipeline_ingestion_4:
+      name: my_project_ingestion_4
+      configuration:
+        pipelines.cdcApplierFetchMetadataTimeoutSeconds: '600'
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_2.id}
+        objects:
+        - table:
+            source_catalog: db2
+            source_schema: dbo
+            source_table: sales
+            destination_catalog: bronze_catalog
+            destination_schema: sales
+            destination_table: sales
+        - table:
+            source_catalog: db2
+            source_schema: dbo
+            source_table: payments
+            destination_catalog: bronze_catalog
+            destination_schema: sales
+            destination_table: payments
+      schema: sales
+      catalog: bronze_catalog
+    my_project_pipeline_ingestion_5:
+      name: my_project_ingestion_5
+      configuration:
+        pipelines.cdcApplierFetchMetadataTimeoutSeconds: '600'
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_3.id}
+        objects:
+        - table:
+            source_catalog: db3
+            source_schema: dbo
+            source_table: audit
+            destination_catalog: silver_catalog
+            destination_schema: logs
+            destination_table: audit
+      schema: logs
+      catalog: silver_catalog
+    my_project_pipeline_ingestion_6:
+      name: my_project_ingestion_6
+      configuration:
+        pipelines.cdcApplierFetchMetadataTimeoutSeconds: '600'
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_3.id}
+        objects:
+        - table:
+            source_catalog: db3
+            source_schema: dbo
+            source_table: logs
+            destination_catalog: silver_catalog
+            destination_schema: logs
+            destination_table: logs
+        - table:
+            source_catalog: db3
+            source_schema: dbo
+            source_table: events
+            destination_catalog: silver_catalog
+            destination_schema: logs
+            destination_table: events
+      schema: logs
+      catalog: silver_catalog

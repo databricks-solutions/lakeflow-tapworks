@@ -1,0 +1,20 @@
+bundle:
+  name: my_sfdc_project
+include:
+- resources/*.yml
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://e2-demo-field-eng.cloud.databricks.com
+variables:
+  dest_catalog:
+    description: Target catalog for Salesforce data
+    default: tapworks_catalog
+  dest_schema:
+    description: Target schema for Salesforce data
+    default: sfdc_test
+  sfdc_connection_name:
+    description: Salesforce connection name in Databricks
+    default: sfdc-pravin-dabs

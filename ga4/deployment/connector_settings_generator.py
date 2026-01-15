@@ -6,15 +6,15 @@ Groups pipelines by pipeline_group (which uses prefix_priority format).
 
 Usage:
     # As a module
-    from deployment.generate_dab_yaml import generate_yaml_files
+    from deployment.connector_settings_generator import generate_yaml_files
     generate_yaml_files(df, output_path)
 
     # Command-line
-    python generate_dab_yaml.py <csv_path> [--output <path>]
+    python connector_settings_generator.py <csv_path> [--output <path>]
 
 Example:
-    python generate_dab_yaml.py ../load_balancing/examples/output_config.csv
-    python generate_dab_yaml.py config.csv --output resources/pipelines.yml
+    python connector_settings_generator.py ../load_balancing/examples/output_config.csv
+    python connector_settings_generator.py config.csv --output resources/pipelines.yml
 """
 
 import pandas as pd
@@ -177,6 +177,7 @@ def generate_yaml_files(
         combined_yaml["resources"]["pipelines"][pipeline_name] = {
             "name": pipeline_display,
             "catalog": "${var.dest_catalog}",
+            "schema": "${var.dest_schema}",
             "ingestion_definition": {
                 "connection_name": "ga4_connection",  # GA4 connection (placeholder)
                 "objects": ingestion_objects
@@ -232,8 +233,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
-  python generate_dab_yaml.py config.csv
-  python generate_dab_yaml.py config.csv --output resources/ga4_pipeline.yml
+  python connector_settings_generator.py config.csv
+  python connector_settings_generator.py config.csv --output resources/ga4_pipeline.yml
 
 Input CSV must have columns:
   - source_catalog (GCP project)
