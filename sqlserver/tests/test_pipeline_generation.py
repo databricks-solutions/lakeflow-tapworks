@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from load_balancing.generate_pipeline_config import generate_pipeline_config
 from deployment.generate_dab_yaml import generate_yaml_files, create_gateways
-from run_pipeline_generation import run_complete_pipeline_generation
+from pipeline_generator import run_complete_pipeline_generation
 
 
 class TestSimpleConfig(unittest.TestCase):
