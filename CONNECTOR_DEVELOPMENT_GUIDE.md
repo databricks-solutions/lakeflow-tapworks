@@ -411,7 +411,7 @@ touch {connector_name}/run_pipeline_generation.py
 2. Generate `pipeline_group = {prefix}_{priority}`
 3. No gateway assignment needed
 
-**Template:** See `sqlserver/load_balancing/load_balancer.py` (database) or `sfdc/load_balancing/load_balancer.py` (SaaS)
+**Template:** See `sqlserver/load_balancing/load_balancer.py` (database) or `salesforce/load_balancing/load_balancer.py` (SaaS)
 
 ### Step 3: Implement YAML Generation
 
@@ -427,7 +427,7 @@ touch {connector_name}/run_pipeline_generation.py
 3. Add scheduled jobs with Quartz cron
 4. Write single YAML file
 
-**Template:** See `sqlserver/deployment/connector_settings_generator.py` (database) or `sfdc/deployment/connector_settings_generator.py` (SaaS)
+**Template:** See `sqlserver/deployment/connector_settings_generator.py` (database) or `salesforce/deployment/connector_settings_generator.py` (SaaS)
 
 ### Step 4: Create Unified Runner
 
@@ -523,13 +523,13 @@ run_complete_pipeline_generation(
 
 **Directory Structure:**
 ```
-sfdc/
+salesforce/
 ├── README.md
 ├── requirements.txt
 ├── load_balancing/
 │   ├── load_balancer.py
 │   └── examples/
-│       └── sfdc_config.csv
+│       └── salesforce_config.csv
 ├── deployment/
 │   └── connector_settings_generator.py
 ├── examples/
@@ -538,7 +538,7 @@ sfdc/
 │       └── deployment/
 │           ├── databricks.yml
 │           └── resources/
-│               ├── sfdc_pipeline.yml
+│               ├── salesforce_pipeline.yml
 │               └── jobs.yml
 ├── pipeline_generator.py
 └── pipeline_setup.ipynb
@@ -700,7 +700,7 @@ Use this checklist when implementing a new connector:
 When adding a new connector:
 
 1. **Follow this guide** - Use templates and naming conventions
-2. **Reference existing connectors** - SQL Server (database) or SFDC (SaaS)
+2. **Reference existing connectors** - SQL Server (database) or Salesforce (SaaS)
 3. **Test thoroughly** - Unit, integration, and deployment tests
 4. **Document completely** - README with all sections
 5. **Submit PR** - Include summary of what was implemented
@@ -711,7 +711,7 @@ When adding a new connector:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0 | 2026-01-09 | Initial template based on SQL Server, SFDC, and GA4 implementations |
+| 1.0 | 2026-01-09 | Initial template based on SQL Server, Salesforce, and Google Analytics 4 implementations |
 
 ---
 

@@ -38,7 +38,7 @@ This folder contains legacy code that is no longer used in the active codebase b
   - Streamlined configuration section
 
 #### `README-sfdc.md`
-- **Original Location:** `sfdc/README.md`
+- **Original Location:** `salesforce/README.md` (formerly sfdc/)
 - **Date Archived:** 2026-01-16
 - **Reason:** Replaced with simplified README
 - **What It Contained:**
@@ -53,7 +53,7 @@ This folder contains legacy code that is no longer used in the active codebase b
   - Removed verbose deployment instructions
 
 #### `README-ga4.md`
-- **Original Location:** `ga4/README.md`
+- **Original Location:** `google_analytics/README.md` (formerly ga4/)
 - **Date Archived:** 2026-01-16
 - **Reason:** Replaced with simplified README
 - **What It Contained:**
@@ -70,9 +70,9 @@ This folder contains legacy code that is no longer used in the active codebase b
 ### SFDC (Salesforce) Connector
 
 #### `sfdc-deployment-auto_balance.py`
-- **Original Location:** `sfdc/deployment/auto_balance.py`
+- **Original Location:** `salesforce/deployment/auto_balance.py` (formerly sfdc/)
 - **Date Archived:** 2026-01-09
-- **Reason:** Replaced by prefix+priority grouping approach in `sfdc/load_balancing/generate_pipeline_config.py`
+- **Reason:** Replaced by prefix+priority grouping approach in `salesforce/load_balancing/load_balancer.py`
 - **What It Did:**
   - Automatic bin-packing load balancer for Salesforce objects
   - Connected to Salesforce API to query row counts
