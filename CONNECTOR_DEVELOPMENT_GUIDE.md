@@ -31,25 +31,29 @@
 ├── requirements.txt                    # Python dependencies
 │
 ├── load_balancing/                     # STEP 1: Load balancing module
-│   ├── load_balancer.py               # Main load balancing logic
+│   └── load_balancer.py               # Main load balancing logic
 │
 ├── deployment/                         # STEP 2: YAML generation module
 │   ├── connector_settings_generator.py # Main YAML generator
-│   ├── setup_{connector}_connection.py    # Connection setup helper
-│   ├── create_{connector}_catalog.py      # Catalog creation helper
+│   ├── setup_{connector}_connection.py    # Connection setup helper (optional)
+│   └── create_{connector}_catalog.py      # Catalog creation helper (optional)
 │
-└── samlpes/
-│       ├── pipeline_config.csv         # Sample input
-│       └── output_dab_config.csv          # Sample 
-│       └── deployment
-│           ├── databricks.yml  
-│           ├── resources
-│               ├──pipeline.yml
-│               ├──gateway.yml
-│               ├──hobs.yml        
+├── examples/                           # Example configurations and outputs
+│   ├── README.md                      # Examples documentation
+│   ├── {example1}/
+│   │   ├── pipeline_config.csv        # Input CSV configuration
+│   │   └── deployment/                # Generated DAB output
+│   │       ├── databricks.yml
+│   │       └── resources/
+│   │           ├── pipelines.yml (or connector-specific naming)
+│   │           ├── gateways.yml (SQL Server only)
+│   │           └── jobs.yml
+│   └── {example2}/
+│       └── ...
+│
 ├── pipeline_generator.py              # Unified runner (combines Steps 1+2)
-└── pipeline_setup.ipynb               # Sample notebook to show how to use the tool 
-    
+└── pipeline_setup.ipynb               # Interactive notebook showing tool usage
+
 ```
 
 
