@@ -68,7 +68,8 @@ def load_input_csv(
 def process_input_config(
     df: pd.DataFrame,
     required_columns: list,
-    optional_columns: dict
+    optional_columns: dict,
+    override_input_config: dict = None
 ) -> pd.DataFrame:
     """
     Validate and normalize input configuration DataFrame.
@@ -97,10 +98,19 @@ def process_input_config(
                 'include_columns': '',
                 'exclude_columns': ''
             }
+        override_input_config (dict, optional): Dictionary of column overrides.
+            Values in these columns will be replaced with the override value for ALL rows.
+            This is useful for forcing specific values across the entire configuration.
+            Example:
+            {
+                'schedule': '*/30 * * * *',  # Override schedule for all rows
+                'target_catalog': 'bronze'   # Force all to bronze catalog
+            }
 
     Returns:
         pd.DataFrame: Normalized DataFrame with all required and optional columns,
-                     NaN values filled, empty strings replaced with defaults
+                     NaN values filled, empty strings replaced with defaults,
+                     and any overrides applied
 
     Raises:
         ValueError: If required columns are missing
@@ -117,7 +127,8 @@ def process_input_config(
         ...     'include_columns': '',
         ...     'exclude_columns': ''
         ... }
-        >>> normalized_df = process_input_config(df, required, optional)
+        >>> override = {'schedule': '*/30 * * * *'}  # Override schedule for all
+        >>> normalized_df = process_input_config(df, required, optional, override)
     """
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
@@ -147,6 +158,12 @@ def process_input_config(
             if isinstance(default_value, str):
                 mask = df[col_name].astype(str).str.strip() == ''
                 df.loc[mask, col_name] = default_value
+
+    # Apply overrides if provided
+    if override_input_config:
+        for col_name, override_value in override_input_config.items():
+            print(f"Info: Overriding '{col_name}' column with value: {override_value}")
+            df[col_name] = override_value
 
     print(f"\n✓ Configuration validated: {len(df)} rows with all required and optional columns")
 
