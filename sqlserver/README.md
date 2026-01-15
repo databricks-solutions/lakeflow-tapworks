@@ -10,7 +10,7 @@ The toolkit automates the creation of load-balanced, production-ready ingestion 
 
 1. **Load Balancing** (`load_balancing/generate_pipeline_config.py`) - Groups tables into optimized pipeline configurations
 2. **YAML Generation** (`deployment/generate_dab_yaml.py`) - Creates Databricks Asset Bundle YAML files
-3. **Unified Runner** (`run_pipeline_generation.py`) - Combines both steps into a single workflow
+3. **Unified Runner** (`pipeline_generator.py`) - Combines both steps into a single workflow
 
 ### Key Features
 
@@ -29,12 +29,12 @@ Use the unified script to run the complete pipeline generation process:
 
 ```bash
 cd sqlserver
-python run_pipeline_generation.py
+python pipeline_generator.py
 ```
 
 #### Option 1b: Databricks Notebook
 
-Upload `run_pipeline_generation.ipynb` to your Databricks workspace and run it interactively. The notebook provides:
+Upload `pipeline_setup.ipynb` to your Databricks workspace and run it interactively. The notebook provides:
 - Interactive widgets for configuration
 - Step-by-step execution with visual feedback
 - Built-in summary statistics and file verification
@@ -323,7 +323,7 @@ def run_complete_pipeline_generation(
 
 **Returns**: Pipeline configuration DataFrame
 
-**Location**: `run_pipeline_generation.py`
+**Location**: `pipeline_generator.py`
 
 ## Output Files
 
@@ -389,14 +389,14 @@ pip install -r requirements.txt
 # - Export from SQL Server metadata
 # - Or manually create following the input format
 
-# 3. Edit run_pipeline_generation.py with your parameters
+# 3. Edit pipeline_generator.py with your parameters
 # - input_csv path
 # - gateway catalog/schema
 # - project name
 # - connection details
 
 # 4. Run the unified generator
-python run_pipeline_generation.py
+python pipeline_generator.py
 
 # 5. Review generated files
 cat deployment/resources/gateways.yml
@@ -509,7 +509,7 @@ Breakdown by database:
 ```bash
 # Make sure you're in the sqlserver directory
 cd sqlserver
-python run_pipeline_generation.py
+python pipeline_generator.py
 ```
 
 ### Connection Issues
@@ -570,7 +570,7 @@ databricks connections get <connection_name>
 sqlserver/
 ├── README.md                           # This file
 ├── requirements.txt                    # Python dependencies
-├── run_pipeline_generation.py          # Unified workflow script
+├── pipeline_generator.py          # Unified workflow script
 ├── load_balancing/
 │   ├── README.md                       # Load balancing documentation
 │   ├── generate_pipeline_config.py    # Load balancing logic

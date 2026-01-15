@@ -1,4 +1,4 @@
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,priority_flag,gateway_catalog,gateway_schema,connection_name,gateway_worker_type,gateway_driver_type,schedule
-db1,dbo,products,tapworks_catalog,tapworks,products,0,tapworks_catalog,tapworks,tapworks_sql_connection,,*/15 * * * *
-db1,dbo,customers,tapworks_catalog,tapworks,customers,0,tapworks_catalog,tapworks,tapworks_sql_connection,,0 */6 * * *
-db1,dbo,orders,tapworks_catalog,tapworks,orders,1,tapworks_catalog,tapworks,tapworks_sql_connection,,0 */7 * * *
+source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,priority_flag,gateway_catalog,gateway_schema,connection_name,schedule,gateway_worker_type,gateway_driver_type
+db1,dbo,products,tapworks_catalog,tapworks,products,0,tapworks_catalog,tapworks,tapworks_sql_connection,*/15 * * * *
+db1,dbo,customers,tapworks_catalog,tapworks,customers,0,tapworks_catalog,tapworks,tapworks_sql_connection,0 */6 * * *
+db1,dbo,orders,tapworks_catalog,tapworks,orders,1,tapworks_catalog,tapworks,tapworks_sql_connection,0 */7 * * *

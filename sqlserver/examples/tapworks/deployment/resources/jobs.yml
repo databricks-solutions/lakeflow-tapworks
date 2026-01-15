@@ -3,7 +3,7 @@ resources:
     job_tapworks_project_ingestion_1:
       name: tapworks_project Pipeline Scheduler - 1
       schedule:
-        quartz_cron_expression: 0 */15 * * * ?
+        quartz_cron_expression: 0 0 */7 * * ?
         timezone_id: UTC
       tasks:
       - task_key: run_tapworks_project_pipeline
