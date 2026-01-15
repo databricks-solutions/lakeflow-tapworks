@@ -13,14 +13,13 @@ import os
 import sys
 
 # Import from local modules
-from load_balancing.load_balancer import load_input_csv, read_input_config, generate_pipeline_config
+from load_balancing.load_balancer import load_input_csv, process_input_config, generate_pipeline_config
 from deployment.connector_settings_generator import generate_yaml_files
 
 
 def run_complete_pipeline_generation(
     input_csv: str,
     project_name: str = "sfdc_ingestion",
-    default_connection_name: str = "sfdc_connection",
     default_schedule: str = "*/15 * * * *",
     workspace_host: str = None,
     output_dir: str = "dab_deployment",
@@ -40,13 +39,16 @@ def run_complete_pipeline_generation(
         input_csv (str): Path to input CSV with Salesforce objects (required)
             Must contain: source_database, source_schema, source_table_name,
                          target_catalog, target_schema, target_table_name,
-                         prefix, priority
+                         prefix, priority, connection_name (all required)
         project_name (str): Project name for the bundle (default: "sfdc_ingestion")
-        default_connection_name (str): Default Salesforce connection name (default: "sfdc_connection")
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
         workspace_host (str): Workspace host URL (optional, can be updated later in databricks.yml)
         output_dir (str): Output directory for DAB project (default: "dab_deployment")
         output_config (str): Output path for intermediate configuration CSV
+
+    Note:
+        connection_name is now a required column in the CSV. Each row must specify
+        which Salesforce connection to use.
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
@@ -62,13 +64,24 @@ def run_complete_pipeline_generation(
 
     # Step 2: Normalize and validate configuration
     print(f"\n[Step 2/4] Normalizing configuration")
-    print(f"  - Default connection: {default_connection_name}")
     print(f"  - Default schedule: {default_schedule}")
 
-    normalized_df = read_input_config(
+    # Define required and optional columns for Salesforce
+    required_columns = [
+        'source_database', 'source_schema', 'source_table_name',
+        'target_catalog', 'target_schema', 'target_table_name',
+        'prefix', 'priority', 'connection_name'
+    ]
+    optional_columns = {
+        'schedule': default_schedule,
+        'include_columns': '',
+        'exclude_columns': ''
+    }
+
+    normalized_df = process_input_config(
         df=input_df,
-        default_connection_name=default_connection_name,
-        default_schedule=default_schedule
+        required_columns=required_columns,
+        optional_columns=optional_columns
     )
 
     # Step 3: Generate pipeline configuration (prefix + priority grouping)
@@ -120,10 +133,9 @@ Examples:
   # Basic usage with default example
   python pipeline_generator.py --input-csv load_balancing/examples/example_config.csv
 
-  # With custom connection and schedule
+  # With custom schedule
   python pipeline_generator.py \\
     --input-csv my_config.csv \\
-    --connection my_sfdc_conn \\
     --schedule "*/30 * * * *"
 
   # With custom project name and workspace
@@ -132,6 +144,8 @@ Examples:
     --project-name my_sfdc_project \\
     --workspace-host https://my-workspace.cloud.databricks.com \\
     --output-dir dab_project
+
+Note: connection_name is now a required column in the CSV file.
         """
     )
     parser.add_argument(
@@ -145,12 +159,6 @@ Examples:
         type=str,
         default='sfdc_ingestion',
         help='Project name for the bundle (default: sfdc_ingestion)'
-    )
-    parser.add_argument(
-        '--connection',
-        type=str,
-        default='sfdc_connection',
-        help='Default Salesforce connection name (default: sfdc_connection)'
     )
     parser.add_argument(
         '--schedule',
@@ -183,7 +191,6 @@ Examples:
     result_df = run_complete_pipeline_generation(
         input_csv=args.input_csv,
         project_name=args.project_name,
-        default_connection_name=args.connection,
         default_schedule=args.schedule,
         workspace_host=args.workspace_host,
         output_dir=args.output_dir,
