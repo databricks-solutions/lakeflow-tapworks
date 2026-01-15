@@ -323,11 +323,7 @@ Examples:
         )
 
         # Generate pipeline configuration
-        output_df = generate_pipeline_config(
-            df=normalized_df,
-            default_connection_name=args.connection,
-            default_schedule=args.schedule
-        )
+        output_df = generate_pipeline_config(df=normalized_df)
 
         # Ensure output directory exists
         output_path = Path(args.output_csv)

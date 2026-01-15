@@ -74,11 +74,7 @@ def run_complete_pipeline_generation(
     # Step 3: Generate pipeline configuration (prefix + priority grouping)
     print(f"\n[Step 3/4] Generating pipeline configuration using prefix + priority")
 
-    pipeline_config_df = generate_pipeline_config(
-        df=normalized_df,
-        default_connection_name=default_connection_name,
-        default_schedule=default_schedule
-    )
+    pipeline_config_df = generate_pipeline_config(df=normalized_df)
 
     print(f"\n  ✓ Created {pipeline_config_df['pipeline_group'].nunique()} pipelines")
     print(f"  ✓ Configured {len(pipeline_config_df)} Salesforce objects")
