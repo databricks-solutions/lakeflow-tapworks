@@ -160,8 +160,6 @@ def read_input_config(
 
 def generate_pipeline_config(
     df: pd.DataFrame,
-    default_connection_name: str = "sfdc_connection",
-    default_schedule: str = "*/15 * * * *"
 ) -> pd.DataFrame:
     """
     Generate pipeline configuration from Salesforce table list using prefix + priority grouping.
@@ -181,8 +179,6 @@ def generate_pipeline_config(
             - prefix, priority
             - connection_name, schedule (already validated)
             - include_columns, exclude_columns (optional, already present)
-        default_connection_name (str): Default connection name (used by read_input_config)
-        default_schedule (str): Default schedule (used by read_input_config)
 
     Returns:
         pd.DataFrame: Configuration dataframe with additional column:
@@ -193,19 +189,6 @@ def generate_pipeline_config(
     """
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
-
-    # Validate DataFrame has been normalized (check for required columns)
-    required_columns = [
-        'source_database', 'source_schema', 'source_table_name',
-        'target_catalog', 'target_schema', 'target_table_name',
-        'prefix', 'priority', 'connection_name', 'schedule'
-    ]
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(
-            f"DataFrame not properly normalized. Missing columns: {missing_columns}\n"
-            f"Please run read_input_config() first to normalize the input DataFrame."
-        )
 
     # Generate pipeline_group by combining prefix + priority
     df['pipeline_group'] = df['prefix'].astype(str) + '_' + df['priority'].astype(str)
