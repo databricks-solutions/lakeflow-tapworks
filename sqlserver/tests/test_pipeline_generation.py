@@ -19,8 +19,8 @@ from pathlib import Path
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from load_balancing.generate_pipeline_config import generate_pipeline_config
-from deployment.generate_dab_yaml import generate_yaml_files, create_gateways
+from load_balancing.load_balancer import generate_pipeline_config
+from deployment.connector_settings_generator import generate_yaml_files, create_gateways
 from pipeline_generator import run_complete_pipeline_generation
 
 

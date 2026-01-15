@@ -31,10 +31,10 @@
 ├── requirements.txt                    # Python dependencies
 │
 ├── load_balancing/                     # STEP 1: Load balancing module
-│   ├── generate_pipeline_config.py    # Main load balancing logic
+│   ├── load_balancer.py               # Main load balancing logic
 │
 ├── deployment/                         # STEP 2: YAML generation module
-│   ├── generate_dab_yaml.py          # Main YAML generator
+│   ├── connector_settings_generator.py # Main YAML generator
 │   ├── setup_{connector}_connection.py    # Connection setup helper
 │   ├── create_{connector}_catalog.py      # Catalog creation helper
 │
