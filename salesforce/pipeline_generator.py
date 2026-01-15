@@ -13,7 +13,7 @@ import os
 import sys
 
 # Import from local modules
-from load_balancing.load_balancer import load_input_csv, generate_pipeline_config
+from load_balancing.load_balancer import load_input_csv, read_input_config, generate_pipeline_config
 from deployment.connector_settings_generator import generate_yaml_files
 
 
@@ -56,17 +56,26 @@ def run_complete_pipeline_generation(
     print("="*80)
 
     # Step 1: Load input CSV
-    print(f"\n[Step 1/3] Loading input CSV: {input_csv}")
+    print(f"\n[Step 1/4] Loading input CSV: {input_csv}")
     input_df = load_input_csv(input_csv)
     print(f"  ✓ Loaded {len(input_df)} Salesforce objects")
 
-    # Step 2: Generate pipeline configuration (prefix + priority grouping)
-    print(f"\n[Step 2/3] Generating pipeline configuration using prefix + priority")
+    # Step 2: Normalize and validate configuration
+    print(f"\n[Step 2/4] Normalizing configuration")
     print(f"  - Default connection: {default_connection_name}")
     print(f"  - Default schedule: {default_schedule}")
 
-    pipeline_config_df = generate_pipeline_config(
+    normalized_df = read_input_config(
         df=input_df,
+        default_connection_name=default_connection_name,
+        default_schedule=default_schedule
+    )
+
+    # Step 3: Generate pipeline configuration (prefix + priority grouping)
+    print(f"\n[Step 3/4] Generating pipeline configuration using prefix + priority")
+
+    pipeline_config_df = generate_pipeline_config(
+        df=normalized_df,
         default_connection_name=default_connection_name,
         default_schedule=default_schedule
     )
@@ -79,8 +88,8 @@ def run_complete_pipeline_generation(
     pipeline_config_df.to_csv(output_config, index=False)
     print(f"  ✓ Saved configuration to: {output_config}")
 
-    # Step 3: Generate YAML files (databricks.yml + resources/sfdc_pipeline.yml)
-    print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
+    # Step 4: Generate YAML files (databricks.yml + resources/sfdc_pipeline.yml)
+    print(f"\n[Step 4/4] Generating Databricks Asset Bundle YAML files")
     print(f"  - Project name: {project_name}")
     print(f"  - Output directory: {output_dir}")
     if workspace_host:
