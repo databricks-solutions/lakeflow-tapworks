@@ -4,6 +4,69 @@ This folder contains legacy code that is no longer used in the active codebase b
 
 ## Files Archived
 
+### Documentation
+
+#### `README-root.md`
+- **Original Location:** Root `/README.md`
+- **Date Archived:** 2026-01-16
+- **Reason:** Replaced with simplified, user-friendly README
+- **What It Contained:**
+  - Detailed technical architecture documentation
+  - Component descriptions (load_balancing, deployment, unified runner)
+  - Legacy file naming (generate_pipeline_config.py, generate_dab_yaml.py, run_pipeline_generation.py)
+  - Deployment instructions and troubleshooting details
+- **Why Replaced:**
+  - New README focuses on quick start and connector overview
+  - Detailed technical documentation moved to connector-specific READMEs
+  - Updated to reflect renamed files (load_balancer.py, connector_settings_generator.py, pipeline_generator.py)
+  - Streamlined for better user experience
+
+#### `README-sqlserver.md`
+- **Original Location:** `sqlserver/README.md`
+- **Date Archived:** 2026-01-16
+- **Reason:** Replaced with simplified README
+- **What It Contained:**
+  - Comprehensive SQL Server connector documentation
+  - Detailed API reference and configuration parameters
+  - Extensive troubleshooting section
+  - Multiple deployment workflows and best practices
+  - Legacy file naming conventions
+- **Why Replaced:**
+  - Updated to reflect renamed modules
+  - Simplified structure focusing on quick start
+  - Removed deployment-specific details (moved to per-example documentation)
+  - Streamlined configuration section
+
+#### `README-sfdc.md`
+- **Original Location:** `sfdc/README.md`
+- **Date Archived:** 2026-01-16
+- **Reason:** Replaced with simplified README
+- **What It Contained:**
+  - Comprehensive Salesforce connector documentation
+  - Detailed DAB configuration examples
+  - Step-by-step connection setup instructions
+  - Monitoring and troubleshooting guides
+- **Why Replaced:**
+  - Updated to reflect renamed modules
+  - Simplified for easier adoption
+  - Focus on essential quick start steps
+  - Removed verbose deployment instructions
+
+#### `README-ga4.md`
+- **Original Location:** `ga4/README.md`
+- **Date Archived:** 2026-01-16
+- **Reason:** Replaced with simplified README
+- **What It Contained:**
+  - Comprehensive GA4 connector documentation
+  - Auto-discovery mode documentation
+  - Databricks notebook usage details
+  - BigQuery integration setup
+- **Why Replaced:**
+  - Updated to reflect renamed modules
+  - Simplified structure matching other connectors
+  - Focus on CSV-based workflow (primary use case)
+  - Streamlined BigQuery connection setup
+
 ### SFDC (Salesforce) Connector
 
 #### `sfdc-deployment-auto_balance.py`
@@ -46,4 +109,4 @@ To restore a legacy file:
 
 ---
 
-**Last Updated:** 2026-01-09
+**Last Updated:** 2026-01-16
