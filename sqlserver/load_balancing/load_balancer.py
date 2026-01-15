@@ -30,11 +30,12 @@ def generate_pipeline_config(
             - gateway_schema: Schema for gateway storage (optional, defaults to target_schema)
             - gateway_worker_type: Worker node type (optional, defaults to None for serverless)
             - gateway_driver_type: Driver node type (optional, defaults to None for serverless)
+            - schedule: Cron schedule expression (optional, will use default if not present or empty)
         default_connection_name (str): Default connection name if not in CSV
         default_gateway_worker_type (str): Default worker node type if not in CSV (None for serverless)
         default_gateway_driver_type (str): Default driver node type if not in CSV (None for serverless)
         max_tables_per_group (int): Maximum tables per pipeline group (default: 250)
-        default_schedule (str): Default cron schedule (default: "*/15 * * * *")
+        default_schedule (str): Default cron schedule if not in CSV or empty (default: "*/15 * * * *")
 
     Returns:
         pd.DataFrame: The generated configuration dataframe with additional columns:
@@ -65,7 +66,17 @@ def generate_pipeline_config(
     # Initialize new columns
     df['pipeline_group'] = 0
     df['gateway'] = 0
-    df['schedule'] = default_schedule
+
+    # Handle schedule column - similar to SFDC pattern
+    if 'schedule' not in df.columns:
+        print(f"Warning: 'schedule' column not found. Using default: {default_schedule}")
+        df['schedule'] = default_schedule
+    else:
+        # Fill empty schedule values with default
+        df['schedule'] = df['schedule'].fillna(default_schedule)
+        # Replace empty strings with default
+        mask = df['schedule'].astype(str).str.strip() == ''
+        df.loc[mask, 'schedule'] = default_schedule
 
     # Check which columns exist in the original CSV before we start modifying
     has_connection_name = 'connection_name' in df.columns
