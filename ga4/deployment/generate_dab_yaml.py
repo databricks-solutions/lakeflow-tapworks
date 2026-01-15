@@ -177,6 +177,7 @@ def generate_yaml_files(
         combined_yaml["resources"]["pipelines"][pipeline_name] = {
             "name": pipeline_display,
             "catalog": "${var.dest_catalog}",
+            "schema": "${var.dest_schema}",
             "ingestion_definition": {
                 "connection_name": "ga4_connection",  # GA4 connection (placeholder)
                 "objects": ingestion_objects

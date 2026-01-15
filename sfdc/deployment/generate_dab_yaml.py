@@ -215,6 +215,7 @@ def generate_yaml_files(
         pipeline_def = {
             "name": pipeline_display,
             "catalog": "${var.dest_catalog}",
+            "schema": "${var.dest_schema}",
             "ingestion_definition": {
                 "connection_name": "${var.sfdc_connection_name}",
                 "objects": []
