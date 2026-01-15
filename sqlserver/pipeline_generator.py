@@ -113,14 +113,14 @@ if __name__ == "__main__":
         epilog="""
 Examples:
   # Basic usage with default example
-  python run_pipeline_generation.py \\
+  python pipeline_generator.py \\
     --input-csv load_balancing/examples/example_config.csv \\
     --project-name my_project \\
     --workspace-host https://my-workspace.cloud.databricks.com \\
     --root-path '/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}'
 
   # With custom connection and node types
-  python run_pipeline_generation.py \\
+  python pipeline_generator.py \\
     --input-csv my_config.csv \\
     --project-name prod_ingestion \\
     --connection my_sql_conn \\
@@ -130,7 +130,7 @@ Examples:
     --driver-type c5a.8xlarge
 
   # With custom output and table limits
-  python run_pipeline_generation.py \\
+  python pipeline_generator.py \\
     --input-csv my_config.csv \\
     --project-name my_project \\
     --workspace-host https://workspace.cloud.databricks.com \\

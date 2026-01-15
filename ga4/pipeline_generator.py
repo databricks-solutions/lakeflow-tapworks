@@ -10,16 +10,16 @@ Two modes:
 
 Usage:
     # CSV mode with prefix+priority grouping
-    python run_pipeline_generation.py --csv input.csv
+    python pipeline_generator.py --csv input.csv
 
     # Auto-discover mode with bin-packing
-    python run_pipeline_generation.py --auto-discover --pipelines 3
+    python pipeline_generator.py --auto-discover --pipelines 3
 
     # Full pipeline with custom output
-    python run_pipeline_generation.py --csv input.csv --output-yaml resources/ga4_pipeline.yml
+    python pipeline_generator.py --csv input.csv --output-yaml resources/ga4_pipeline.yml
 
 Example:
-    python run_pipeline_generation.py --csv load_balancing/examples/example_config.csv
+    python pipeline_generator.py --csv load_balancing/examples/example_config.csv
 """
 
 import argparse
@@ -264,13 +264,13 @@ def main():
         epilog="""
 Examples:
   # CSV mode with prefix+priority grouping
-  python run_pipeline_generation.py --csv input.csv
+  python pipeline_generator.py --csv input.csv
 
   # Auto-discover mode with bin-packing
-  python run_pipeline_generation.py --auto-discover --pipelines 3
+  python pipeline_generator.py --auto-discover --pipelines 3
 
   # Custom outputs
-  python run_pipeline_generation.py --csv input.csv --output-yaml resources/custom.yml
+  python pipeline_generator.py --csv input.csv --output-yaml resources/custom.yml
 
 Modes:
   1. CSV Mode (--csv): Read properties from CSV with prefix/priority columns
