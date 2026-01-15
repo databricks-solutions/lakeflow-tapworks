@@ -23,6 +23,48 @@ import sys
 from pathlib import Path
 
 
+def load_input_csv(
+    input_csv: str
+) -> pd.DataFrame:
+    """
+    Load and validate input CSV configuration file.
+
+    Args:
+        input_csv (str): Path to input CSV file
+
+    Returns:
+        pd.DataFrame: Loaded configuration dataframe
+
+    Raises:
+        FileNotFoundError: If input file does not exist
+        ValueError: If CSV is empty or cannot be parsed
+    """
+    input_path = Path(input_csv)
+
+    if not input_path.exists():
+        raise FileNotFoundError(
+            f"Input file not found: {input_csv}\n\n"
+            f"Please create an input CSV with the following columns:\n"
+            f"  - source_database, source_schema, source_table_name\n"
+            f"  - target_catalog, target_schema, target_table_name\n"
+            f"  - prefix, priority\n"
+            f"  - connection_name (optional)\n"
+            f"  - schedule (optional)"
+        )
+
+    try:
+        df = pd.read_csv(input_csv)
+    except Exception as e:
+        raise ValueError(f"Failed to parse CSV file: {e}")
+
+    if df.empty:
+        raise ValueError(f"Input CSV is empty: {input_csv}")
+
+    print(f"✓ Loaded {len(df)} rows from {input_csv}")
+
+    return df
+
+
 def generate_pipeline_config(
     df: pd.DataFrame,
     default_connection_name: str = "sfdc_connection",
@@ -214,23 +256,11 @@ Examples:
 
     args = parser.parse_args()
 
-    # Check if input file exists
-    input_path = Path(args.input_csv)
-    if not input_path.exists():
-        print(f"Error: Input file not found: {args.input_csv}")
-        print(f"\nPlease create an input CSV with the following columns:")
-        print("  - source_database, source_schema, source_table_name")
-        print("  - target_catalog, target_schema, target_table_name")
-        print("  - prefix, priority")
-        print("  - connection_name (optional)")
-        print("  - schedule (optional)")
-        sys.exit(1)
-
     print(f"Reading input CSV: {args.input_csv}")
 
     try:
-        # Load input CSV
-        input_df = pd.read_csv(args.input_csv)
+        # Load input CSV using dedicated function
+        input_df = load_input_csv(args.input_csv)
 
         # Generate pipeline configuration
         output_df = generate_pipeline_config(

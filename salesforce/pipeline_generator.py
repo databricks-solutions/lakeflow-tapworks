@@ -13,7 +13,7 @@ import os
 import sys
 
 # Import from local modules
-from load_balancing.load_balancer import generate_pipeline_config
+from load_balancing.load_balancer import load_input_csv, generate_pipeline_config
 from deployment.connector_settings_generator import generate_yaml_files
 
 
@@ -57,7 +57,7 @@ def run_complete_pipeline_generation(
 
     # Step 1: Load input CSV
     print(f"\n[Step 1/3] Loading input CSV: {input_csv}")
-    input_df = pd.read_csv(input_csv)
+    input_df = load_input_csv(input_csv)
     print(f"  ✓ Loaded {len(input_df)} Salesforce objects")
 
     # Step 2: Generate pipeline configuration (prefix + priority grouping)
