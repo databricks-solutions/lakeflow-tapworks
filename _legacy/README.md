@@ -52,6 +52,16 @@ This folder contains legacy code that is no longer used in the active codebase b
   - Focus on essential quick start steps
   - Removed verbose deployment instructions
 
+#### `README-salesforce-extra.md`
+- **Original Location:** `salesforce/README (1).md`
+- **Date Archived:** 2026-01-16
+- **Reason:** Duplicate README file
+- **What It Contained:**
+  - Appears to be a duplicate or alternative version of Salesforce documentation
+- **Why Archived:**
+  - Redundant with main Salesforce README
+  - Likely created accidentally during file operations
+
 #### `README-ga4.md`
 - **Original Location:** `google_analytics/README.md` (formerly ga4/)
 - **Date Archived:** 2026-01-16
