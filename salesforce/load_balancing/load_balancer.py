@@ -65,10 +65,10 @@ def load_input_csv(
     return df
 
 
-def read_input_config(
+def process_input_config(
     df: pd.DataFrame,
-    default_connection_name: str = "sfdc_connection",
-    default_schedule: str = "*/15 * * * *"
+    required_columns: list,
+    optional_columns: dict
 ) -> pd.DataFrame:
     """
     Validate and normalize input configuration DataFrame.
@@ -80,26 +80,23 @@ def read_input_config(
     The output DataFrame will have all required and optional columns with clean values
     (no NaN, empty strings replaced with defaults).
 
-    Required Columns:
-        - source_database: Source database (usually "Salesforce")
-        - source_schema: Source schema (e.g., "standard", "custom")
-        - source_table_name: Source Salesforce object name
-        - target_catalog: Target Databricks catalog
-        - target_schema: Target Databricks schema
-        - target_table_name: Target table name
-        - prefix: Pipeline prefix (e.g., "business_unit1", "business_unit2")
-        - priority: Priority level (e.g., "01", "02", "03")
-
-    Optional Columns (added with defaults if missing):
-        - connection_name: Databricks Salesforce connection name
-        - schedule: Cron schedule expression
-        - include_columns: Comma-separated columns to include
-        - exclude_columns: Comma-separated columns to exclude
-
     Args:
         df (pd.DataFrame): Input DataFrame from any source (CSV, Delta, code)
-        default_connection_name (str): Default connection name (default: "sfdc_connection")
-        default_schedule (str): Default cron schedule (default: "*/15 * * * *")
+        required_columns (list): List of required column names that must be present.
+            Example for Salesforce:
+            [
+                'source_database', 'source_schema', 'source_table_name',
+                'target_catalog', 'target_schema', 'target_table_name',
+                'prefix', 'priority', 'connection_name'
+            ]
+        optional_columns (dict): Dictionary of optional columns with their default values.
+            Missing columns will be added, NaN/empty values will be filled with defaults.
+            Example:
+            {
+                'schedule': '*/15 * * * *',
+                'include_columns': '',
+                'exclude_columns': ''
+            }
 
     Returns:
         pd.DataFrame: Normalized DataFrame with all required and optional columns,
@@ -108,6 +105,19 @@ def read_input_config(
     Raises:
         ValueError: If required columns are missing
         ValueError: If DataFrame is empty
+
+    Example Usage:
+        >>> required = [
+        ...     'source_database', 'source_schema', 'source_table_name',
+        ...     'target_catalog', 'target_schema', 'target_table_name',
+        ...     'prefix', 'priority', 'connection_name'
+        ... ]
+        >>> optional = {
+        ...     'schedule': '*/15 * * * *',
+        ...     'include_columns': '',
+        ...     'exclude_columns': ''
+        ... }
+        >>> normalized_df = process_input_config(df, required, optional)
     """
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
@@ -116,13 +126,6 @@ def read_input_config(
     if df.empty:
         raise ValueError("Input DataFrame is empty")
 
-    # Define required columns
-    required_columns = [
-        'source_database', 'source_schema', 'source_table_name',
-        'target_catalog', 'target_schema', 'target_table_name',
-        'prefix', 'priority'
-    ]
-
     # Validate required columns exist
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
@@ -130,14 +133,6 @@ def read_input_config(
             f"Missing required columns: {missing_columns}\n"
             f"Required columns: {', '.join(required_columns)}"
         )
-
-    # Define optional columns with their defaults
-    optional_columns = {
-        'connection_name': default_connection_name,
-        'schedule': default_schedule,
-        'include_columns': '',
-        'exclude_columns': ''
-    }
 
     # Add optional columns if not present and handle NaN/empty values
     for col_name, default_value in optional_columns.items():
@@ -269,16 +264,17 @@ def main():
         epilog="""
 Examples:
   # Use default example file
-  python generate_pipeline_config.py
+  python load_balancer.py
 
   # Specify input and output files
-  python generate_pipeline_config.py --input-csv my_tables.csv --output-csv my_output.csv
+  python load_balancer.py --input-csv my_tables.csv --output-csv my_output.csv
 
-  # With custom defaults
-  python generate_pipeline_config.py \\
+  # With custom schedule
+  python load_balancer.py \\
     --input-csv my_tables.csv \\
-    --connection my_sfdc_conn \\
     --schedule "*/30 * * * *"
+
+Note: connection_name is now a required column in the CSV file.
         """
     )
 
@@ -295,12 +291,6 @@ Examples:
         help='Path to output CSV file (default: examples/output_config.csv)'
     )
     parser.add_argument(
-        '--connection',
-        type=str,
-        default='sfdc_connection',
-        help='Default Salesforce connection name (default: sfdc_connection)'
-    )
-    parser.add_argument(
         '--schedule',
         type=str,
         default='*/15 * * * *',
@@ -315,11 +305,23 @@ Examples:
         # Load input CSV using dedicated function
         input_df = load_input_csv(args.input_csv)
 
+        # Define required and optional columns for Salesforce
+        required_columns = [
+            'source_database', 'source_schema', 'source_table_name',
+            'target_catalog', 'target_schema', 'target_table_name',
+            'prefix', 'priority', 'connection_name'
+        ]
+        optional_columns = {
+            'schedule': args.schedule,
+            'include_columns': '',
+            'exclude_columns': ''
+        }
+
         # Normalize and validate configuration
-        normalized_df = read_input_config(
+        normalized_df = process_input_config(
             df=input_df,
-            default_connection_name=args.connection,
-            default_schedule=args.schedule
+            required_columns=required_columns,
+            optional_columns=optional_columns
         )
 
         # Generate pipeline configuration
