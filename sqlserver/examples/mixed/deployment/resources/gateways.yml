@@ -1,12 +1,12 @@
 resources:
   pipelines:
-    mixed_project_pipeline_mixed_project_gateway_1:
-      name: mixed_project_gateway_1
+    my_project_pipeline_my_project_gateway_1:
+      name: my_project_gateway_1
       gateway_definition:
         connection_name: sqlserver_conn_1
         gateway_storage_catalog: tapworks_catalog_gw
         gateway_storage_schema: tapworks_gw
-        gateway_storage_name: mixed_project_gateway_1
+        gateway_storage_name: my_project_gateway_1
       schema: tapworks_gw
       continuous: true
       catalog: tapworks_catalog_gw
@@ -14,23 +14,23 @@ resources:
       - num_workers: 1
         node_type_id: m5d.large
         driver_node_type_id: m5d.large
-    mixed_project_pipeline_mixed_project_gateway_2:
-      name: mixed_project_gateway_2
+    my_project_pipeline_my_project_gateway_2:
+      name: my_project_gateway_2
       gateway_definition:
-        connection_name: conn_1
+        connection_name: my_sqlserver_connection_2
         gateway_storage_catalog: bronze_catalog
         gateway_storage_schema: sales
-        gateway_storage_name: mixed_project_gateway_2
+        gateway_storage_name: my_project_gateway_2
       schema: sales
       continuous: true
       catalog: bronze_catalog
-    mixed_project_pipeline_mixed_project_gateway_3:
-      name: mixed_project_gateway_3
+    my_project_pipeline_my_project_gateway_3:
+      name: my_project_gateway_3
       gateway_definition:
         connection_name: sqlserver_conn_3
         gateway_storage_catalog: silver_catalog_gw
         gateway_storage_schema: logs_gw
-        gateway_storage_name: mixed_project_gateway_3
+        gateway_storage_name: my_project_gateway_3
       schema: logs_gw
       continuous: true
       catalog: silver_catalog_gw

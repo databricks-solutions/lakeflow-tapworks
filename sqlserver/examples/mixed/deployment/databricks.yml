@@ -1,10 +1,10 @@
 bundle:
-  name: mixed_project
+  name: my_project
 include:
 - resources/*.yml
 targets:
   prod:
     mode: production
     workspace:
-      host: https://example.databricks.com
-      root_path: /Users/example/.bundle
+      host: https://your-workspace.cloud.databricks.com
+      root_path: /Users/your-email/.bundle/${bundle.name}/${bundle.target}

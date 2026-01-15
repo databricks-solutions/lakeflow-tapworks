@@ -6,5 +6,5 @@ targets:
   prod:
     mode: production
     workspace:
-      host: https://example.databricks.com
-      root_path: /Users/example/.bundle
+      host: https://adb-7861826065021443.3.azuredatabricks.net
+      root_path: /Users/yas.mokri@databricks.com/.bundle/${bundle.name}/${bundle.target}
