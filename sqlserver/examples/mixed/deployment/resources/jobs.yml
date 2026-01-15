@@ -1,56 +1,56 @@
 resources:
   jobs:
-    job_mixed_project_ingestion_1:
-      name: mixed_project Pipeline Scheduler - 1
+    job_my_project_ingestion_1:
+      name: my_project Pipeline Scheduler - 1
       schedule:
-        quartz_cron_expression: 0 */15 * * * ?
+        quartz_cron_expression: 0 */16 * * * ?
         timezone_id: UTC
       tasks:
-      - task_key: run_mixed_project_pipeline
+      - task_key: run_my_project_pipeline
         pipeline_task:
-          pipeline_id: ${resources.pipelines.mixed_project_pipeline_ingestion_1.id}
-    job_mixed_project_ingestion_2:
-      name: mixed_project Pipeline Scheduler - 2
+          pipeline_id: ${resources.pipelines.my_project_pipeline_ingestion_1.id}
+    job_my_project_ingestion_2:
+      name: my_project Pipeline Scheduler - 2
       schedule:
-        quartz_cron_expression: 0 */15 * * * ?
+        quartz_cron_expression: 0 */16 * * * ?
         timezone_id: UTC
       tasks:
-      - task_key: run_mixed_project_pipeline
+      - task_key: run_my_project_pipeline
         pipeline_task:
-          pipeline_id: ${resources.pipelines.mixed_project_pipeline_ingestion_2.id}
-    job_mixed_project_ingestion_3:
-      name: mixed_project Pipeline Scheduler - 3
+          pipeline_id: ${resources.pipelines.my_project_pipeline_ingestion_2.id}
+    job_my_project_ingestion_3:
+      name: my_project Pipeline Scheduler - 3
       schedule:
-        quartz_cron_expression: 0 */15 * * * ?
+        quartz_cron_expression: 0 */16 * * * ?
         timezone_id: UTC
       tasks:
-      - task_key: run_mixed_project_pipeline
+      - task_key: run_my_project_pipeline
         pipeline_task:
-          pipeline_id: ${resources.pipelines.mixed_project_pipeline_ingestion_3.id}
-    job_mixed_project_ingestion_4:
-      name: mixed_project Pipeline Scheduler - 4
+          pipeline_id: ${resources.pipelines.my_project_pipeline_ingestion_3.id}
+    job_my_project_ingestion_4:
+      name: my_project Pipeline Scheduler - 4
       schedule:
-        quartz_cron_expression: 0 */15 * * * ?
+        quartz_cron_expression: 0 */16 * * * ?
         timezone_id: UTC
       tasks:
-      - task_key: run_mixed_project_pipeline
+      - task_key: run_my_project_pipeline
         pipeline_task:
-          pipeline_id: ${resources.pipelines.mixed_project_pipeline_ingestion_4.id}
-    job_mixed_project_ingestion_5:
-      name: mixed_project Pipeline Scheduler - 5
+          pipeline_id: ${resources.pipelines.my_project_pipeline_ingestion_4.id}
+    job_my_project_ingestion_5:
+      name: my_project Pipeline Scheduler - 5
       schedule:
-        quartz_cron_expression: 0 */15 * * * ?
+        quartz_cron_expression: 0 */16 * * * ?
         timezone_id: UTC
       tasks:
-      - task_key: run_mixed_project_pipeline
+      - task_key: run_my_project_pipeline
         pipeline_task:
-          pipeline_id: ${resources.pipelines.mixed_project_pipeline_ingestion_5.id}
-    job_mixed_project_ingestion_6:
-      name: mixed_project Pipeline Scheduler - 6
+          pipeline_id: ${resources.pipelines.my_project_pipeline_ingestion_5.id}
+    job_my_project_ingestion_6:
+      name: my_project Pipeline Scheduler - 6
       schedule:
-        quartz_cron_expression: 0 */15 * * * ?
+        quartz_cron_expression: 0 */16 * * * ?
         timezone_id: UTC
       tasks:
-      - task_key: run_mixed_project_pipeline
+      - task_key: run_my_project_pipeline
         pipeline_task:
-          pipeline_id: ${resources.pipelines.mixed_project_pipeline_ingestion_6.id}
+          pipeline_id: ${resources.pipelines.my_project_pipeline_ingestion_6.id}

@@ -1,11 +1,11 @@
 resources:
   pipelines:
-    mixed_project_pipeline_ingestion_1:
-      name: mixed_project_ingestion_1
+    my_project_pipeline_ingestion_1:
+      name: my_project_ingestion_1
       configuration:
         pipelines.***REMOVED***: '600'
       ingestion_definition:
-        ingestion_gateway_id: ${resources.pipelines.mixed_project_pipeline_mixed_project_gateway_1.id}
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_1.id}
         objects:
         - table:
             source_catalog: db1
@@ -16,12 +16,12 @@ resources:
             destination_table: orders
       schema: tapworks
       catalog: tapworks_catalog
-    mixed_project_pipeline_ingestion_2:
-      name: mixed_project_ingestion_2
+    my_project_pipeline_ingestion_2:
+      name: my_project_ingestion_2
       configuration:
         pipelines.***REMOVED***: '600'
       ingestion_definition:
-        ingestion_gateway_id: ${resources.pipelines.mixed_project_pipeline_mixed_project_gateway_1.id}
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_1.id}
         objects:
         - table:
             source_catalog: db1
@@ -39,12 +39,12 @@ resources:
             destination_table: customers
       schema: tapworks
       catalog: tapworks_catalog
-    mixed_project_pipeline_ingestion_3:
-      name: mixed_project_ingestion_3
+    my_project_pipeline_ingestion_3:
+      name: my_project_ingestion_3
       configuration:
         pipelines.***REMOVED***: '600'
       ingestion_definition:
-        ingestion_gateway_id: ${resources.pipelines.mixed_project_pipeline_mixed_project_gateway_2.id}
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_2.id}
         objects:
         - table:
             source_catalog: db2
@@ -55,12 +55,12 @@ resources:
             destination_table: transactions
       schema: sales
       catalog: bronze_catalog
-    mixed_project_pipeline_ingestion_4:
-      name: mixed_project_ingestion_4
+    my_project_pipeline_ingestion_4:
+      name: my_project_ingestion_4
       configuration:
         pipelines.***REMOVED***: '600'
       ingestion_definition:
-        ingestion_gateway_id: ${resources.pipelines.mixed_project_pipeline_mixed_project_gateway_2.id}
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_2.id}
         objects:
         - table:
             source_catalog: db2
@@ -78,12 +78,12 @@ resources:
             destination_table: payments
       schema: sales
       catalog: bronze_catalog
-    mixed_project_pipeline_ingestion_5:
-      name: mixed_project_ingestion_5
+    my_project_pipeline_ingestion_5:
+      name: my_project_ingestion_5
       configuration:
         pipelines.***REMOVED***: '600'
       ingestion_definition:
-        ingestion_gateway_id: ${resources.pipelines.mixed_project_pipeline_mixed_project_gateway_3.id}
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_3.id}
         objects:
         - table:
             source_catalog: db3
@@ -94,12 +94,12 @@ resources:
             destination_table: audit
       schema: logs
       catalog: silver_catalog
-    mixed_project_pipeline_ingestion_6:
-      name: mixed_project_ingestion_6
+    my_project_pipeline_ingestion_6:
+      name: my_project_ingestion_6
       configuration:
         pipelines.***REMOVED***: '600'
       ingestion_definition:
-        ingestion_gateway_id: ${resources.pipelines.mixed_project_pipeline_mixed_project_gateway_3.id}
+        ingestion_gateway_id: ${resources.pipelines.my_project_pipeline_my_project_gateway_3.id}
         objects:
         - table:
             source_catalog: db3
