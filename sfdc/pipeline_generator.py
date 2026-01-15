@@ -13,8 +13,8 @@ import os
 import sys
 
 # Import from local modules
-from load_balancing.generate_pipeline_config import generate_pipeline_config
-from deployment.generate_dab_yaml import generate_yaml_files
+from load_balancing.load_balancer import generate_pipeline_config
+from deployment.connector_settings_generator import generate_yaml_files
 
 
 def run_complete_pipeline_generation(
@@ -113,16 +113,16 @@ if __name__ == "__main__":
         epilog="""
 Examples:
   # Basic usage with default example
-  python run_pipeline_generation.py --input-csv load_balancing/examples/example_config.csv
+  python pipeline_generator.py --input-csv load_balancing/examples/example_config.csv
 
   # With custom connection and schedule
-  python run_pipeline_generation.py \\
+  python pipeline_generator.py \\
     --input-csv my_config.csv \\
     --connection my_sfdc_conn \\
     --schedule "*/30 * * * *"
 
   # With custom project name and workspace
-  python run_pipeline_generation.py \\
+  python pipeline_generator.py \\
     --input-csv my_config.csv \\
     --project-name my_sfdc_project \\
     --workspace-host https://my-workspace.cloud.databricks.com \\

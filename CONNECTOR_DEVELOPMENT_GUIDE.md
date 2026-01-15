@@ -31,40 +31,31 @@
 ├── requirements.txt                    # Python dependencies
 │
 ├── load_balancing/                     # STEP 1: Load balancing module
-│   ├── generate_pipeline_config.py    # Main load balancing logic
-│   └── examples/
-│       ├── example_config.csv         # Sample input
-│       └── output_config.csv          # Sample output
+│   └── load_balancer.py               # Main load balancing logic
 │
 ├── deployment/                         # STEP 2: YAML generation module
-│   ├── generate_dab_yaml.py          # Main YAML generator
-│   ├── examples/
-│   │   ├── example_config.csv        # Sample pipeline config
-│   │   ├── example_databricks.yml    # Sample DAB config
-│   │   └── example_pipeline.yml      # Sample generated output
-│   └── resources/                     # Generated YAML output directory
-│       └── {connector}_pipeline.yml
+│   ├── connector_settings_generator.py # Main YAML generator
+│   ├── setup_{connector}_connection.py    # Connection setup helper (optional)
+│   └── create_{connector}_catalog.py      # Catalog creation helper (optional)
 │
-├── run_pipeline_generation.py         # Unified runner (combines Steps 1+2)
-└── notebooks/                          # Optional: Interactive notebooks
-    └── main.ipynb                     # Step-by-step execution
+├── examples/                           # Example configurations and outputs
+│   ├── README.md                      # Examples documentation
+│   ├── {example1}/
+│   │   ├── pipeline_config.csv        # Input CSV configuration
+│   │   └── deployment/                # Generated DAB output
+│   │       ├── databricks.yml
+│   │       └── resources/
+│   │           ├── pipelines.yml (or connector-specific naming)
+│   │           ├── gateways.yml (SQL Server only)
+│   │           └── jobs.yml
+│   └── {example2}/
+│       └── ...
+│
+├── pipeline_generator.py              # Unified runner (combines Steps 1+2)
+└── pipeline_setup.ipynb               # Interactive notebook showing tool usage
+
 ```
 
-### Optional Additions
-
-**For Database Connectors:**
-```
-{connector_name}/
-├── deployment/
-│   └── prework.py                     # Optional: Catalog/schema setup
-```
-
-**For SaaS Connectors:**
-```
-{connector_name}/
-├── setup_{connector}_connection.py    # Connection setup helper
-├── create_{connector}_catalog.py      # Catalog creation helper
-```
 
 ---
 

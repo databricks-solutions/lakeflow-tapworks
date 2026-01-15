@@ -10,22 +10,107 @@ Two modes:
 
 Usage:
     # CSV mode with prefix+priority grouping
-    python run_pipeline_generation.py --csv input.csv
+    python pipeline_generator.py --csv input.csv
 
     # Auto-discover mode with bin-packing
-    python run_pipeline_generation.py --auto-discover --pipelines 3
+    python pipeline_generator.py --auto-discover --pipelines 3
 
     # Full pipeline with custom output
-    python run_pipeline_generation.py --csv input.csv --output-yaml resources/ga4_pipeline.yml
+    python pipeline_generator.py --csv input.csv --output-yaml resources/ga4_pipeline.yml
 
 Example:
-    python run_pipeline_generation.py --csv load_balancing/examples/example_config.csv
+    python pipeline_generator.py --csv load_balancing/examples/example_config.csv
 """
 
 import argparse
 import sys
 import subprocess
+import pandas as pd
+import os
 from pathlib import Path
+
+# Import from local modules
+from load_balancing.load_balancer import generate_pipeline_config
+from deployment.connector_settings_generator import generate_yaml_files
+
+
+def run_complete_pipeline_generation(
+    input_csv: str,
+    project_name: str = "ga4_ingestion",
+    workspace_host: str = None,
+    output_dir: str = "dab_deployment",
+    default_schedule: str = "0 */6 * * *"
+):
+    """
+    Complete pipeline generation process from GA4 property list to YAML files.
+
+    Args:
+        input_csv (str): Path to input CSV with GA4 properties
+        project_name (str): Project name for the bundle (default: "ga4_ingestion")
+        workspace_host (str): Workspace host URL (optional, can be set later)
+        output_dir (str): Output directory for DAB project (default: "dab_deployment")
+        default_schedule (str): Default cron schedule (default: "0 */6 * * *")
+
+    Returns:
+        pd.DataFrame: The pipeline configuration dataframe
+
+    Note:
+        - Properties are grouped by prefix+priority combinations
+        - Each unique (prefix, priority) pair creates a separate pipeline
+        - Pipeline groups are named: {prefix}_{priority}
+    """
+    print("="*80)
+    print("STARTING COMPLETE GA4 PIPELINE GENERATION PROCESS")
+    print("="*80)
+
+    # Step 1: Load input CSV
+    print(f"\n[Step 1/3] Loading input CSV: {input_csv}")
+    input_df = pd.read_csv(input_csv)
+    print(f"  ✓ Loaded {len(input_df)} GA4 properties")
+
+    # Step 2: Generate pipeline configuration (prefix+priority grouping)
+    print(f"\n[Step 2/3] Generating pipeline configuration with prefix+priority grouping")
+    print(f"  - Default schedule: {default_schedule}")
+
+    pipeline_config_df = generate_pipeline_config(
+        df=input_df,
+        default_schedule=default_schedule
+    )
+
+    # Step 3: Generate YAML files
+    print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
+    print(f"  - Output directory: {output_dir}")
+
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Generate YAML output path
+    yaml_output_path = os.path.join(output_dir, 'resources', 'ga4_pipeline.yml')
+
+    generate_yaml_files(
+        df=pipeline_config_df,
+        output_path=yaml_output_path
+    )
+
+    # Save intermediate config
+    config_output_path = os.path.join(output_dir, 'generated_config.csv')
+    pipeline_config_df.to_csv(config_output_path, index=False)
+    print(f"\n✓ Intermediate configuration saved to: {config_output_path}")
+
+    print("\n" + "="*80)
+    print("PIPELINE GENERATION COMPLETE!")
+    print("="*80)
+    print(f"\nNext steps:")
+    print(f"  1. Review the generated DAB project:")
+    print(f"     - {yaml_output_path}")
+    print(f"  2. Update GA4 connection name in YAML if needed")
+    print(f"  3. Ensure GA4 connection exists in Databricks")
+    print(f"  4. Deploy using Databricks Asset Bundles:")
+    print(f"     cd {output_dir}")
+    print(f"     databricks bundle deploy -t dev")
+    print("="*80 + "\n")
+
+    return pipeline_config_df
 
 
 def run_csv_mode(
@@ -179,13 +264,13 @@ def main():
         epilog="""
 Examples:
   # CSV mode with prefix+priority grouping
-  python run_pipeline_generation.py --csv input.csv
+  python pipeline_generator.py --csv input.csv
 
   # Auto-discover mode with bin-packing
-  python run_pipeline_generation.py --auto-discover --pipelines 3
+  python pipeline_generator.py --auto-discover --pipelines 3
 
   # Custom outputs
-  python run_pipeline_generation.py --csv input.csv --output-yaml resources/custom.yml
+  python pipeline_generator.py --csv input.csv --output-yaml resources/custom.yml
 
 Modes:
   1. CSV Mode (--csv): Read properties from CSV with prefix/priority columns
