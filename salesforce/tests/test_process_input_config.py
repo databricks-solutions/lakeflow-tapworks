@@ -55,7 +55,11 @@ class TestProcessInputConfig:
             'exclude_columns': ['', 'CreatedDate']
         })
 
-        result = read_input_config(df, default_connection_name='default_conn')
+        result = process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS
+        )
 
         # Verify all columns present
         assert 'source_database' in result.columns
@@ -86,7 +90,11 @@ class TestProcessInputConfig:
         })
 
         with pytest.raises(ValueError, match="Missing required columns"):
-            read_input_config(df)
+            process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS
+        )
 
     def test_missing_multiple_required_columns(self):
         """Test that multiple missing required columns are reported"""
@@ -96,7 +104,11 @@ class TestProcessInputConfig:
         })
 
         with pytest.raises(ValueError, match="Missing required columns"):
-            read_input_config(df)
+            process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS
+        )
 
     def test_missing_all_optional_columns(self):
         """Test that missing optional columns are added with defaults"""
@@ -108,22 +120,28 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['Account'],
             'prefix': ['sales'],
-            'priority': ['01']
+            'priority': ['01'],
+            'connection_name': ['my_conn']  # Now required
         })
 
-        result = read_input_config(
+        result = process_input_config(
             df,
-            default_connection_name='my_conn',
-            default_schedule='0 */6 * * *'
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns={
+                'schedule': '0 */6 * * *',
+                'include_columns': '',
+                'exclude_columns': ''
+            }
         )
 
         # Verify optional columns added with defaults
-        assert 'connection_name' in result.columns
         assert 'schedule' in result.columns
         assert 'include_columns' in result.columns
         assert 'exclude_columns' in result.columns
 
+        # connection_name should be preserved from input
         assert result['connection_name'].iloc[0] == 'my_conn'
+        # Optional columns should have defaults
         assert result['schedule'].iloc[0] == '0 */6 * * *'
         assert result['include_columns'].iloc[0] == ''
         assert result['exclude_columns'].iloc[0] == ''
@@ -139,25 +157,32 @@ class TestProcessInputConfig:
             'target_table_name': ['Account', 'Contact'],
             'prefix': ['sales', 'sales'],
             'priority': ['01', '01'],
-            'connection_name': [None, 'custom_conn'],  # NaN
-            'schedule': ['*/15 * * * *', None],  # NaN
-            'include_columns': [None, 'Id,Name'],  # NaN
-            'exclude_columns': ['SystemModstamp', None]  # NaN
+            'connection_name': ['conn1', 'custom_conn'],  # Required, must have valid values
+            'schedule': ['*/15 * * * *', None],  # NaN in optional
+            'include_columns': [None, 'Id,Name'],  # NaN in optional
+            'exclude_columns': ['SystemModstamp', None]  # NaN in optional
         })
 
-        result = read_input_config(
+        result = process_input_config(
             df,
-            default_connection_name='default_conn',
-            default_schedule='0 */12 * * *'
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns={
+                'schedule': '0 */12 * * *',
+                'include_columns': '',
+                'exclude_columns': ''
+            }
         )
 
-        # First row should have defaults where NaN
-        assert result['connection_name'].iloc[0] == 'default_conn'
-        assert result['include_columns'].iloc[0] == ''
-        assert result['exclude_columns'].iloc[1] == ''
-
-        # Second row should preserve non-NaN values
+        # Required columns should be preserved
+        assert result['connection_name'].iloc[0] == 'conn1'
         assert result['connection_name'].iloc[1] == 'custom_conn'
+
+        # Optional columns with NaN should get defaults
+        assert result['schedule'].iloc[1] == '0 */12 * * *'  # NaN replaced with default
+        assert result['include_columns'].iloc[0] == ''  # NaN replaced with default
+        assert result['exclude_columns'].iloc[1] == ''  # NaN replaced with default
+
+        # Non-NaN optional values should be preserved
         assert result['schedule'].iloc[0] == '*/15 * * * *'
         assert result['include_columns'].iloc[1] == 'Id,Name'
         assert result['exclude_columns'].iloc[0] == 'SystemModstamp'
@@ -173,27 +198,33 @@ class TestProcessInputConfig:
             'target_table_name': ['Account', 'Contact'],
             'prefix': ['sales', 'sales'],
             'priority': ['01', '01'],
-            'connection_name': ['', 'my_conn'],  # Empty string
-            'schedule': ['*/15 * * * *', ''],  # Empty string
-            'include_columns': ['', ''],  # Empty strings
-            'exclude_columns': ['', '']  # Empty strings
+            'connection_name': ['conn1', 'my_conn'],  # Required, must have valid values
+            'schedule': ['*/15 * * * *', ''],  # Empty string in optional
+            'include_columns': ['', ''],  # Empty strings (default is also empty)
+            'exclude_columns': ['', '']  # Empty strings (default is also empty)
         })
 
-        result = read_input_config(
+        result = process_input_config(
             df,
-            default_connection_name='default_conn',
-            default_schedule='0 */6 * * *'
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns={
+                'schedule': '0 */6 * * *',
+                'include_columns': '',
+                'exclude_columns': ''
+            }
         )
 
-        # Empty strings should be replaced with defaults
-        assert result['connection_name'].iloc[0] == 'default_conn'
+        # Required columns should be preserved
+        assert result['connection_name'].iloc[0] == 'conn1'
+        assert result['connection_name'].iloc[1] == 'my_conn'
+
+        # Empty strings in schedule should be replaced with default
         assert result['schedule'].iloc[1] == '0 */6 * * *'
 
-        # Non-empty values should be preserved
-        assert result['connection_name'].iloc[1] == 'my_conn'
+        # Non-empty schedule should be preserved
         assert result['schedule'].iloc[0] == '*/15 * * * *'
 
-        # Empty strings for include/exclude should remain empty
+        # Empty strings for include/exclude should remain empty (since default is also empty)
         assert result['include_columns'].iloc[0] == ''
         assert result['exclude_columns'].iloc[1] == ''
 
@@ -208,18 +239,23 @@ class TestProcessInputConfig:
             'target_table_name': ['Account'],
             'prefix': ['sales'],
             'priority': ['01'],
-            'connection_name': ['   '],  # Whitespace only
-            'schedule': ['\t\n'],  # Whitespace only
+            'connection_name': ['my_conn'],  # Required, must have valid value
+            'schedule': ['\t\n'],  # Whitespace only in optional
         })
 
-        result = read_input_config(
+        result = process_input_config(
             df,
-            default_connection_name='default_conn',
-            default_schedule='0 */6 * * *'
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns={
+                'schedule': '0 */6 * * *',
+                'include_columns': '',
+                'exclude_columns': ''
+            }
         )
 
-        # Whitespace-only should be replaced with defaults
-        assert result['connection_name'].iloc[0] == 'default_conn'
+        # Required columns should be preserved
+        assert result['connection_name'].iloc[0] == 'my_conn'
+        # Whitespace-only in optional column should be replaced with default
         assert result['schedule'].iloc[0] == '0 */6 * * *'
 
     def test_empty_dataframe(self):
@@ -236,10 +272,14 @@ class TestProcessInputConfig:
         })
 
         with pytest.raises(ValueError, match="Input DataFrame is empty"):
-            read_input_config(df)
+            process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS
+        )
 
     def test_mixed_valid_and_empty_values(self):
-        """Test DataFrame with mix of valid values, NaN, and empty strings"""
+        """Test DataFrame with mix of valid values, NaN, and empty strings in optional columns"""
         df = pd.DataFrame({
             'source_database': ['Salesforce', 'Salesforce', 'Salesforce'],
             'source_schema': ['standard', 'custom', 'standard'],
@@ -249,34 +289,34 @@ class TestProcessInputConfig:
             'target_table_name': ['Account', 'MyCustom', 'Contact'],
             'prefix': ['sales', 'marketing', 'sales'],
             'priority': ['01', '02', '01'],
-            'connection_name': ['conn1', '', None],  # Valid, empty, NaN
+            'connection_name': ['conn1', 'conn2', 'conn3'],  # Required, all valid
             'schedule': [None, '*/30 * * * *', ''],  # NaN, valid, empty
             'include_columns': ['Id,Name', '', None],
             'exclude_columns': [None, 'CreatedDate', '']
         })
 
-        result = read_input_config(
+        result = process_input_config(
             df,
-            default_connection_name='default_conn',
-            default_schedule='*/15 * * * *'
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS
         )
 
         # Row 0: Valid connection, NaN schedule
         assert result['connection_name'].iloc[0] == 'conn1'
-        assert result['schedule'].iloc[0] == '*/15 * * * *'  # Default
+        assert result['schedule'].iloc[0] == '*/15 * * * *'  # NaN replaced with default
         assert result['include_columns'].iloc[0] == 'Id,Name'
-        assert result['exclude_columns'].iloc[0] == ''  # Default for NaN
+        assert result['exclude_columns'].iloc[0] == ''  # NaN replaced with default
 
-        # Row 1: Empty connection, valid schedule
-        assert result['connection_name'].iloc[1] == 'default_conn'  # Default
+        # Row 1: Valid connection, valid schedule
+        assert result['connection_name'].iloc[1] == 'conn2'
         assert result['schedule'].iloc[1] == '*/30 * * * *'
         assert result['include_columns'].iloc[1] == ''  # Empty stays empty
         assert result['exclude_columns'].iloc[1] == 'CreatedDate'
 
-        # Row 2: NaN connection, empty schedule
-        assert result['connection_name'].iloc[2] == 'default_conn'  # Default
-        assert result['schedule'].iloc[2] == '*/15 * * * *'  # Default
-        assert result['include_columns'].iloc[2] == ''  # Default for NaN
+        # Row 2: Valid connection, empty schedule
+        assert result['connection_name'].iloc[2] == 'conn3'
+        assert result['schedule'].iloc[2] == '*/15 * * * *'  # Empty replaced with default
+        assert result['include_columns'].iloc[2] == ''  # NaN replaced with default
         assert result['exclude_columns'].iloc[2] == ''  # Empty stays empty
 
     def test_all_required_columns_present_different_types(self):
@@ -289,10 +329,15 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc', 'sfdc'],
             'target_table_name': ['Account', 'MyCustom'],
             'prefix': ['sales', 'marketing'],
-            'priority': [1, 2]  # integers instead of strings
+            'priority': [1, 2],  # integers instead of strings
+            'connection_name': ['conn1', 'conn2']
         })
 
-        result = read_input_config(df)
+        result = process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS
+        )
 
         # Should handle different types
         assert len(result) == 2
@@ -308,19 +353,25 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['Account'],
             'prefix': ['sales'],
-            'priority': ['01']
+            'priority': ['01'],
+            'connection_name': ['my_custom_connection']
         })
 
-        custom_conn = 'my_custom_connection'
         custom_schedule = '0 0 * * *'  # Daily at midnight
 
-        result = read_input_config(
+        result = process_input_config(
             df,
-            default_connection_name=custom_conn,
-            default_schedule=custom_schedule
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns={
+                'schedule': custom_schedule,
+                'include_columns': '',
+                'exclude_columns': ''
+            }
         )
 
-        assert result['connection_name'].iloc[0] == custom_conn
+        # connection_name should be preserved from DataFrame
+        assert result['connection_name'].iloc[0] == 'my_custom_connection'
+        # Custom schedule should be applied
         assert result['schedule'].iloc[0] == custom_schedule
 
     def test_dataframe_not_modified_in_place(self):
@@ -333,22 +384,27 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['Account'],
             'prefix': ['sales'],
-            'priority': ['01']
+            'priority': ['01'],
+            'connection_name': ['my_conn']
         })
 
         original_columns = list(df.columns)
         original_len = len(df)
 
-        result = read_input_config(df)
+        result = process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS
+        )
 
         # Original DataFrame should be unchanged
         assert list(df.columns) == original_columns
         assert len(df) == original_len
-        assert 'connection_name' not in df.columns
+        assert 'schedule' not in df.columns  # Optional column shouldn't be in original
 
-        # Result should have new columns
-        assert 'connection_name' in result.columns
+        # Result should have new optional columns
         assert 'schedule' in result.columns
+        assert 'include_columns' in result.columns
 
     def test_large_dataframe(self):
         """Test with a larger DataFrame to ensure performance"""
@@ -361,10 +417,15 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'] * num_rows,
             'target_table_name': [f'Table{i}' for i in range(num_rows)],
             'prefix': ['sales'] * num_rows,
-            'priority': ['01'] * num_rows
+            'priority': ['01'] * num_rows,
+            'connection_name': ['sfdc_connection'] * num_rows
         })
 
-        result = read_input_config(df)
+        result = process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS
+        )
 
         assert len(result) == num_rows
         assert all(result['connection_name'] == 'sfdc_connection')
@@ -385,13 +446,170 @@ class TestProcessInputConfig:
             'include_columns': ['Id,Name__c,Custom_Field__c']
         })
 
-        result = read_input_config(df)
+        result = process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS
+        )
 
         assert result['source_schema'].iloc[0] == 'custom__c'
         assert result['source_table_name'].iloc[0] == 'My_Custom__c'
         assert result['prefix'].iloc[0] == 'sales-team-1'
         assert result['connection_name'].iloc[0] == 'conn@special!'
         assert result['include_columns'].iloc[0] == 'Id,Name__c,Custom_Field__c'
+
+    def test_override_single_column(self):
+        """Test that override_input_config overrides a single column for all rows"""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'custom'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['bronze', 'bronze'],
+            'target_schema': ['sfdc', 'sfdc'],
+            'target_table_name': ['Account', 'Contact'],
+            'prefix': ['sales', 'sales'],
+            'priority': ['01', '02'],
+            'connection_name': ['conn1', 'conn2'],
+            'schedule': ['*/15 * * * *', '*/30 * * * *']
+        })
+
+        override_config = {'schedule': '0 */6 * * *'}
+
+        result = process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS,
+            override_input_config=override_config
+        )
+
+        # Schedule should be overridden for all rows
+        assert result['schedule'].iloc[0] == '0 */6 * * *'
+        assert result['schedule'].iloc[1] == '0 */6 * * *'
+
+        # Other columns should remain unchanged
+        assert result['connection_name'].iloc[0] == 'conn1'
+        assert result['connection_name'].iloc[1] == 'conn2'
+
+    def test_override_multiple_columns(self):
+        """Test that override_input_config can override multiple columns"""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'custom', 'standard'],
+            'source_table_name': ['Account', 'Contact', 'Lead'],
+            'target_catalog': ['bronze', 'silver', 'bronze'],
+            'target_schema': ['sfdc', 'sfdc', 'sfdc'],
+            'target_table_name': ['Account', 'Contact', 'Lead'],
+            'prefix': ['sales', 'marketing', 'sales'],
+            'priority': ['01', '02', '01'],
+            'connection_name': ['conn1', 'conn2', 'conn3'],
+            'schedule': ['*/15 * * * *', '*/30 * * * *', '*/45 * * * *']
+        })
+
+        override_config = {
+            'schedule': '0 0 * * *',
+            'target_catalog': 'gold'
+        }
+
+        result = process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS,
+            override_input_config=override_config
+        )
+
+        # Both schedule and target_catalog should be overridden for all rows
+        assert all(result['schedule'] == '0 0 * * *')
+        assert all(result['target_catalog'] == 'gold')
+
+        # Other columns should remain unchanged
+        assert result['connection_name'].tolist() == ['conn1', 'conn2', 'conn3']
+        assert result['prefix'].tolist() == ['sales', 'marketing', 'sales']
+
+    def test_override_replaces_existing_values(self):
+        """Test that override replaces existing non-empty values"""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce'],
+            'source_schema': ['standard'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['bronze'],
+            'target_schema': ['sfdc'],
+            'target_table_name': ['Account'],
+            'prefix': ['sales'],
+            'priority': ['01'],
+            'connection_name': ['original_conn'],
+            'schedule': ['*/15 * * * *']
+        })
+
+        override_config = {
+            'connection_name': 'override_conn',
+            'schedule': '0 */12 * * *'
+        }
+
+        result = process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS,
+            override_input_config=override_config
+        )
+
+        # Original values should be replaced
+        assert result['connection_name'].iloc[0] == 'override_conn'
+        assert result['schedule'].iloc[0] == '0 */12 * * *'
+
+    def test_override_with_none(self):
+        """Test that None override_input_config doesn't affect processing"""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce'],
+            'source_schema': ['standard'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['bronze'],
+            'target_schema': ['sfdc'],
+            'target_table_name': ['Account'],
+            'prefix': ['sales'],
+            'priority': ['01'],
+            'connection_name': ['my_conn'],
+            'schedule': ['*/15 * * * *']
+        })
+
+        result = process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS,
+            override_input_config=None
+        )
+
+        # Values should remain unchanged
+        assert result['connection_name'].iloc[0] == 'my_conn'
+        assert result['schedule'].iloc[0] == '*/15 * * * *'
+
+    def test_override_with_missing_column_adds_column(self):
+        """Test that override can add a new column not in original DataFrame"""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce'],
+            'source_schema': ['standard'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['bronze'],
+            'target_schema': ['sfdc'],
+            'target_table_name': ['Account'],
+            'prefix': ['sales'],
+            'priority': ['01'],
+            'connection_name': ['my_conn']
+        })
+
+        override_config = {
+            'schedule': '0 0 * * *'  # schedule not in original, will be added by optional
+        }
+
+        result = process_input_config(
+            df,
+            required_columns=REQUIRED_COLUMNS,
+            optional_columns=OPTIONAL_COLUMNS,
+            override_input_config=override_config
+        )
+
+        # Schedule should be added and overridden
+        assert 'schedule' in result.columns
+        assert result['schedule'].iloc[0] == '0 0 * * *'
 
 
 if __name__ == '__main__':

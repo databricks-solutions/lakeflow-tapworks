@@ -113,20 +113,27 @@ def test_mixed_valid_and_empty_values(self):
 ### Required Columns
 - Must be present in input DataFrame
 - Missing required columns raise `ValueError`
-- Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `prefix`, `priority`
+- Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `prefix`, `priority`, `connection_name`
 
 ### Optional Columns
 - Added with defaults if missing
 - NaN values replaced with defaults
 - Empty strings replaced with defaults
 - Whitespace-only strings replaced with defaults
-- Optional columns: `connection_name`, `schedule`, `include_columns`, `exclude_columns`
+- Optional columns: `schedule`, `include_columns`, `exclude_columns`
+
+### Override Configuration
+- Override values replace existing values for ALL rows
+- Useful for forcing specific values across entire configuration
+- Overrides are applied after optional column processing
+- Example: Override schedule for all rows regardless of input values
 
 ### Output
 - All required columns present
 - All optional columns present with valid values
-- No NaN values
-- No empty strings in columns with defaults
+- No NaN values in optional columns
+- No empty strings in optional columns with non-empty defaults
+- Override values applied to all rows
 - Original DataFrame not modified
 
 ## Adding New Tests
