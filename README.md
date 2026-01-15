@@ -35,7 +35,7 @@ Each connector provides three usage options:
 
 ```bash
 # 1. Navigate to connector directory
-cd sqlserver  # or sfdc, ga4
+cd sqlserver  # or salesforce, google_analytics
 
 # 2. Install dependencies
 pip install -r requirements.txt
@@ -55,8 +55,8 @@ databricks bundle deploy -t prod
 ```
 lakehouse-tapworks/
 ├── sqlserver/          # SQL Server connector
-├── sfdc/               # Salesforce connector
-├── ga4/                # Google Analytics 4 connector
+├── salesforce/         # Salesforce connector
+├── google_analytics/   # Google Analytics 4 connector
 ├── CONNECTOR_DEVELOPMENT_GUIDE.md  # Guide for adding new connectors
 └── README.md           # This file
 ```
@@ -80,7 +80,7 @@ Each connector follows a unified structure:
 
 ## Documentation
 
-- **Connector-Specific Guides**: See README.md in each connector directory (sqlserver/, sfdc/, ga4/)
+- **Connector-Specific Guides**: See README.md in each connector directory (sqlserver/, salesforce/, google_analytics/)
 - **Development Guide**: See [CONNECTOR_DEVELOPMENT_GUIDE.md](CONNECTOR_DEVELOPMENT_GUIDE.md) for implementing new connectors
 - **Legacy Documentation**: Historical documentation available in [_legacy/](_legacy/)
 
@@ -113,7 +113,7 @@ Input CSV → Load Balancing → Pipeline Config → YAML Generation → DAB Fil
 
 ## Getting Started
 
-1. **Choose a connector** based on your data source (sqlserver, sfdc, or ga4)
+1. **Choose a connector** based on your data source (sqlserver, salesforce, or google_analytics)
 2. **Read the connector README** in the specific connector directory
 3. **Prepare your input CSV** following the connector's format
 4. **Run the pipeline generator** using the interactive notebook or Python script
