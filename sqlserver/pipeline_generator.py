@@ -10,8 +10,8 @@ import pandas as pd
 import os
 
 # Import from local modules
-from load_balancing.generate_pipeline_config import generate_pipeline_config
-from deployment.generate_dab_yaml import generate_yaml_files
+from load_balancing.load_balancer import generate_pipeline_config
+from deployment.connector_settings_generator import generate_yaml_files
 
 
 def run_complete_pipeline_generation(
