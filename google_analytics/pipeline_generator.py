@@ -102,17 +102,16 @@ def run_complete_pipeline_generation(
 
     # Step 3: Generate YAML files
     print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
+    print(f"  - Project name: {project_name}")
     print(f"  - Output directory: {output_dir}")
-
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Generate YAML output path
-    yaml_output_path = os.path.join(output_dir, 'resources', 'ga4_pipeline.yml')
+    if workspace_host:
+        print(f"  - Workspace host: {workspace_host}")
 
     generate_yaml_files(
         df=pipeline_config_df,
-        output_path=yaml_output_path
+        project_name=project_name,
+        workspace_host=workspace_host,
+        output_dir=output_dir
     )
 
     # Save intermediate config
@@ -121,17 +120,8 @@ def run_complete_pipeline_generation(
     print(f"\n✓ Intermediate configuration saved to: {config_output_path}")
 
     print("\n" + "="*80)
-    print("PIPELINE GENERATION COMPLETE!")
+    print("GA4 PIPELINE GENERATION COMPLETE!")
     print("="*80)
-    print(f"\nNext steps:")
-    print(f"  1. Review the generated DAB project:")
-    print(f"     - {yaml_output_path}")
-    print(f"  2. Update GA4 connection name in YAML if needed")
-    print(f"  3. Ensure GA4 connection exists in Databricks")
-    print(f"  4. Deploy using Databricks Asset Bundles:")
-    print(f"     cd {output_dir}")
-    print(f"     databricks bundle deploy -t dev")
-    print("="*80 + "\n")
 
     return pipeline_config_df
 

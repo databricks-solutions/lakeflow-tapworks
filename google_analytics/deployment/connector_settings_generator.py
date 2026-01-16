@@ -3,24 +3,26 @@
 Generates Databricks Asset Bundle (DAB) YAML for Google Analytics 4 ingestion pipelines.
 
 Groups pipelines by pipeline_group (which uses prefix_priority format).
+Creates separate YAML files for pipelines and jobs, similar to SQL Server structure.
 
 Usage:
     # As a module
     from deployment.connector_settings_generator import generate_yaml_files
-    generate_yaml_files(df, output_path)
+    generate_yaml_files(df, project_name, workspace_host, output_dir)
 
     # Command-line
-    python connector_settings_generator.py <csv_path> [--output <path>]
+    python connector_settings_generator.py <csv_path> [--project-name <name>] [--output-dir <path>]
 
 Example:
     python connector_settings_generator.py ../load_balancing/examples/output_config.csv
-    python connector_settings_generator.py config.csv --output resources/pipelines.yml
+    python connector_settings_generator.py config.csv --project-name my_project --output-dir dab_deployment
 """
 
 import pandas as pd
 import yaml
 import sys
 import argparse
+import os
 from pathlib import Path
 from collections import defaultdict
 
@@ -29,73 +31,30 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from utilities import convert_cron_to_quartz
 
 
-def generate_yaml_files(
-    df: pd.DataFrame,
-    output_path: str = "resources/ga4_pipeline.yml"
-) -> None:
+def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
     """
-    Generate Databricks Asset Bundle YAML for Google Analytics 4 ingestion pipelines.
+    Create pipeline YAML configuration from dataframe.
 
-    Creates one pipeline per unique pipeline_group value, with scheduled jobs
-    for each pipeline based on the schedule column.
+    Creates one Delta Live Tables pipeline per unique pipeline_group value.
 
     Args:
-        df (pd.DataFrame): Pipeline configuration dataframe with columns:
-            - source_catalog: GCP project ID
-            - source_schema: GA4 property (e.g., analytics_123456789)
-            - tables: Comma-separated list of tables (e.g., "events,events_intraday,users")
-            - target_catalog: Target Databricks catalog
-            - target_schema: Target Databricks schema
-            - connection_name: GA4 connection name in Databricks
-            - pipeline_group: Pipeline group identifier (e.g., "business_unit1_01")
-            - schedule: Cron schedule expression
-        output_path (str): Output path for YAML file
+        df (pd.DataFrame): Input dataframe containing GA4 property configurations
+        project_name (str): Project name prefix for all resources
 
     Returns:
-        None (writes YAML file to disk)
-
-    Note:
-        Each pipeline uses the target_catalog, target_schema, and connection_name
-        from its rows in the CSV. Different pipeline groups can target different
-        catalogs, schemas, or use different connections.
+        dict: Pipelines YAML structure
     """
-    print("\n" + "="*80)
-    print("GENERATING DATABRICKS ASSET BUNDLE YAML FOR GA4")
-    print("="*80)
-
-    # Validate required columns
-    required_columns = [
-        'source_catalog', 'source_schema', 'tables',
-        'target_catalog', 'target_schema', 'connection_name',
-        'pipeline_group', 'schedule'
-    ]
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"Missing required columns: {missing_columns}")
-
-    print(f"\nConfiguration:")
-    print(f"  Total properties: {len(df)}")
+    pipelines = {}
 
     # Group properties by pipeline_group
     groups = defaultdict(list)
     for idx, row in df.iterrows():
         groups[row['pipeline_group']].append(row)
 
-    print(f"  Unique pipelines: {len(groups)}")
-
-    # Build combined YAML with all pipeline groups
-    combined_yaml = {
-        "resources": {
-            "pipelines": {},
-            "jobs": {}
-        }
-    }
-
     print("\n" + "-"*80)
     print("Pipeline Details:")
     print("-"*80)
 
-    # Generate a pipeline for each group
     for pipeline_group in sorted(groups.keys()):
         group_properties = groups[pipeline_group]
 
@@ -103,17 +62,15 @@ def generate_yaml_files(
         pipeline_name = f"pipeline_ga4_{pipeline_group}"
         pipeline_display = f"GA4 Ingestion - {pipeline_group}"
 
-        # Get catalog, schema, connection_name, and schedule from first property in group
+        # Get catalog, schema, and connection_name from first property in group
         target_catalog = group_properties[0]['target_catalog']
         target_schema = group_properties[0]['target_schema']
         connection_name = group_properties[0]['connection_name']
-        schedule = group_properties[0]['schedule']
 
         print(f"\nPipeline: {pipeline_group}")
         print(f"  Name: {pipeline_name}")
         print(f"  Target: {target_catalog}.{target_schema}")
         print(f"  Connection: {connection_name}")
-        print(f"  Schedule: {schedule}")
         print(f"  Properties: {len(group_properties)}")
 
         # Warn if catalogs differ within same group
@@ -139,14 +96,6 @@ def generate_yaml_files(
             for c in connections_in_group:
                 print(f"      {c}")
             print(f"  Using connection_name from first property: {connection_name}")
-
-        # Warn if schedules differ within same group
-        schedules_in_group = set(item['schedule'] for item in group_properties if pd.notna(item['schedule']))
-        if len(schedules_in_group) > 1:
-            print(f"  ⚠ Warning: Different schedules detected in group:")
-            for s in schedules_in_group:
-                print(f"      {s}")
-            print(f"  Using schedule from first property: {schedule}")
 
         # Build ingestion objects list
         ingestion_objects = []
@@ -177,8 +126,8 @@ def generate_yaml_files(
 
             print(f"    - {source_schema}: {', '.join(tables)}")
 
-        # Add pipeline to YAML using actual values from CSV
-        combined_yaml["resources"]["pipelines"][pipeline_name] = {
+        # Add pipeline using actual values from CSV
+        pipelines[pipeline_name] = {
             "name": pipeline_display,
             "catalog": target_catalog,
             "schema": target_schema,
@@ -188,47 +137,192 @@ def generate_yaml_files(
             }
         }
 
-        # Add scheduled job for this pipeline
-        job_name = f"job_ga4_{pipeline_group}"
-        job_display = f"GA4 Pipeline Scheduler - {pipeline_group}"
+    return {'resources': {'pipelines': pipelines}}
 
-        # Convert to Quartz cron
-        quartz_cron = convert_cron_to_quartz(schedule)
 
-        combined_yaml["resources"]["jobs"][job_name] = {
-            "name": job_display,
-            "schedule": {
-                "quartz_cron_expression": quartz_cron,
-                "timezone_id": "UTC"
-            },
-            "tasks": [
-                {
-                    "task_key": "run_ga4_pipeline",
-                    "pipeline_task": {
-                        "pipeline_id": f"${{resources.pipelines.{pipeline_name}.id}}"
+def create_jobs(df: pd.DataFrame, project_name: str) -> dict:
+    """
+    Create job YAML configuration from dataframe.
+
+    Creates a scheduled job for each pipeline that triggers the pipeline on a cron schedule.
+
+    Args:
+        df (pd.DataFrame): Input dataframe containing pipeline_group and schedule columns
+        project_name (str): Project name prefix for all resources
+
+    Returns:
+        dict: Jobs YAML structure
+    """
+    jobs = {}
+
+    # Group by pipeline_group
+    for pipeline_group, group_df in df.groupby('pipeline_group'):
+        schedule = group_df.iloc[0]['schedule']
+
+        # Only create job if schedule is defined
+        if pd.notna(schedule) and schedule.strip():
+            job_name = f"job_ga4_{pipeline_group}"
+            job_display = f"GA4 Pipeline Scheduler - {pipeline_group}"
+            pipeline_resource_name = f"pipeline_ga4_{pipeline_group}"
+            quartz_schedule = convert_cron_to_quartz(schedule)
+
+            jobs[job_name] = {
+                'name': job_display,
+                'schedule': {
+                    'quartz_cron_expression': quartz_schedule,
+                    'timezone_id': 'UTC'
+                },
+                'tasks': [{
+                    'task_key': 'run_ga4_pipeline',
+                    'pipeline_task': {
+                        'pipeline_id': f"${{resources.pipelines.{pipeline_resource_name}.id}}"
                     }
+                }]
+            }
+
+            print(f"  Job: {job_name}")
+            print(f"    Quartz cron: {quartz_schedule}")
+
+    return {'resources': {'jobs': jobs}}
+
+
+def create_databricks_yml(project_name: str, workspace_host: str) -> dict:
+    """
+    Create the main databricks.yml file for the GA4 DAB project.
+
+    Args:
+        project_name (str): Project name for the bundle
+        workspace_host (str): Workspace host URL
+
+    Returns:
+        dict: The databricks.yml structure
+
+    Note:
+        Catalog, schema, and connection_name are now specified directly in
+        each pipeline definition from the CSV values, not as variables.
+    """
+    return {
+        'bundle': {
+            'name': project_name
+        },
+        'include': [
+            'resources/*.yml'
+        ],
+        'targets': {
+            'dev': {
+                'mode': 'development',
+                'default': True,
+                'workspace': {
+                    'host': workspace_host
                 }
-            ]
+            }
         }
+    }
 
-        print(f"  Job: {job_name}")
-        print(f"    Quartz cron: {quartz_cron}")
 
-    # Write YAML to file
-    output_path_obj = Path(output_path)
-    output_path_obj.parent.mkdir(parents=True, exist_ok=True)
+def generate_yaml_files(
+    df: pd.DataFrame,
+    project_name: str = "ga4_ingestion",
+    workspace_host: str = None,
+    output_dir: str = "dab_deployment"
+) -> None:
+    """
+    Generate Databricks Asset Bundle YAML files for Google Analytics 4 ingestion pipelines.
 
-    with open(output_path, 'w') as f:
-        yaml.dump(combined_yaml, f, default_flow_style=False, sort_keys=False, indent=2)
+    Creates a complete DAB structure with:
+    - databricks.yml (root configuration)
+    - resources/pipelines.yml (pipeline definitions)
+    - resources/jobs.yml (job definitions)
+
+    Args:
+        df (pd.DataFrame): Pipeline configuration dataframe with columns:
+            - source_catalog: GCP project ID
+            - source_schema: GA4 property (e.g., analytics_123456789)
+            - tables: Comma-separated list of tables (e.g., "events,events_intraday,users")
+            - target_catalog: Target Databricks catalog
+            - target_schema: Target Databricks schema
+            - connection_name: GA4 connection name in Databricks
+            - pipeline_group: Pipeline group identifier (e.g., "business_unit1_01")
+            - schedule: Cron schedule expression
+        project_name (str): Project name for the bundle (default: "ga4_ingestion")
+        workspace_host (str): Workspace host URL (optional, can be set later)
+        output_dir (str): Output directory for DAB project (default: "dab_deployment")
+
+    Returns:
+        None (writes YAML files to disk)
+
+    Note:
+        Each pipeline uses the target_catalog, target_schema, and connection_name
+        from its rows in the CSV. Different pipeline groups can target different
+        catalogs, schemas, or use different connections.
+    """
+    print("\n" + "="*80)
+    print("GENERATING DATABRICKS ASSET BUNDLE YAML FOR GA4")
+    print("="*80)
+
+    # Validate required columns
+    required_columns = [
+        'source_catalog', 'source_schema', 'tables',
+        'target_catalog', 'target_schema', 'connection_name',
+        'pipeline_group', 'schedule'
+    ]
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+
+    print(f"\nConfiguration:")
+    print(f"  Total properties: {len(df)}")
+    print(f"  Unique pipelines: {df['pipeline_group'].nunique()}")
+
+    # Generate YAML content using separate functions
+    pipelines_yaml = create_pipelines(df, project_name)
+    jobs_yaml = create_jobs(df, project_name)
+    databricks_yaml = create_databricks_yml(
+        project_name=project_name,
+        workspace_host=workspace_host or "https://your-workspace.cloud.databricks.com"
+    )
+
+    # Create directory structure
+    resources_dir = Path(output_dir) / 'resources'
+    resources_dir.mkdir(parents=True, exist_ok=True)
+
+    # Define output paths
+    databricks_yml_path = Path(output_dir) / 'databricks.yml'
+    pipelines_yml_path = resources_dir / 'pipelines.yml'
+    jobs_yml_path = resources_dir / 'jobs.yml'
+
+    # Write YAML files
+    with open(databricks_yml_path, 'w') as f:
+        yaml.dump(databricks_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+
+    with open(pipelines_yml_path, 'w') as f:
+        yaml.dump(pipelines_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+
+    with open(jobs_yml_path, 'w') as f:
+        yaml.dump(jobs_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
 
     print("\n" + "="*80)
-    print(f"✓ YAML generated successfully: {output_path}")
+    print("YAML GENERATION COMPLETE")
     print("="*80)
-    print("\nSummary:")
-    print(f"  Pipelines created: {len(combined_yaml['resources']['pipelines'])}")
-    print(f"  Jobs created: {len(combined_yaml['resources']['jobs'])}")
-    print(f"  Total properties: {len(df)}")
-    print()
+    print(f"\nGenerated DAB project structure in: {output_dir}")
+    print(f"  ✓ {databricks_yml_path}")
+    print(f"  ✓ {pipelines_yml_path}")
+    print(f"  ✓ {jobs_yml_path}")
+    print(f"\nSummary:")
+    print(f"  - Pipelines: {len(pipelines_yaml['resources']['pipelines'])}")
+    print(f"  - Scheduled jobs: {len(jobs_yaml['resources']['jobs'])}")
+    print(f"  - Total properties: {len(df)}")
+
+    print("\nNext steps:")
+    print("  1. Update workspace_host in databricks.yml if needed")
+    print("  2. Ensure GA4 connection exists in Databricks UI:")
+    print("     → Catalog → Connections → Create → Type: Google Analytics")
+    print("  3. Review the generated YAML files")
+    print("  4. Deploy using Databricks Asset Bundles:")
+    print(f"     cd {output_dir}")
+    print("     databricks bundle validate -t dev")
+    print("     databricks bundle deploy -t dev")
+    print("="*80 + "\n")
 
 
 def main():
@@ -236,9 +330,15 @@ def main():
         description='Generate Databricks Asset Bundle YAML for GA4 pipelines',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Example:
-  python connector_settings_generator.py config.csv
-  python connector_settings_generator.py config.csv --output resources/ga4_pipeline.yml
+Examples:
+  # Generate from pipeline config CSV
+  python connector_settings_generator.py ../load_balancing/examples/output_config.csv
+
+  # With custom project name and output directory
+  python connector_settings_generator.py config.csv --project-name my_ga4_project --output-dir dab_project
+
+  # With workspace host
+  python connector_settings_generator.py config.csv --workspace-host https://my-workspace.cloud.databricks.com
 
 Input CSV must have columns:
   - source_catalog (GCP project)
@@ -246,6 +346,7 @@ Input CSV must have columns:
   - tables (comma-separated: events,events_intraday,users)
   - target_catalog
   - target_schema
+  - connection_name
   - pipeline_group (e.g., business_unit1_01)
   - schedule (cron expression)
         """
@@ -256,9 +357,22 @@ Input CSV must have columns:
         help='Input CSV file with pipeline configuration'
     )
     parser.add_argument(
-        '--output', '-o',
-        default='resources/ga4_pipeline.yml',
-        help='Output YAML file path (default: resources/ga4_pipeline.yml)'
+        '--project-name',
+        type=str,
+        default='ga4_ingestion',
+        help='Project name for the bundle (default: ga4_ingestion)'
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=str,
+        default='dab_deployment',
+        help='Output directory for DAB project (default: dab_deployment)'
+    )
+    parser.add_argument(
+        '--workspace-host',
+        type=str,
+        default=None,
+        help='Workspace host URL (optional, can be updated later in databricks.yml)'
     )
 
     args = parser.parse_args()
@@ -273,14 +387,13 @@ Input CSV must have columns:
 
         print(f"Loaded {len(df)} properties")
 
-        # Generate YAML
-        generate_yaml_files(df, args.output)
-
-        print("Next steps:")
-        print(f"  1. Review YAML: {args.output}")
-        print(f"  2. Update GA4 connection name in YAML")
-        print(f"  3. Deploy: databricks bundle deploy -t dev")
-        print()
+        # Generate YAML files
+        generate_yaml_files(
+            df=df,
+            project_name=args.project_name,
+            workspace_host=args.workspace_host,
+            output_dir=args.output_dir
+        )
 
     except FileNotFoundError:
         print(f"Error: File not found: {args.csv_file}", file=sys.stderr)
