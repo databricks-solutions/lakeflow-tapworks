@@ -93,8 +93,9 @@ def process_input_config(
             print(f"Info: '{col_name}' column not found. Adding with default: {default_value}")
             df[col_name] = default_value
         else:
-            # Fill NaN values with default
-            df[col_name] = df[col_name].fillna(default_value)
+            # Fill NaN values with default (skip if default is None, as pandas doesn't support fillna(None))
+            if default_value is not None:
+                df[col_name] = df[col_name].fillna(default_value)
 
             # Replace empty strings with default (for string columns)
             if isinstance(default_value, str):
