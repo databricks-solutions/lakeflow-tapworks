@@ -11,9 +11,10 @@ Note: Unlike SQL Server, Salesforce is a SaaS connector and does NOT require gat
 import pandas as pd
 import os
 import sys
+from pathlib import Path
 
 # Import from local modules
-from load_balancing.load_balancer import load_input_csv, process_input_config, generate_pipeline_config
+from load_balancing.load_balancer import process_input_config, generate_pipeline_config
 from deployment.connector_settings_generator import generate_yaml_files
 
 def load_input_csv(
@@ -58,7 +59,7 @@ def load_input_csv(
     return df
 
 def run_complete_pipeline_generation(
-    input_csv: str,
+    df: pd.DataFrame,
     project_name: str = "sfdc_ingestion",
     default_schedule: str = "*/15 * * * *",
     workspace_host: str = None,
@@ -68,7 +69,7 @@ def run_complete_pipeline_generation(
     """
     Complete pipeline generation process from Salesforce objects to YAML files.
 
-    Pipeline grouping is based on prefix + priority combinations from the input CSV.
+    Pipeline grouping is based on prefix + priority combinations from the input DataFrame.
     Each unique (prefix, priority) pair becomes a separate pipeline.
 
     Creates a complete DAB structure with:
@@ -76,7 +77,7 @@ def run_complete_pipeline_generation(
     - resources/sfdc_pipeline.yml (pipeline and job definitions)
 
     Args:
-        input_csv (str): Path to input CSV with Salesforce objects (required)
+        df (pd.DataFrame): Input DataFrame with Salesforce objects (required)
             Must contain: source_database, source_schema, source_table_name,
                          target_catalog, target_schema, target_table_name,
                          prefix, priority, connection_name (all required)
@@ -87,7 +88,7 @@ def run_complete_pipeline_generation(
         output_config (str): Output path for intermediate configuration CSV
 
     Note:
-        connection_name is now a required column in the CSV. Each row must specify
+        connection_name is now a required column in the DataFrame. Each row must specify
         which Salesforce connection to use.
 
     Returns:
@@ -97,13 +98,9 @@ def run_complete_pipeline_generation(
     print("SALESFORCE PIPELINE GENERATION")
     print("="*80)
 
-    # Step 1: Load input CSV
-    print(f"\n[Step 1/4] Loading input CSV: {input_csv}")
-    input_df = load_input_csv(input_csv)
-    print(f"  ✓ Loaded {len(input_df)} Salesforce objects")
-
-    # Step 2: Normalize and validate configuration
-    print(f"\n[Step 2/4] Normalizing configuration")
+    # Step 1: Normalize and validate configuration
+    print(f"\n[Step 1/3] Normalizing configuration")
+    print(f"  - Input rows: {len(df)}")
     print(f"  - Default schedule: {default_schedule}")
 
     # Define required and optional columns for Salesforce
@@ -119,13 +116,13 @@ def run_complete_pipeline_generation(
     }
 
     normalized_df = process_input_config(
-        df=input_df,
+        df=df,
         required_columns=required_columns,
         optional_columns=optional_columns
     )
 
-    # Step 3: Generate pipeline configuration (prefix + priority grouping)
-    print(f"\n[Step 3/4] Generating pipeline configuration using prefix + priority")
+    # Step 2: Generate pipeline configuration (prefix + priority grouping)
+    print(f"\n[Step 2/3] Generating pipeline configuration using prefix + priority")
 
     pipeline_config_df = generate_pipeline_config(df=normalized_df)
 
@@ -137,8 +134,8 @@ def run_complete_pipeline_generation(
     pipeline_config_df.to_csv(output_config, index=False)
     print(f"  ✓ Saved configuration to: {output_config}")
 
-    # Step 4: Generate YAML files (databricks.yml + resources/sfdc_pipeline.yml)
-    print(f"\n[Step 4/4] Generating Databricks Asset Bundle YAML files")
+    # Step 3: Generate YAML files (databricks.yml + resources/sfdc_pipeline.yml)
+    print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
     print(f"  - Project name: {project_name}")
     print(f"  - Output directory: {output_dir}")
     if workspace_host:
@@ -227,9 +224,13 @@ Note: connection_name is now a required column in the CSV file.
 
     args = parser.parse_args()
 
+    # Load input CSV
+    print(f"Loading input CSV: {args.input_csv}")
+    input_df = load_input_csv(args.input_csv)
+
     # Run the complete pipeline generation
     result_df = run_complete_pipeline_generation(
-        input_csv=args.input_csv,
+        df=input_df,
         project_name=args.project_name,
         default_schedule=args.schedule,
         workspace_host=args.workspace_host,
