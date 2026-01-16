@@ -86,7 +86,10 @@ def run_complete_pipeline_generation(
     Complete pipeline generation process from GA4 property list to YAML files.
 
     Args:
-        df (pd.DataFrame): Input DataFrame with GA4 properties
+        df (pd.DataFrame): Input DataFrame with GA4 properties (required)
+            Must contain: source_catalog, source_schema, tables,
+                         target_catalog, target_schema,
+                         prefix, priority, connection_name (all required)
         project_name (str): Project name for the bundle (default: "ga4_ingestion")
         workspace_host (str): Workspace host URL (optional, can be set later)
         output_dir (str): Output directory for DAB project (default: "dab_deployment")
@@ -96,6 +99,8 @@ def run_complete_pipeline_generation(
         pd.DataFrame: The pipeline configuration dataframe
 
     Note:
+        - connection_name is a required column in the DataFrame. Each row must specify
+          which GA4 connection to use.
         - Properties are grouped by prefix+priority combinations
         - Each unique (prefix, priority) pair creates a separate pipeline
         - Pipeline groups are named: {prefix}_{priority}
@@ -113,7 +118,7 @@ def run_complete_pipeline_generation(
     required_columns = [
         'source_catalog', 'source_schema', 'tables',
         'target_catalog', 'target_schema',
-        'prefix', 'priority'
+        'prefix', 'priority', 'connection_name'
     ]
     optional_columns = {
         'schedule': default_schedule
