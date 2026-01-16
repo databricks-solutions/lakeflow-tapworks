@@ -40,10 +40,10 @@ from deployment.connector_settings_generator import generate_yaml_files
 
 def run_complete_pipeline_generation(
     df: pd.DataFrame,
-    project_name: str = "ga4_ingestion",
-    workspace_host: str = None,
-    output_dir: str = "dab_deployment",
-    default_schedule: str = "0 */6 * * *",
+    project_name: str ,
+    workspace_host: str,
+    output_dir: str,
+    output_config: str =None,
     default_values: dict = None,
     override_input_config: dict = None
 ):
@@ -80,7 +80,7 @@ def run_complete_pipeline_generation(
     # Step 1: Normalize and validate configuration
     print(f"\n[Step 1/3] Normalizing configuration")
     print(f"  - Input rows: {len(df)}")
-    print(f"  - Default schedule: {default_schedule}")
+    # print(f"  - Default schedule: {default_schedule}")
 
     # Define required columns for Google Analytics
     required_columns = [
@@ -90,16 +90,17 @@ def run_complete_pipeline_generation(
     ]
 
     # Build default values (merge built-in with user-provided)
-    built_in_defaults = {
-        'schedule': default_schedule
-    }
+    # built_in_defaults = {
+    #     'schedule': default_schedule
+    # }
 
-    if default_values:
-        # User-provided defaults override built-in defaults
-        final_defaults = {**built_in_defaults, **default_values}
-    else:
-        final_defaults = built_in_defaults
-
+    # if default_values:
+    #     # User-provided defaults override built-in defaults
+    #     final_defaults = {**built_in_defaults, **default_values}
+    # else:
+    #     final_defaults = built_in_defaults
+    
+    final_defaults = default_values
     normalized_df = process_input_config(
         df=df,
         required_columns=required_columns,
