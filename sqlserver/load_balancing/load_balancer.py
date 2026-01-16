@@ -130,7 +130,7 @@ if __name__ == "__main__":
         'source_database', 'source_schema', 'source_table_name',
         'target_catalog', 'target_schema', 'target_table_name'
     ]
-    optional_columns = {
+    default_values = {
         'priority_flag': 0,
         'connection_name': 'conn_1',
         'gateway_catalog': None,  # Will be set to target_catalog if None
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     normalized_df = process_input_config(
         df=input_df,
         required_columns=required_columns,
-        optional_columns=optional_columns
+        default_values=default_values
     )
 
     # Handle gateway_catalog and gateway_schema defaults (use target values if None)

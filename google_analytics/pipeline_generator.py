@@ -83,14 +83,14 @@ def run_complete_pipeline_generation(
         'target_catalog', 'target_schema',
         'prefix', 'priority', 'connection_name'
     ]
-    optional_columns = {
+    default_values = {
         'schedule': default_schedule
     }
 
     normalized_df = process_input_config(
         df=df,
         required_columns=required_columns,
-        optional_columns=optional_columns
+        default_values=default_values
     )
 
     # Step 2: Generate pipeline configuration (prefix+priority grouping)

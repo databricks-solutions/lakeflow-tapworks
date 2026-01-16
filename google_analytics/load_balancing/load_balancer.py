@@ -144,7 +144,7 @@ Output:
             'target_catalog', 'target_schema',
             'prefix', 'priority'
         ]
-        optional_columns = {
+        default_values = {
             'schedule': args.schedule
         }
 
@@ -152,7 +152,7 @@ Output:
         normalized_df = process_input_config(
             df=df,
             required_columns=required_columns,
-            optional_columns=optional_columns
+            default_values=default_values
         )
 
         # Step 4: Generate configuration with pipeline groups

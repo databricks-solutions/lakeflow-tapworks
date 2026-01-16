@@ -27,7 +27,7 @@ REQUIRED_COLUMNS = [
     'prefix', 'priority', 'connection_name'
 ]
 
-OPTIONAL_COLUMNS = {
+DEFAULT_VALUES = {
     'schedule': '*/15 * * * *',
     'include_columns': '',
     'exclude_columns': ''
@@ -57,7 +57,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS
+            default_values=DEFAULT_VALUES
         )
 
         # Verify all columns present
@@ -92,7 +92,7 @@ class TestProcessInputConfig:
             process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS
+            default_values=DEFAULT_VALUES
         )
 
     def test_missing_multiple_required_columns(self):
@@ -106,7 +106,7 @@ class TestProcessInputConfig:
             process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS
+            default_values=DEFAULT_VALUES
         )
 
     def test_missing_all_optional_columns(self):
@@ -126,7 +126,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns={
+            default_values={
                 'schedule': '0 */6 * * *',
                 'include_columns': '',
                 'exclude_columns': ''
@@ -165,7 +165,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns={
+            default_values={
                 'schedule': '0 */12 * * *',
                 'include_columns': '',
                 'exclude_columns': ''
@@ -206,7 +206,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns={
+            default_values={
                 'schedule': '0 */6 * * *',
                 'include_columns': '',
                 'exclude_columns': ''
@@ -245,7 +245,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns={
+            default_values={
                 'schedule': '0 */6 * * *',
                 'include_columns': '',
                 'exclude_columns': ''
@@ -274,7 +274,7 @@ class TestProcessInputConfig:
             process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS
+            default_values=DEFAULT_VALUES
         )
 
     def test_mixed_valid_and_empty_values(self):
@@ -297,7 +297,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS
+            default_values=DEFAULT_VALUES
         )
 
         # Row 0: Valid connection, NaN schedule
@@ -335,7 +335,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS
+            default_values=DEFAULT_VALUES
         )
 
         # Should handle different types
@@ -361,7 +361,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns={
+            default_values={
                 'schedule': custom_schedule,
                 'include_columns': '',
                 'exclude_columns': ''
@@ -393,7 +393,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS
+            default_values=DEFAULT_VALUES
         )
 
         # Original DataFrame should be unchanged
@@ -423,7 +423,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS
+            default_values=DEFAULT_VALUES
         )
 
         assert len(result) == num_rows
@@ -448,7 +448,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS
+            default_values=DEFAULT_VALUES
         )
 
         assert result['source_schema'].iloc[0] == 'custom__c'
@@ -477,7 +477,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS,
+            default_values=DEFAULT_VALUES,
             override_input_config=override_config
         )
 
@@ -512,7 +512,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS,
+            default_values=DEFAULT_VALUES,
             override_input_config=override_config
         )
 
@@ -547,7 +547,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS,
+            default_values=DEFAULT_VALUES,
             override_input_config=override_config
         )
 
@@ -573,7 +573,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS,
+            default_values=DEFAULT_VALUES,
             override_input_config=None
         )
 
@@ -602,7 +602,7 @@ class TestProcessInputConfig:
         result = process_input_config(
             df,
             required_columns=REQUIRED_COLUMNS,
-            optional_columns=OPTIONAL_COLUMNS,
+            default_values=DEFAULT_VALUES,
             override_input_config=override_config
         )
 

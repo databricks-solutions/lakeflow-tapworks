@@ -12,7 +12,7 @@ from pathlib import Path
 def process_input_config(
     df: pd.DataFrame,
     required_columns: list,
-    optional_columns: dict,
+    default_values: dict,
     override_input_config: dict = None
 ) -> pd.DataFrame:
     """
@@ -34,7 +34,7 @@ def process_input_config(
                 'target_catalog', 'target_schema', 'target_table_name',
                 'connection_name'
             ]
-        optional_columns (dict): Dictionary of optional columns with their default values.
+        default_values (dict): Dictionary of optional columns with their default values.
             Missing columns will be added, NaN/empty values will be filled with defaults.
             Example:
             {
@@ -65,12 +65,12 @@ def process_input_config(
         ...     'target_catalog', 'target_schema', 'target_table_name',
         ...     'connection_name'
         ... ]
-        >>> optional = {
+        >>> defaults = {
         ...     'schedule': '*/15 * * * *',
         ...     'priority_flag': 0
         ... }
         >>> override = {'schedule': '*/30 * * * *'}
-        >>> normalized_df = process_input_config(df, required, optional, override)
+        >>> normalized_df = process_input_config(df, required, defaults, override)
     """
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
@@ -88,7 +88,7 @@ def process_input_config(
         )
 
     # Add optional columns if not present and handle NaN/empty values
-    for col_name, default_value in optional_columns.items():
+    for col_name, default_value in default_values.items():
         if col_name not in df.columns:
             print(f"Info: '{col_name}' column not found. Adding with default: {default_value}")
             df[col_name] = default_value
