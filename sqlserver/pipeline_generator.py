@@ -8,10 +8,55 @@ This script demonstrates the complete two-part process:
 
 import pandas as pd
 import os
+from pathlib import Path
 
 # Import from local modules
-from load_balancing.load_balancer import load_input_csv, process_input_config, generate_pipeline_config
+from load_balancing.load_balancer import process_input_config, generate_pipeline_config
 from deployment.connector_settings_generator import generate_yaml_files
+
+
+def load_input_csv(
+    input_csv: str
+) -> pd.DataFrame:
+    """
+    Load and validate input CSV configuration file.
+
+    Args:
+        input_csv (str): Path to input CSV file
+
+    Returns:
+        pd.DataFrame: Loaded configuration dataframe
+
+    Raises:
+        FileNotFoundError: If input file does not exist
+        ValueError: If CSV is empty or cannot be parsed
+    """
+    input_path = Path(input_csv)
+
+    if not input_path.exists():
+        raise FileNotFoundError(
+            f"Input file not found: {input_csv}\n\n"
+            f"Please create an input CSV with the following columns:\n"
+            f"  - source_database, source_schema, source_table_name\n"
+            f"  - target_catalog, target_schema, target_table_name\n"
+            f"  - priority_flag (optional)\n"
+            f"  - connection_name (optional)\n"
+            f"  - gateway_catalog, gateway_schema (optional)\n"
+            f"  - gateway_worker_type, gateway_driver_type (optional)\n"
+            f"  - schedule (optional)"
+        )
+
+    try:
+        df = pd.read_csv(input_csv)
+    except Exception as e:
+        raise ValueError(f"Failed to parse CSV file: {e}")
+
+    if df.empty:
+        raise ValueError(f"Input CSV is empty: {input_csv}")
+
+    print(f"✓ Loaded {len(df)} rows from {input_csv}")
+
+    return df
 
 
 def run_complete_pipeline_generation(
