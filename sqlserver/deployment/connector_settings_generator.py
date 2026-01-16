@@ -1,35 +1,12 @@
 import yaml
 import pandas as pd
 import os
+import sys
+from pathlib import Path
 
-
-def convert_to_quartz_cron(cron_expression):
-    """Convert standard 5-field cron to Quartz 6-field format.
-
-    Standard cron format: minute hour day_of_month month day_of_week
-    Quartz format: second minute hour day_of_month month day_of_week
-
-    In Quartz, one of day_of_month or day_of_week must be '?' instead of '*'.
-    This function replaces the last field (day_of_week) with '?' if it's '*'.
-
-    Args:
-        cron_expression (str): Standard cron expression (5 fields)
-                               Example: "*/15 * * * *"
-
-    Returns:
-        str: Quartz cron expression (6 fields)
-             Example: "0 */15 * * * ?"
-    """
-    fields = cron_expression.strip().split()
-    if len(fields) == 5:
-        # Replace day_of_week (last field) with '?' if it's '*'
-        if fields[4] == '*':
-            fields[4] = '?'
-        # Prepend seconds field
-        return f"0 {' '.join(fields)}"
-    else:
-        # If already in different format, just prepend 0
-        return f"0 {cron_expression}"
+# Add parent directory to path to import utilities
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from utilities import convert_cron_to_quartz
 
 
 def create_gateways(df, project_name):
@@ -144,7 +121,7 @@ def create_jobs(df, project_name):
         pipeline_resource_name = f"{project_name}_pipeline_ingestion_{pipeline_group}"
 
         # Convert standard cron to Quartz format
-        quartz_cron = convert_to_quartz_cron(schedule)
+        quartz_cron = convert_cron_to_quartz(schedule)
 
         jobs[job_name] = {
             'name': f"{project_name} Pipeline Scheduler - {pipeline_group}",

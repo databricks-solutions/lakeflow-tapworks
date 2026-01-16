@@ -1,70 +1,128 @@
-# Databricks Lakeflow Connect Pipeline Generator
+# Lakehouse Tapworks
 
-This toolkit provides a solution for generating load-balanced Databricks Lakeflow Connect pipelines using user defined configurations.
+Automated pipeline generation toolkit for Databricks Lakeflow Connect ingestion.
 
 ## Overview
 
-The toolkit automatically generates Databricks Asset Bundle YAMLs needed to deploy the piplines based user defined configurations as well as intelligent table grouping and resource optimization. 
-Use cases include:
-- **Extract list from the source:** Extract a list of existing tables from sources like SFDC, SQL Server or folder structure and use that information to automatically create DAB
-- **Migaration:** Continue leveraging exsiting meta data used by an existing data ingestion tools 
-- **Automated naming:** e.g., specify pipeline names based on some conventions or table mapping based on some logic 
+Lakehouse Tapworks simplifies creating and managing Databricks Delta Live Tables (DLT) ingestion pipelines using Databricks Asset Bundles (DAB). The toolkit automatically generates optimized pipeline configurations from simple CSV inputs, handling load balancing, scheduling, and resource allocation.
 
+## Supported Connectors
 
-## Current Connetors
-Database connectors
-SQL Server
+### Database Connectors
+- **SQL Server** - On-premises and cloud SQL Server databases with gateway support
 
-SaaS Connectors
-Salesforce
+### SaaS Connectors
+- **Salesforce** - Salesforce objects via OAuth connection
+- **Google Analytics 4** - GA4 data via BigQuery integration
 
+## Key Features
 
-### Components
+- **Automated Load Balancing** - Intelligently groups tables into optimized pipeline configurations
+- **Per-Pipeline Scheduling** - Configure individual schedules for each pipeline via CSV
+- **Infrastructure as Code** - Generates Databricks Asset Bundle (DAB) YAML files ready for deployment
+- **Unified Architecture** - Consistent structure and workflow across all connectors
+- **Interactive Notebooks** - Databricks notebooks for interactive pipeline configuration
 
-1. **Load Balancing** (`load_balancing/generate_pipeline_config.py`) - Groups tables into optimized pipeline configurations
-2. **YAML Generation** (`deployment/generate_dab_yaml.py`) - Creates Databricks Asset Bundle YAML files
-3. **Unified Runner** (`run_pipeline_generation.py`) - Combines both steps into a single workflow
+## Quick Start
 
+Each connector provides three usage options:
+
+1. **Interactive Notebook** (`pipeline_setup.ipynb`) - Run directly in Databricks workspace with visual feedback
+2. **Python Script** (`pipeline_generator.py`) - Complete workflow in a single command
+3. **Programmatic** - Import and use functions in your own scripts
+
+### Basic Workflow
+
+```bash
+# 1. Navigate to connector directory
+cd sqlserver  # or salesforce, google_analytics
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Prepare input CSV with tables/objects to ingest
+
+# 4. Run pipeline generator
+python pipeline_generator.py
+
+# 5. Deploy to Databricks
+cd examples/your_example/deployment
+databricks bundle deploy -t prod
+```
+
+## Project Structure
+
+```
+lakehouse-tapworks/
+├── sqlserver/          # SQL Server connector
+├── salesforce/         # Salesforce connector
+├── google_analytics/   # Google Analytics 4 connector
+├── CONNECTOR_DEVELOPMENT_GUIDE.md  # Guide for adding new connectors
+└── README.md           # This file
+```
+
+Each connector follows a unified structure:
+
+```
+{connector}/
+├── README.md                           # Connector-specific documentation
+├── load_balancing/
+│   └── load_balancer.py               # Load balancing logic
+├── deployment/
+│   └── connector_settings_generator.py # DAB YAML generation
+├── examples/
+│   └── {example_name}/
+│       ├── pipeline_config.csv        # Input configuration
+│       └── deployment/                # Generated DAB files
+├── pipeline_generator.py              # Unified workflow script
+└── pipeline_setup.ipynb               # Interactive notebook
+```
+
+## Documentation
+
+- **Connector-Specific Guides**: See README.md in each connector directory (sqlserver/, salesforce/, google_analytics/)
+- **Development Guide**: See [CONNECTOR_DEVELOPMENT_GUIDE.md](CONNECTOR_DEVELOPMENT_GUIDE.md) for implementing new connectors
+- **Legacy Documentation**: Historical documentation available in [_legacy/](_legacy/)
 
 ## Architecture
 
-There are two major steps (each can be run indpeendently)
-
-- Load balancing: based on some logic assigns the tables to different pipelines and geenrates the configuration for the second step (table mapping based on some logic can happen here)
-- DAB YAML geenration: using the config geenrated in the first step or manually generate DAB YAMLs for the specific connector
-   
-
-### Two-Part Process
+The toolkit uses a two-stage process:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      INPUT: Source Table List                   │
-│  (source_database, source_schema, source_table_name, etc.)      │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌────────────────────────────────────────────────────────────────────────────────┐
-│                    PART 1: Load Balancing                                      │
-│  • Groups tables into pipeline_groups                                          │
-│  • Use source table list and pipeline groups to genrate pipeline configuration │
-└────────────────────────────┬───────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                 OUTPUT: Pipeline Configuration                  │
-│     (all input columns + pipeline_group + gateway + ...)        │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   PART 2: YAML Generation                       │
-│  • Generates Databricks Asset Bundle resources                  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     OUTPUT: YAML Files                          │
-│              (gateways.yml + pipelines.yml)                     │
-└─────────────────────────────────────────────────────────────────┘
+Input CSV → Load Balancing → Pipeline Config → YAML Generation → DAB Files
 ```
 
+1. **Load Balancing** - Groups tables/objects into optimized pipeline configurations based on:
+   - Source database isolation (database connectors)
+   - Priority flags for time-sensitive data
+   - Maximum tables per pipeline
+   - User-defined grouping (SaaS connectors)
+
+2. **YAML Generation** - Creates Databricks Asset Bundle files including:
+   - Gateway configurations (database connectors)
+   - Pipeline definitions
+   - Job schedules
+   - Resource configurations
+
+## Requirements
+
+- Python 3.8+
+- Databricks workspace with Unity Catalog
+- Databricks CLI configured
+- Appropriate source system credentials
+
+## Getting Started
+
+1. **Choose a connector** based on your data source (sqlserver, salesforce, or google_analytics)
+2. **Read the connector README** in the specific connector directory
+3. **Prepare your input CSV** following the connector's format
+4. **Run the pipeline generator** using the interactive notebook or Python script
+5. **Deploy to Databricks** using the generated DAB files
+
+## Contributing
+
+To add a new connector, follow the [CONNECTOR_DEVELOPMENT_GUIDE.md](CONNECTOR_DEVELOPMENT_GUIDE.md).
+
+## Support
+
+For issues, questions, or contributions, please open an issue in the repository.
