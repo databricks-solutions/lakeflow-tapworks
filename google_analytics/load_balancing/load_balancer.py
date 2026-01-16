@@ -24,41 +24,31 @@ import argparse
 import sys
 from pathlib import Path
 
+# Add parent directory to path to import utilities
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from utilities import process_input_config, load_input_csv
+
 
 def generate_pipeline_config(
-    df: pd.DataFrame,
-    default_schedule: str = "0 */6 * * *"
+    df: pd.DataFrame
 ) -> pd.DataFrame:
     """
     Generate pipeline configuration with prefix+priority grouping.
 
+    This function expects a clean DataFrame (output from process_input_config).
+
     Args:
-        df: Input DataFrame with GA4 configuration
-        default_schedule: Default cron schedule if not specified
+        df: Clean input DataFrame (from process_input_config) with columns:
+            - source_catalog, source_schema, tables
+            - target_catalog, target_schema
+            - prefix, priority
+            - schedule (already validated)
 
     Returns:
         DataFrame with pipeline_group column added
     """
-    # Validate required columns
-    required_columns = [
-        'source_catalog',
-        'source_schema',
-        'tables',
-        'target_catalog',
-        'target_schema',
-        'prefix',
-        'priority'
-    ]
-
-    missing = [col for col in required_columns if col not in df.columns]
-    if missing:
-        raise ValueError(f"Missing required columns: {missing}")
-
-    # Fill optional columns with defaults
-    if 'schedule' not in df.columns:
-        df['schedule'] = default_schedule
-    else:
-        df['schedule'] = df['schedule'].fillna(default_schedule)
+    # Make a copy to avoid modifying the original dataframe
+    df = df.copy()
 
     # Ensure prefix and priority are strings for consistent concatenation
     df['prefix'] = df['prefix'].astype(str)
@@ -84,20 +74,6 @@ def generate_pipeline_config(
         print(f"    Schemas: {', '.join(group_df['source_schema'].unique())}")
     print()
 
-    return df
-
-
-def read_input_csv(input_file: str) -> pd.DataFrame:
-    """Read and validate input CSV"""
-    if not Path(input_file).exists():
-        raise FileNotFoundError(f"Input file not found: {input_file}")
-
-    df = pd.read_csv(input_file)
-
-    if df.empty:
-        raise ValueError(f"Input CSV is empty: {input_file}")
-
-    print(f"Read {len(df)} rows from {input_file}")
     return df
 
 
@@ -159,11 +135,28 @@ Output:
         print("=" * 70)
         print()
 
-        # Read input
-        df = read_input_csv(args.input_csv)
+        # Step 1: Load input CSV
+        df = load_input_csv(args.input_csv)
 
-        # Generate configuration
-        df_with_groups = generate_pipeline_config(df, args.schedule)
+        # Step 2: Define required and optional columns for Google Analytics
+        required_columns = [
+            'source_catalog', 'source_schema', 'tables',
+            'target_catalog', 'target_schema',
+            'prefix', 'priority'
+        ]
+        optional_columns = {
+            'schedule': args.schedule
+        }
+
+        # Step 3: Normalize and validate configuration
+        normalized_df = process_input_config(
+            df=df,
+            required_columns=required_columns,
+            optional_columns=optional_columns
+        )
+
+        # Step 4: Generate configuration with pipeline groups
+        df_with_groups = generate_pipeline_config(normalized_df)
 
         # Write output
         write_output_csv(df_with_groups, output_file)

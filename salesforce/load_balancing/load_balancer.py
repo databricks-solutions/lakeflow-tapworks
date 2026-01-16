@@ -22,14 +22,18 @@ import argparse
 import sys
 from pathlib import Path
 
+# Add parent directory to path to import utilities
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from utilities import process_input_config, load_input_csv
+
 
 def generate_pipeline_config(
     df: pd.DataFrame,
-    default_connection_name: str = "sfdc_connection",
-    default_schedule: str = "*/15 * * * *"
 ) -> pd.DataFrame:
     """
     Generate pipeline configuration from Salesforce table list using prefix + priority grouping.
+
+    This function expects a clean DataFrame (output from read_input_config).
 
     Logic:
     - Each unique combination of (prefix, priority) becomes one pipeline
@@ -38,62 +42,22 @@ def generate_pipeline_config(
     - No load balancing - grouping is explicit via prefix+priority
 
     Args:
-        df (pd.DataFrame): Input dataframe with columns:
-            - source_database: Source database (usually "Salesforce")
-            - source_schema: Source schema (e.g., "standard", "custom")
-            - source_table_name: Source Salesforce object name
-            - target_catalog: Target Databricks catalog
-            - target_schema: Target Databricks schema
-            - target_table_name: Target table name
-            - prefix: Pipeline prefix (e.g., "business_unit1", "business_unit2")
-            - priority: Priority level (e.g., "01", "02", "03")
-            - connection_name: Databricks Salesforce connection name (optional)
-            - schedule: Cron schedule expression (optional)
-        default_connection_name (str): Default connection name if not in CSV
-        default_schedule (str): Default schedule if not in CSV
+        df (pd.DataFrame): Clean input dataframe (from read_input_config) with columns:
+            - source_database, source_schema, source_table_name
+            - target_catalog, target_schema, target_table_name
+            - prefix, priority
+            - connection_name, schedule (already validated)
+            - include_columns, exclude_columns (optional, already present)
 
     Returns:
-        pd.DataFrame: Configuration dataframe with additional columns:
+        pd.DataFrame: Configuration dataframe with additional column:
             - pipeline_group: Pipeline group identifier (prefix_priority)
-            - connection_name: Salesforce connection name
-            - schedule: Cron schedule expression
 
     Raises:
         ValueError: If required columns are missing
     """
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
-
-    # Validate required columns
-    required_columns = [
-        'source_database', 'source_schema', 'source_table_name',
-        'target_catalog', 'target_schema', 'target_table_name',
-        'prefix', 'priority'
-    ]
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(
-            f"Missing required columns: {missing_columns}\n"
-            f"Required columns: {', '.join(required_columns)}"
-        )
-
-    # Add connection_name if not present
-    if 'connection_name' not in df.columns:
-        print(f"Warning: 'connection_name' column not found. Using default: {default_connection_name}")
-        df['connection_name'] = default_connection_name
-    else:
-        # Fill empty connection_name values with default
-        df['connection_name'] = df['connection_name'].fillna(default_connection_name)
-        df.loc[df['connection_name'].str.strip() == '', 'connection_name'] = default_connection_name
-
-    # Add schedule if not present
-    if 'schedule' not in df.columns:
-        print(f"Warning: 'schedule' column not found. Using default: {default_schedule}")
-        df['schedule'] = default_schedule
-    else:
-        # Fill empty schedule values with default
-        df['schedule'] = df['schedule'].fillna(default_schedule)
-        df.loc[df['schedule'].str.strip() == '', 'schedule'] = default_schedule
 
     # Generate pipeline_group by combining prefix + priority
     df['pipeline_group'] = df['prefix'].astype(str) + '_' + df['priority'].astype(str)
@@ -174,16 +138,17 @@ def main():
         epilog="""
 Examples:
   # Use default example file
-  python generate_pipeline_config.py
+  python load_balancer.py
 
   # Specify input and output files
-  python generate_pipeline_config.py --input-csv my_tables.csv --output-csv my_output.csv
+  python load_balancer.py --input-csv my_tables.csv --output-csv my_output.csv
 
-  # With custom defaults
-  python generate_pipeline_config.py \\
+  # With custom schedule
+  python load_balancer.py \\
     --input-csv my_tables.csv \\
-    --connection my_sfdc_conn \\
     --schedule "*/30 * * * *"
+
+Note: connection_name is now a required column in the CSV file.
         """
     )
 
@@ -200,12 +165,6 @@ Examples:
         help='Path to output CSV file (default: examples/output_config.csv)'
     )
     parser.add_argument(
-        '--connection',
-        type=str,
-        default='sfdc_connection',
-        help='Default Salesforce connection name (default: sfdc_connection)'
-    )
-    parser.add_argument(
         '--schedule',
         type=str,
         default='*/15 * * * *',
@@ -214,30 +173,33 @@ Examples:
 
     args = parser.parse_args()
 
-    # Check if input file exists
-    input_path = Path(args.input_csv)
-    if not input_path.exists():
-        print(f"Error: Input file not found: {args.input_csv}")
-        print(f"\nPlease create an input CSV with the following columns:")
-        print("  - source_database, source_schema, source_table_name")
-        print("  - target_catalog, target_schema, target_table_name")
-        print("  - prefix, priority")
-        print("  - connection_name (optional)")
-        print("  - schedule (optional)")
-        sys.exit(1)
-
     print(f"Reading input CSV: {args.input_csv}")
 
     try:
-        # Load input CSV
-        input_df = pd.read_csv(args.input_csv)
+        # Load input CSV using dedicated function
+        input_df = load_input_csv(args.input_csv)
+
+        # Define required and optional columns for Salesforce
+        required_columns = [
+            'source_database', 'source_schema', 'source_table_name',
+            'target_catalog', 'target_schema', 'target_table_name',
+            'prefix', 'priority', 'connection_name'
+        ]
+        optional_columns = {
+            'schedule': args.schedule,
+            'include_columns': '',
+            'exclude_columns': ''
+        }
+
+        # Normalize and validate configuration
+        normalized_df = process_input_config(
+            df=input_df,
+            required_columns=required_columns,
+            optional_columns=optional_columns
+        )
 
         # Generate pipeline configuration
-        output_df = generate_pipeline_config(
-            df=input_df,
-            default_connection_name=args.connection,
-            default_schedule=args.schedule
-        )
+        output_df = generate_pipeline_config(df=normalized_df)
 
         # Ensure output directory exists
         output_path = Path(args.output_csv)

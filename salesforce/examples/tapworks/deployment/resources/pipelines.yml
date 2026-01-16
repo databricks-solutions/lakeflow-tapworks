@@ -1,0 +1,90 @@
+resources:
+  pipelines:
+    pipeline_sfdc_tapworks_business_unit1_1:
+      name: SFDC Ingestion - tapworks_business_unit1_1
+      catalog: tapworks_catalog
+      schema: sfdc_test
+      ingestion_definition:
+        connection_name: sfdc-pravin-dabs
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Account
+            destination_catalog: tapworks_catalog
+            destination_schema: sfdc_test
+            destination_table: Account
+            table_configuration:
+              include_columns:
+              - Id
+              - Name
+              - Type
+              - Industry
+              - AnnualRevenue
+              - SystemModstamp
+              - IsDeleted
+        - table:
+            source_schema: objects
+            source_table: Contact
+            destination_catalog: tapworks_catalog
+            destination_schema: sfdc_test
+            destination_table: Contact
+        - table:
+            source_schema: objects
+            source_table: Campaign
+            destination_catalog: tapworks_catalog
+            destination_schema: sfdc_test
+            destination_table: Campaign
+    pipeline_sfdc_tapworks_business_unit1_2:
+      name: SFDC Ingestion - tapworks_business_unit1_2
+      catalog: tapworks_catalog
+      schema: sfdc_test
+      ingestion_definition:
+        connection_name: sfdc-pravin-dabs
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Opportunity
+            destination_catalog: tapworks_catalog
+            destination_schema: sfdc_test
+            destination_table: Opportunity
+            table_configuration:
+              exclude_columns:
+              - Description
+    pipeline_sfdc_tapworks_business_unit2_1:
+      name: SFDC Ingestion - tapworks_business_unit2_1
+      catalog: tapworks_catalog
+      schema: sfdc_test
+      ingestion_definition:
+        connection_name: sfdc-pravin-dabs
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Lead
+            destination_catalog: tapworks_catalog
+            destination_schema: sfdc_test
+            destination_table: Lead
+        - table:
+            source_schema: objects
+            source_table: Case
+            destination_catalog: tapworks_catalog
+            destination_schema: sfdc_test
+            destination_table: Case
+    pipeline_sfdc_tapworks_business_unit3_1:
+      name: SFDC Ingestion - tapworks_business_unit3_1
+      catalog: tapworks_catalog
+      schema: sfdc_test
+      ingestion_definition:
+        connection_name: sfdc-pravin-dabs
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Task
+            destination_catalog: tapworks_catalog
+            destination_schema: sfdc_test
+            destination_table: Task
+        - table:
+            source_schema: objects
+            source_table: Event
+            destination_catalog: tapworks_catalog
+            destination_schema: sfdc_test
+            destination_table: Event

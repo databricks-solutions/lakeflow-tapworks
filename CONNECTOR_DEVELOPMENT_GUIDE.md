@@ -1,7 +1,7 @@
 # Connector Development Guide
 
 **Version:** 1.0
-**Last Updated:** 2026-01-09
+**Last Updated:** 2026-01-16
 **Purpose:** Template and standards for implementing new Databricks Lakeflow Connect connectors
 
 > **See also:** [Connector Architecture Overview](CONNECTOR_OVERVIEW.md) - For an overview of connector architecture and types
@@ -61,7 +61,7 @@
 
 ## Standard Function Names
 
-### 1. Load Balancing Module (`load_balancing/generate_pipeline_config.py`)
+### 1. Load Balancing Module (`load_balancing/load_balancer.py`)
 
 #### Function: `generate_pipeline_config()`
 
@@ -114,7 +114,7 @@ def generate_pipeline_config(
 
 ---
 
-### 2. YAML Generation Module (`deployment/generate_dab_yaml.py`)
+### 2. YAML Generation Module (`deployment/connector_settings_generator.py`)
 
 #### Function: `generate_yaml_files()`
 
@@ -175,7 +175,7 @@ def convert_cron_to_quartz(cron_expression: str) -> str:
 
 ---
 
-### 3. Unified Runner (`run_pipeline_generation.py`)
+### 3. Unified Runner (`pipeline_generator.py`)
 
 #### Function: `run_complete_pipeline_generation()`
 
@@ -251,10 +251,12 @@ db1,dbo,orders,bronze,sales,orders
 
 **With Optional Columns:**
 ```csv
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,priority_flag,connection_name,schedule
-db1,dbo,customers,bronze,sales,customers,0,sql_conn,*/15 * * * *
-db1,dbo,orders,bronze,sales,orders,1,sql_conn,*/15 * * * *
+source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,priority_flag,gateway_catalog,gateway_schema,connection_name,schedule,gateway_worker_type,gateway_driver_type
+db1,dbo,customers,bronze,sales,customers,0,bronze_gw,ingestion,sql_conn,*/15 * * * *,,
+db1,dbo,orders,bronze,sales,orders,1,bronze_gw,ingestion,sql_conn,*/15 * * * *,m5d.large,m5d.large
 ```
+
+**Note:** Schedule column is placed after connection_name so users can omit trailing optional columns (gateway_worker_type, gateway_driver_type) without adding empty commas.
 
 #### SaaS Connector CSV
 
@@ -409,7 +411,7 @@ touch {connector_name}/run_pipeline_generation.py
 2. Generate `pipeline_group = {prefix}_{priority}`
 3. No gateway assignment needed
 
-**Template:** See `sqlserver/load_balancing/generate_pipeline_config.py` (database) or `sfdc/load_balancing/generate_pipeline_config.py` (SaaS)
+**Template:** See `sqlserver/load_balancing/load_balancer.py` (database) or `salesforce/load_balancing/load_balancer.py` (SaaS)
 
 ### Step 3: Implement YAML Generation
 
@@ -425,7 +427,7 @@ touch {connector_name}/run_pipeline_generation.py
 3. Add scheduled jobs with Quartz cron
 4. Write single YAML file
 
-**Template:** See `sqlserver/deployment/generate_dab_yaml.py` (database) or `sfdc/deployment/generate_dab_yaml.py` (SaaS)
+**Template:** See `sqlserver/deployment/connector_settings_generator.py` (database) or `salesforce/deployment/connector_settings_generator.py` (SaaS)
 
 ### Step 4: Create Unified Runner
 
@@ -479,13 +481,22 @@ sqlserver/
 ├── README.md
 ├── requirements.txt
 ├── load_balancing/
-│   ├── generate_pipeline_config.py
+│   ├── load_balancer.py
 │   └── examples/
-│       └── example_config.csv
+│       └── tapworks_config.csv
 ├── deployment/
-│   ├── generate_dab_yaml.py
-│   └── examples/
-└── run_pipeline_generation.py
+│   └── connector_settings_generator.py
+├── examples/
+│   └── tapworks/
+│       ├── pipeline_config.csv
+│       └── deployment/
+│           ├── databricks.yml
+│           └── resources/
+│               ├── gateways.yml
+│               ├── pipelines.yml
+│               └── jobs.yml
+├── pipeline_generator.py
+└── pipeline_setup.ipynb
 ```
 
 **Key Characteristics:**
@@ -512,18 +523,25 @@ run_complete_pipeline_generation(
 
 **Directory Structure:**
 ```
-sfdc/
+salesforce/
 ├── README.md
 ├── requirements.txt
 ├── load_balancing/
-│   ├── generate_pipeline_config.py
+│   ├── load_balancer.py
 │   └── examples/
-│       └── example_config.csv
+│       └── salesforce_config.csv
 ├── deployment/
-│   ├── generate_dab_yaml.py
-│   ├── prework.py
-│   └── examples/
-└── run_pipeline_generation.py
+│   └── connector_settings_generator.py
+├── examples/
+│   └── sales/
+│       ├── pipeline_config.csv
+│       └── deployment/
+│           ├── databricks.yml
+│           └── resources/
+│               ├── salesforce_pipeline.yml
+│               └── jobs.yml
+├── pipeline_generator.py
+└── pipeline_setup.ipynb
 ```
 
 **Key Characteristics:**
@@ -642,9 +660,10 @@ Real-world examples
 Use this checklist when implementing a new connector:
 
 ### Structure
-- [ ] Created `{connector}/load_balancing/generate_pipeline_config.py`
-- [ ] Created `{connector}/deployment/generate_dab_yaml.py`
-- [ ] Created `{connector}/run_pipeline_generation.py`
+- [ ] Created `{connector}/load_balancing/load_balancer.py`
+- [ ] Created `{connector}/deployment/connector_settings_generator.py`
+- [ ] Created `{connector}/pipeline_generator.py`
+- [ ] Created `{connector}/pipeline_setup.ipynb`
 - [ ] Created `requirements.txt`
 - [ ] Created example configurations
 
@@ -681,7 +700,7 @@ Use this checklist when implementing a new connector:
 When adding a new connector:
 
 1. **Follow this guide** - Use templates and naming conventions
-2. **Reference existing connectors** - SQL Server (database) or SFDC (SaaS)
+2. **Reference existing connectors** - SQL Server (database) or Salesforce (SaaS)
 3. **Test thoroughly** - Unit, integration, and deployment tests
 4. **Document completely** - README with all sections
 5. **Submit PR** - Include summary of what was implemented
@@ -692,7 +711,7 @@ When adding a new connector:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0 | 2026-01-09 | Initial template based on SQL Server, SFDC, and GA4 implementations |
+| 1.0 | 2026-01-09 | Initial template based on SQL Server, Salesforce, and Google Analytics 4 implementations |
 
 ---
 

@@ -29,13 +29,17 @@ import pandas as pd
 import os
 from pathlib import Path
 
+# Add parent directory to path to import utilities
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from utilities import process_input_config, load_input_csv
+
 # Import from local modules
 from load_balancing.load_balancer import generate_pipeline_config
 from deployment.connector_settings_generator import generate_yaml_files
 
 
 def run_complete_pipeline_generation(
-    input_csv: str,
+    df: pd.DataFrame,
     project_name: str = "ga4_ingestion",
     workspace_host: str = None,
     output_dir: str = "dab_deployment",
@@ -45,7 +49,10 @@ def run_complete_pipeline_generation(
     Complete pipeline generation process from GA4 property list to YAML files.
 
     Args:
-        input_csv (str): Path to input CSV with GA4 properties
+        df (pd.DataFrame): Input DataFrame with GA4 properties (required)
+            Must contain: source_catalog, source_schema, tables,
+                         target_catalog, target_schema,
+                         prefix, priority, connection_name (all required)
         project_name (str): Project name for the bundle (default: "ga4_ingestion")
         workspace_host (str): Workspace host URL (optional, can be set later)
         output_dir (str): Output directory for DAB project (default: "dab_deployment")
@@ -55,6 +62,8 @@ def run_complete_pipeline_generation(
         pd.DataFrame: The pipeline configuration dataframe
 
     Note:
+        - connection_name is a required column in the DataFrame. Each row must specify
+          which GA4 connection to use.
         - Properties are grouped by prefix+priority combinations
         - Each unique (prefix, priority) pair creates a separate pipeline
         - Pipeline groups are named: {prefix}_{priority}
@@ -63,33 +72,46 @@ def run_complete_pipeline_generation(
     print("STARTING COMPLETE GA4 PIPELINE GENERATION PROCESS")
     print("="*80)
 
-    # Step 1: Load input CSV
-    print(f"\n[Step 1/3] Loading input CSV: {input_csv}")
-    input_df = pd.read_csv(input_csv)
-    print(f"  ✓ Loaded {len(input_df)} GA4 properties")
+    # Step 1: Normalize and validate configuration
+    print(f"\n[Step 1/3] Normalizing configuration")
+    print(f"  - Input rows: {len(df)}")
+    print(f"  - Default schedule: {default_schedule}")
+
+    # Define required and optional columns for Google Analytics
+    required_columns = [
+        'source_catalog', 'source_schema', 'tables',
+        'target_catalog', 'target_schema',
+        'prefix', 'priority', 'connection_name'
+    ]
+    optional_columns = {
+        'schedule': default_schedule
+    }
+
+    normalized_df = process_input_config(
+        df=df,
+        required_columns=required_columns,
+        optional_columns=optional_columns
+    )
 
     # Step 2: Generate pipeline configuration (prefix+priority grouping)
     print(f"\n[Step 2/3] Generating pipeline configuration with prefix+priority grouping")
-    print(f"  - Default schedule: {default_schedule}")
 
     pipeline_config_df = generate_pipeline_config(
-        df=input_df,
-        default_schedule=default_schedule
+        df=normalized_df
     )
 
     # Step 3: Generate YAML files
     print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
+    print(f"  - Project name: {project_name}")
     print(f"  - Output directory: {output_dir}")
-
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Generate YAML output path
-    yaml_output_path = os.path.join(output_dir, 'resources', 'ga4_pipeline.yml')
+    if workspace_host:
+        print(f"  - Workspace host: {workspace_host}")
 
     generate_yaml_files(
         df=pipeline_config_df,
-        output_path=yaml_output_path
+        project_name=project_name,
+        workspace_host=workspace_host,
+        output_dir=output_dir
     )
 
     # Save intermediate config
@@ -98,17 +120,8 @@ def run_complete_pipeline_generation(
     print(f"\n✓ Intermediate configuration saved to: {config_output_path}")
 
     print("\n" + "="*80)
-    print("PIPELINE GENERATION COMPLETE!")
+    print("GA4 PIPELINE GENERATION COMPLETE!")
     print("="*80)
-    print(f"\nNext steps:")
-    print(f"  1. Review the generated DAB project:")
-    print(f"     - {yaml_output_path}")
-    print(f"  2. Update GA4 connection name in YAML if needed")
-    print(f"  3. Ensure GA4 connection exists in Databricks")
-    print(f"  4. Deploy using Databricks Asset Bundles:")
-    print(f"     cd {output_dir}")
-    print(f"     databricks bundle deploy -t dev")
-    print("="*80 + "\n")
 
     return pipeline_config_df
 
