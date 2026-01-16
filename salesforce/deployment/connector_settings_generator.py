@@ -24,40 +24,9 @@ import argparse
 from pathlib import Path
 from collections import defaultdict
 
-
-def convert_cron_to_quartz(cron_expression: str) -> str:
-    """
-    Convert standard 5-field cron to Quartz 6-field cron format.
-
-    Standard cron: minute hour day month day-of-week
-    Quartz cron:   second minute hour day month day-of-week
-
-    Examples:
-        */15 * * * *  → 0 */15 * * * ?
-        0 */6 * * *   → 0 0 */6 * * ?
-        0 0 * * *     → 0 0 0 * * ?
-        0 9 * * 1     → 0 0 9 ? * 1
-    """
-    parts = cron_expression.strip().split()
-
-    if len(parts) != 5:
-        # If already 6+ fields, assume it's Quartz format
-        return cron_expression
-
-    # Add seconds=0 at start
-    minute, hour, day, month, dow = parts
-
-    # In Quartz cron, you must use ? for either day-of-month OR day-of-week (not both can be *)
-    # If day-of-week is *, use ? for day-of-week
-    # If day-of-week is specified (not *), use ? for day-of-month
-    if dow == '*':
-        dow = '?'
-    else:
-        # day-of-week is specified, so day-of-month must be ?
-        day = '?'
-
-    quartz_cron = f"0 {minute} {hour} {day} {month} {dow}"
-    return quartz_cron
+# Add parent directory to path to import utilities
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from utilities import convert_cron_to_quartz
 
 
 def create_databricks_yml(project_name: str, workspace_host: str, default_catalog: str,
