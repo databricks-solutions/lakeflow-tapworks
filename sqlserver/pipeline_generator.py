@@ -10,18 +10,18 @@ import pandas as pd
 import os
 
 # Import from local modules
-from load_balancing.load_balancer import generate_pipeline_config
+from load_balancing.load_balancer import load_input_csv, process_input_config, generate_pipeline_config
 from deployment.connector_settings_generator import generate_yaml_files
 
 
 def run_complete_pipeline_generation(
-    input_csv: str,
+    df: pd.DataFrame,
     project_name: str,
     output_dir: str,
     workspace_host: str,
     root_path: str,
-    default_connection_name: str = "conn_1",
     max_tables_per_group: int = 250,
+    default_connection_name: str = "conn_1",
     default_schedule: str = "*/15 * * * *",
     default_gateway_worker_type: str = None,
     default_gateway_driver_type: str = None
@@ -30,13 +30,13 @@ def run_complete_pipeline_generation(
     Complete pipeline generation process from source table list to YAML files.
 
     Args:
-        input_csv (str): Path to input CSV with source table list
+        df (pd.DataFrame): Input DataFrame with source table list
         project_name (str): Project name prefix for all resources
         output_dir (str): Output directory for DAB project
         workspace_host (str): Workspace host URL
         root_path (str): Root path for bundle deployment
-        default_connection_name (str): Default connection name if not in CSV (default: "conn_1")
         max_tables_per_group (int): Maximum tables per pipeline group (default: 250)
+        default_connection_name (str): Default connection name if not in CSV (default: "conn_1")
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
         default_gateway_worker_type (str): Default worker node type if not in CSV (default: None)
         default_gateway_driver_type (str): Default driver node type if not in CSV (default: None)
@@ -45,33 +45,59 @@ def run_complete_pipeline_generation(
         pd.DataFrame: The pipeline configuration dataframe
 
     Note:
-        - All gateway settings are read from the input CSV:
+        - All gateway settings are read from the input DataFrame:
           connection_name, gateway_catalog, gateway_schema, gateway_worker_type, gateway_driver_type
-        - If not present in CSV, defaults are used
+        - If not present, defaults are used
         - Settings can vary per source_database group
     """
     print("="*80)
     print("STARTING COMPLETE PIPELINE GENERATION PROCESS")
     print("="*80)
 
-    # Step 1: Load input CSV
-    print(f"\n[Step 1/3] Loading input CSV: {input_csv}")
-    input_df = pd.read_csv(input_csv)
-    print(f"  ✓ Loaded {len(input_df)} tables from {input_df['source_database'].nunique()} databases")
-
-    # Step 2: Generate pipeline configuration (load balancing)
-    print(f"\n[Step 2/3] Generating pipeline configuration with load balancing")
+    # Step 1: Normalize and validate configuration
+    print(f"\n[Step 1/3] Normalizing configuration")
+    print(f"  - Input rows: {len(df)}")
+    print(f"  - Databases: {df['source_database'].nunique()}")
     print(f"  - Max tables per group: {max_tables_per_group}")
     print(f"  - Default connection name: {default_connection_name}")
     print(f"  - Default schedule: {default_schedule}")
 
+    # Define required and optional columns for SQL Server
+    required_columns = [
+        'source_database', 'source_schema', 'source_table_name',
+        'target_catalog', 'target_schema', 'target_table_name'
+    ]
+    optional_columns = {
+        'priority_flag': 0,
+        'connection_name': default_connection_name,
+        'gateway_catalog': None,  # Will be set to target_catalog if None
+        'gateway_schema': None,   # Will be set to target_schema if None
+        'gateway_worker_type': default_gateway_worker_type,
+        'gateway_driver_type': default_gateway_driver_type,
+        'schedule': default_schedule
+    }
+
+    normalized_df = process_input_config(
+        df=df,
+        required_columns=required_columns,
+        optional_columns=optional_columns
+    )
+
+    # Handle gateway_catalog and gateway_schema defaults (use target values if None)
+    if 'gateway_catalog' in normalized_df.columns:
+        mask = normalized_df['gateway_catalog'].isna()
+        normalized_df.loc[mask, 'gateway_catalog'] = normalized_df.loc[mask, 'target_catalog']
+
+    if 'gateway_schema' in normalized_df.columns:
+        mask = normalized_df['gateway_schema'].isna()
+        normalized_df.loc[mask, 'gateway_schema'] = normalized_df.loc[mask, 'target_schema']
+
+    # Step 2: Generate pipeline configuration (load balancing)
+    print(f"\n[Step 2/3] Generating pipeline configuration with load balancing")
+
     pipeline_config_df = generate_pipeline_config(
-        df=input_df,
-        default_connection_name=default_connection_name,
-        default_gateway_worker_type=default_gateway_worker_type,
-        default_gateway_driver_type=default_gateway_driver_type,
-        max_tables_per_group=max_tables_per_group,
-        default_schedule=default_schedule
+        df=normalized_df,
+        max_tables_per_group=max_tables_per_group
     )
 
     # Step 3: Generate YAML files
@@ -206,15 +232,19 @@ Examples:
 
     args = parser.parse_args()
 
+    # Load input CSV
+    print(f"Loading input CSV: {args.input_csv}")
+    input_df = load_input_csv(args.input_csv)
+
     # Run the complete pipeline generation
     result_df = run_complete_pipeline_generation(
-        input_csv=args.input_csv,
+        df=input_df,
         project_name=args.project_name,
         output_dir=args.output_dir,
         workspace_host=args.workspace_host,
         root_path=args.root_path,
-        default_connection_name=args.connection,
         max_tables_per_group=args.max_tables,
+        default_connection_name=args.connection,
         default_schedule=args.schedule,
         default_gateway_worker_type=args.worker_type,
         default_gateway_driver_type=args.driver_type
