@@ -15,10 +15,9 @@ import pandas as pd
 import sys
 from pathlib import Path
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from load_balancing.load_balancer import process_input_config
+# Add parent directory to path to import utilities
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from utilities import process_input_config
 
 
 # Default required and optional columns for Salesforce connector
