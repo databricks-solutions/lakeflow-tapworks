@@ -40,10 +40,12 @@ from deployment.connector_settings_generator import generate_yaml_files
 
 def run_complete_pipeline_generation(
     df: pd.DataFrame,
-    project_name: str = "ga4_ingestion",
-    workspace_host: str = None,
-    output_dir: str = "dab_deployment",
-    default_schedule: str = "0 */6 * * *"
+    project_name: str ,
+    workspace_host: str,
+    output_dir: str,
+    output_config: str =None,
+    default_values: dict = None,
+    override_input_config: dict = None
 ):
     """
     Complete pipeline generation process from GA4 property list to YAML files.
@@ -57,6 +59,9 @@ def run_complete_pipeline_generation(
         workspace_host (str): Workspace host URL (optional, can be set later)
         output_dir (str): Output directory for DAB project (default: "dab_deployment")
         default_schedule (str): Default cron schedule (default: "0 */6 * * *")
+        default_values (dict): Optional dict of column defaults to override built-in defaults
+            If provided, will be merged with built-in defaults
+        override_input_config (dict): Optional dict to override specific columns for all rows
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
@@ -75,22 +80,32 @@ def run_complete_pipeline_generation(
     # Step 1: Normalize and validate configuration
     print(f"\n[Step 1/3] Normalizing configuration")
     print(f"  - Input rows: {len(df)}")
-    print(f"  - Default schedule: {default_schedule}")
+    # print(f"  - Default schedule: {default_schedule}")
 
-    # Define required and optional columns for Google Analytics
+    # Define required columns for Google Analytics
     required_columns = [
         'source_catalog', 'source_schema', 'tables',
         'target_catalog', 'target_schema',
         'prefix', 'priority', 'connection_name'
     ]
-    optional_columns = {
-        'schedule': default_schedule
-    }
 
+    # Build default values (merge built-in with user-provided)
+    # built_in_defaults = {
+    #     'schedule': default_schedule
+    # }
+
+    # if default_values:
+    #     # User-provided defaults override built-in defaults
+    #     final_defaults = {**built_in_defaults, **default_values}
+    # else:
+    #     final_defaults = built_in_defaults
+    
+    final_defaults = default_values
     normalized_df = process_input_config(
         df=df,
         required_columns=required_columns,
-        optional_columns=optional_columns
+        default_values=final_defaults,
+        override_input_config=override_input_config
     )
 
     # Step 2: Generate pipeline configuration (prefix+priority grouping)

@@ -12,7 +12,7 @@ from pathlib import Path
 def process_input_config(
     df: pd.DataFrame,
     required_columns: list,
-    optional_columns: dict,
+    default_values: dict = None,
     override_input_config: dict = None
 ) -> pd.DataFrame:
     """
@@ -34,8 +34,9 @@ def process_input_config(
                 'target_catalog', 'target_schema', 'target_table_name',
                 'connection_name'
             ]
-        optional_columns (dict): Dictionary of optional columns with their default values.
+        default_values (dict, optional): Dictionary of optional columns with their default values.
             Missing columns will be added, NaN/empty values will be filled with defaults.
+            If None, no default values will be applied.
             Example:
             {
                 'schedule': '*/15 * * * *',
@@ -65,12 +66,12 @@ def process_input_config(
         ...     'target_catalog', 'target_schema', 'target_table_name',
         ...     'connection_name'
         ... ]
-        >>> optional = {
+        >>> defaults = {
         ...     'schedule': '*/15 * * * *',
         ...     'priority_flag': 0
         ... }
         >>> override = {'schedule': '*/30 * * * *'}
-        >>> normalized_df = process_input_config(df, required, optional, override)
+        >>> normalized_df = process_input_config(df, required, defaults, override)
     """
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
@@ -88,19 +89,20 @@ def process_input_config(
         )
 
     # Add optional columns if not present and handle NaN/empty values
-    for col_name, default_value in optional_columns.items():
-        if col_name not in df.columns:
-            print(f"Info: '{col_name}' column not found. Adding with default: {default_value}")
-            df[col_name] = default_value
-        else:
-            # Fill NaN values with default (skip if default is None, as pandas doesn't support fillna(None))
-            if default_value is not None:
-                df[col_name] = df[col_name].fillna(default_value)
+    if default_values:
+        for col_name, default_value in default_values.items():
+            if col_name not in df.columns:
+                print(f"Info: '{col_name}' column not found. Adding with default: {default_value}")
+                df[col_name] = default_value
+            else:
+                # Fill NaN values with default (skip if default is None, as pandas doesn't support fillna(None))
+                if default_value is not None:
+                    df[col_name] = df[col_name].fillna(default_value)
 
-            # Replace empty strings with default (for string columns)
-            if isinstance(default_value, str):
-                mask = df[col_name].astype(str).str.strip() == ''
-                df.loc[mask, col_name] = default_value
+                # Replace empty strings with default (for string columns)
+                if isinstance(default_value, str):
+                    mask = df[col_name].astype(str).str.strip() == ''
+                    df.loc[mask, col_name] = default_value
 
     # Apply overrides if provided
     if override_input_config:
