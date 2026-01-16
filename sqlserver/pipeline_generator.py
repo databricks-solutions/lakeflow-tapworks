@@ -27,9 +27,12 @@ def run_complete_pipeline_generation(
     workspace_host: str,
     root_path: str,
     max_tables_per_group: int = 250,
-    default_schedule: str = "*/15 * * * *",
-    default_gateway_worker_type: str = None,
-    default_gateway_driver_type: str = None
+    output_config: str =None,
+    # default_schedule: str = "*/15 * * * *",
+    # default_gateway_worker_type: str = None,
+    # default_gateway_driver_type: str = None,
+    default_values: dict = None,
+    override_input_config: dict = None
 ):
     """
     Complete pipeline generation process from source table list to YAML files.
@@ -47,6 +50,9 @@ def run_complete_pipeline_generation(
         default_schedule (str): Default cron schedule (default: "*/15 * * * *")
         default_gateway_worker_type (str): Default worker node type if not in CSV (default: None)
         default_gateway_driver_type (str): Default driver node type if not in CSV (default: None)
+        default_values (dict): Optional dict of column defaults to override built-in defaults
+            If provided, will be merged with built-in defaults
+        override_input_config (dict): Optional dict to override specific columns for all rows
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
@@ -67,27 +73,38 @@ def run_complete_pipeline_generation(
     print(f"  - Input rows: {len(df)}")
     print(f"  - Databases: {df['source_database'].nunique()}")
     print(f"  - Max tables per group: {max_tables_per_group}")
-    print(f"  - Default schedule: {default_schedule}")
+    # print(f"  - Default schedule: {default_schedule}")
 
-    # Define required and optional columns for SQL Server
+    # Define required columns for SQL Server
     required_columns = [
         'source_database', 'source_schema', 'source_table_name',
         'target_catalog', 'target_schema', 'target_table_name',
         'connection_name'
     ]
-    optional_columns = {
-        'priority_flag': 0,
-        'gateway_catalog': None,  # Will be set to target_catalog if None
-        'gateway_schema': None,   # Will be set to target_schema if None
-        'gateway_worker_type': default_gateway_worker_type,
-        'gateway_driver_type': default_gateway_driver_type,
-        'schedule': default_schedule
-    }
+
+    # Build default values (merge built-in with user-provided)
+    # built_in_defaults = {
+    #     'priority_flag': 0,
+    #     'gateway_catalog': None,  # Will be set to target_catalog if None
+    #     'gateway_schema': None,   # Will be set to target_schema if None
+    #     'gateway_worker_type': default_gateway_worker_type,
+    #     'gateway_driver_type': default_gateway_driver_type,
+    #     'schedule': default_schedule
+    # }
+
+    # if default_values:
+    #     # User-provided defaults override built-in defaults
+    #     final_defaults = {**built_in_defaults, **default_values}
+    # else:
+    #     final_defaults = built_in_defaults
+    
+    final_defaults = default_values
 
     normalized_df = process_input_config(
         df=df,
         required_columns=required_columns,
-        optional_columns=optional_columns
+        default_values=final_defaults,
+        override_input_config=override_input_config
     )
 
     # Handle gateway_catalog and gateway_schema defaults (use target values if None)
@@ -247,7 +264,7 @@ Note:
         workspace_host=args.workspace_host,
         root_path=args.root_path,
         max_tables_per_group=args.max_tables,
-        default_schedule=args.schedule,
+        # default_schedule=args.schedule,
         default_gateway_worker_type=args.worker_type,
         default_gateway_driver_type=args.driver_type
     )

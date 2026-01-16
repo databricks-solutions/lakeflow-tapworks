@@ -185,7 +185,7 @@ Note: connection_name is now a required column in the CSV file.
             'target_catalog', 'target_schema', 'target_table_name',
             'prefix', 'priority', 'connection_name'
         ]
-        optional_columns = {
+        default_values = {
             'schedule': args.schedule,
             'include_columns': '',
             'exclude_columns': ''
@@ -195,7 +195,7 @@ Note: connection_name is now a required column in the CSV file.
         normalized_df = process_input_config(
             df=input_df,
             required_columns=required_columns,
-            optional_columns=optional_columns
+            default_values=default_values
         )
 
         # Generate pipeline configuration
