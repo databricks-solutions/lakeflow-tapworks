@@ -27,7 +27,9 @@ def run_complete_pipeline_generation(
     default_schedule: str = "*/15 * * * *",
     workspace_host: str = None,
     output_dir: str = "dab_deployment",
-    output_config: str = "dab_deployment/generated_config.csv"
+    output_config: str = "dab_deployment/generated_config.csv",
+    default_values: dict = None,
+    override_input_config: dict = None
 ):
     """
     Complete pipeline generation process from Salesforce objects to YAML files.
@@ -37,7 +39,8 @@ def run_complete_pipeline_generation(
 
     Creates a complete DAB structure with:
     - databricks.yml (root configuration with variables)
-    - resources/sfdc_pipeline.yml (pipeline and job definitions)
+    - resources/pipelines.yml (pipeline definitions)
+    - resources/jobs.yml (job definitions)
 
     Args:
         df (pd.DataFrame): Input DataFrame with Salesforce objects (required)
@@ -49,6 +52,9 @@ def run_complete_pipeline_generation(
         workspace_host (str): Workspace host URL (optional, can be updated later in databricks.yml)
         output_dir (str): Output directory for DAB project (default: "dab_deployment")
         output_config (str): Output path for intermediate configuration CSV
+        default_values (dict): Optional dict of column defaults to override built-in defaults
+            If provided, will be merged with built-in defaults
+        override_input_config (dict): Optional dict to override specific columns for all rows
 
     Note:
         connection_name is now a required column in the DataFrame. Each row must specify
@@ -66,22 +72,31 @@ def run_complete_pipeline_generation(
     print(f"  - Input rows: {len(df)}")
     print(f"  - Default schedule: {default_schedule}")
 
-    # Define required and optional columns for Salesforce
+    # Define required columns for Salesforce
     required_columns = [
         'source_database', 'source_schema', 'source_table_name',
         'target_catalog', 'target_schema', 'target_table_name',
         'prefix', 'priority', 'connection_name'
     ]
-    default_values = {
+
+    # Build default values (merge built-in with user-provided)
+    built_in_defaults = {
         'schedule': default_schedule,
         'include_columns': '',
         'exclude_columns': ''
     }
 
+    if default_values:
+        # User-provided defaults override built-in defaults
+        final_defaults = {**built_in_defaults, **default_values}
+    else:
+        final_defaults = built_in_defaults
+
     normalized_df = process_input_config(
         df=df,
         required_columns=required_columns,
-        default_values=default_values
+        default_values=final_defaults,
+        override_input_config=override_input_config
     )
 
     # Step 2: Generate pipeline configuration (prefix + priority grouping)
