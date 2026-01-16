@@ -46,12 +46,18 @@ def generate_yaml_files(
             - tables: Comma-separated list of tables (e.g., "events,events_intraday,users")
             - target_catalog: Target Databricks catalog
             - target_schema: Target Databricks schema
+            - connection_name: GA4 connection name in Databricks
             - pipeline_group: Pipeline group identifier (e.g., "business_unit1_01")
             - schedule: Cron schedule expression
         output_path (str): Output path for YAML file
 
     Returns:
         None (writes YAML file to disk)
+
+    Note:
+        Each pipeline uses the target_catalog, target_schema, and connection_name
+        from its rows in the CSV. Different pipeline groups can target different
+        catalogs, schemas, or use different connections.
     """
     print("\n" + "="*80)
     print("GENERATING DATABRICKS ASSET BUNDLE YAML FOR GA4")
@@ -60,18 +66,14 @@ def generate_yaml_files(
     # Validate required columns
     required_columns = [
         'source_catalog', 'source_schema', 'tables',
-        'target_catalog', 'target_schema', 'pipeline_group', 'schedule'
+        'target_catalog', 'target_schema', 'connection_name',
+        'pipeline_group', 'schedule'
     ]
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
         raise ValueError(f"Missing required columns: {missing_columns}")
 
-    # Get default catalog and schema from first entry
-    default_catalog = df['target_catalog'].iloc[0]
-    default_schema = df['target_schema'].iloc[0]
-
     print(f"\nConfiguration:")
-    print(f"  Target: {default_catalog}.{default_schema}")
     print(f"  Total properties: {len(df)}")
 
     # Group properties by pipeline_group
@@ -83,10 +85,6 @@ def generate_yaml_files(
 
     # Build combined YAML with all pipeline groups
     combined_yaml = {
-        "variables": {
-            "dest_catalog": {"default": default_catalog},
-            "dest_schema": {"default": default_schema},
-        },
         "resources": {
             "pipelines": {},
             "jobs": {}
@@ -105,13 +103,50 @@ def generate_yaml_files(
         pipeline_name = f"pipeline_ga4_{pipeline_group}"
         pipeline_display = f"GA4 Ingestion - {pipeline_group}"
 
-        # Get schedule from first property in group
+        # Get catalog, schema, connection_name, and schedule from first property in group
+        target_catalog = group_properties[0]['target_catalog']
+        target_schema = group_properties[0]['target_schema']
+        connection_name = group_properties[0]['connection_name']
         schedule = group_properties[0]['schedule']
 
         print(f"\nPipeline: {pipeline_group}")
         print(f"  Name: {pipeline_name}")
+        print(f"  Target: {target_catalog}.{target_schema}")
+        print(f"  Connection: {connection_name}")
         print(f"  Schedule: {schedule}")
         print(f"  Properties: {len(group_properties)}")
+
+        # Warn if catalogs differ within same group
+        catalogs_in_group = set(item['target_catalog'] for item in group_properties if pd.notna(item['target_catalog']))
+        if len(catalogs_in_group) > 1:
+            print(f"  ⚠ Warning: Different target_catalog values detected in group:")
+            for c in catalogs_in_group:
+                print(f"      {c}")
+            print(f"  Using target_catalog from first property: {target_catalog}")
+
+        # Warn if schemas differ within same group
+        schemas_in_group = set(item['target_schema'] for item in group_properties if pd.notna(item['target_schema']))
+        if len(schemas_in_group) > 1:
+            print(f"  ⚠ Warning: Different target_schema values detected in group:")
+            for s in schemas_in_group:
+                print(f"      {s}")
+            print(f"  Using target_schema from first property: {target_schema}")
+
+        # Warn if connection_names differ within same group
+        connections_in_group = set(item['connection_name'] for item in group_properties if pd.notna(item['connection_name']))
+        if len(connections_in_group) > 1:
+            print(f"  ⚠ Warning: Different connection_name values detected in group:")
+            for c in connections_in_group:
+                print(f"      {c}")
+            print(f"  Using connection_name from first property: {connection_name}")
+
+        # Warn if schedules differ within same group
+        schedules_in_group = set(item['schedule'] for item in group_properties if pd.notna(item['schedule']))
+        if len(schedules_in_group) > 1:
+            print(f"  ⚠ Warning: Different schedules detected in group:")
+            for s in schedules_in_group:
+                print(f"      {s}")
+            print(f"  Using schedule from first property: {schedule}")
 
         # Build ingestion objects list
         ingestion_objects = []
@@ -133,8 +168,8 @@ def generate_yaml_files(
                         "source_catalog": source_catalog,
                         "source_schema": source_schema,
                         "source_table": table,
-                        "destination_catalog": "${var.dest_catalog}",
-                        "destination_schema": "${var.dest_schema}",
+                        "destination_catalog": row['target_catalog'],
+                        "destination_schema": row['target_schema'],
                         "destination_table": f"{source_schema}_{table}"
                     }
                 }
@@ -142,13 +177,13 @@ def generate_yaml_files(
 
             print(f"    - {source_schema}: {', '.join(tables)}")
 
-        # Add pipeline to YAML
+        # Add pipeline to YAML using actual values from CSV
         combined_yaml["resources"]["pipelines"][pipeline_name] = {
             "name": pipeline_display,
-            "catalog": "${var.dest_catalog}",
-            "schema": "${var.dest_schema}",
+            "catalog": target_catalog,
+            "schema": target_schema,
             "ingestion_definition": {
-                "connection_name": "ga4_connection",  # GA4 connection (placeholder)
+                "connection_name": connection_name,
                 "objects": ingestion_objects
             }
         }
