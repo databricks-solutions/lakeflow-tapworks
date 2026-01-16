@@ -75,7 +75,7 @@ def run_complete_pipeline_generation(
         'target_catalog', 'target_schema', 'target_table_name',
         'connection_name'
     ]
-    optional_columns = {
+    default_values = {
         'priority_flag': 0,
         'gateway_catalog': None,  # Will be set to target_catalog if None
         'gateway_schema': None,   # Will be set to target_schema if None
@@ -87,7 +87,7 @@ def run_complete_pipeline_generation(
     normalized_df = process_input_config(
         df=df,
         required_columns=required_columns,
-        optional_columns=optional_columns
+        default_values=default_values
     )
 
     # Handle gateway_catalog and gateway_schema defaults (use target values if None)
