@@ -29,25 +29,20 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from utilities import convert_cron_to_quartz
 
 
-def create_databricks_yml(project_name: str, workspace_host: str, default_catalog: str,
-                          default_schema: str, connection_name: str) -> dict:
+def create_databricks_yml(project_name: str, workspace_host: str) -> dict:
     """
     Create the main databricks.yml file for the SFDC DAB project.
 
     Args:
         project_name (str): Project name for the bundle
         workspace_host (str): Workspace host URL
-        default_catalog (str): Default target catalog for Salesforce data
-        default_schema (str): Default target schema for Salesforce data
-        connection_name (str): Salesforce connection name
 
     Returns:
         dict: The databricks.yml structure
 
     Note:
-        SFDC databricks.yml includes variables at the root level (unlike SQL Server).
-        This allows the same bundle to be deployed to different environments by
-        overriding variables.
+        Catalog, schema, and connection_name are now specified directly in
+        each pipeline definition from the CSV values, not as variables.
     """
     return {
         'bundle': {
@@ -64,27 +59,12 @@ def create_databricks_yml(project_name: str, workspace_host: str, default_catalo
                     'host': workspace_host
                 }
             }
-        },
-        'variables': {
-            'dest_catalog': {
-                'description': 'Target catalog for Salesforce data',
-                'default': default_catalog
-            },
-            'dest_schema': {
-                'description': 'Target schema for Salesforce data',
-                'default': default_schema
-            },
-            'sfdc_connection_name': {
-                'description': 'Salesforce connection name in Databricks',
-                'default': connection_name
-            }
         }
     }
 
 
 def generate_yaml_files(
     df: pd.DataFrame,
-    connection_name: str,
     project_name: str = "sfdc_ingestion",
     workspace_host: str = None,
     output_dir: str = "dab_deployment"
@@ -107,13 +87,17 @@ def generate_yaml_files(
             - schedule: Cron schedule expression
             - include_columns: (optional) Comma-separated list of columns to include
             - exclude_columns: (optional) Comma-separated list of columns to exclude
-        connection_name (str): Salesforce connection name in Databricks
         project_name (str): Project name for the bundle (default: "sfdc_ingestion")
         workspace_host (str): Workspace host URL (optional, can be set later)
         output_dir (str): Output directory for DAB project (default: "dab_deployment")
 
     Returns:
         None (writes YAML files to disk)
+
+    Note:
+        Each pipeline uses the target_catalog, target_schema, and connection_name
+        from its rows in the CSV. Different pipeline groups can target different
+        catalogs, schemas, or use different connections.
     """
     print("\n" + "="*80)
     print("GENERATING DATABRICKS ASSET BUNDLE YAML")
@@ -128,13 +112,7 @@ def generate_yaml_files(
     if missing_columns:
         raise ValueError(f"Missing required columns: {missing_columns}")
 
-    # Get default catalog and schema from first entry
-    default_catalog = df['target_catalog'].iloc[0]
-    default_schema = df['target_schema'].iloc[0]
-
     print(f"\nConfiguration:")
-    print(f"  Target: {default_catalog}.{default_schema}")
-    print(f"  Connection: {connection_name}")
     print(f"  Total tables: {len(df)}")
 
     # Group tables by pipeline_group
@@ -164,13 +142,42 @@ def generate_yaml_files(
         pipeline_name = f"pipeline_sfdc_{pipeline_group}"
         pipeline_display = f"SFDC Ingestion - {pipeline_group}"
 
-        # Get schedule from first table in group
+        # Get catalog, schema, connection_name, and schedule from first table in group
+        target_catalog = group_tables[0]['target_catalog']
+        target_schema = group_tables[0]['target_schema']
+        connection_name = group_tables[0]['connection_name']
         schedule = group_tables[0]['schedule']
 
         print(f"\nPipeline: {pipeline_group}")
         print(f"  Name: {pipeline_name}")
+        print(f"  Target: {target_catalog}.{target_schema}")
+        print(f"  Connection: {connection_name}")
         print(f"  Schedule: {schedule}")
         print(f"  Tables: {len(group_tables)}")
+
+        # Warn if catalogs differ within same group
+        catalogs_in_group = set(item['target_catalog'] for item in group_tables if pd.notna(item['target_catalog']))
+        if len(catalogs_in_group) > 1:
+            print(f"  ⚠ Warning: Different target_catalog values detected in group:")
+            for c in catalogs_in_group:
+                print(f"      {c}")
+            print(f"  Using target_catalog from first table: {target_catalog}")
+
+        # Warn if schemas differ within same group
+        schemas_in_group = set(item['target_schema'] for item in group_tables if pd.notna(item['target_schema']))
+        if len(schemas_in_group) > 1:
+            print(f"  ⚠ Warning: Different target_schema values detected in group:")
+            for s in schemas_in_group:
+                print(f"      {s}")
+            print(f"  Using target_schema from first table: {target_schema}")
+
+        # Warn if connection_names differ within same group
+        connections_in_group = set(item['connection_name'] for item in group_tables if pd.notna(item['connection_name']))
+        if len(connections_in_group) > 1:
+            print(f"  ⚠ Warning: Different connection_name values detected in group:")
+            for c in connections_in_group:
+                print(f"      {c}")
+            print(f"  Using connection_name from first table: {connection_name}")
 
         # Warn if schedules differ within same group
         schedules_in_group = set(item['schedule'] for item in group_tables if pd.notna(item['schedule']))
@@ -180,13 +187,13 @@ def generate_yaml_files(
                 print(f"      {s}")
             print(f"  Using schedule from first table: {schedule}")
 
-        # Create pipeline definition
+        # Create pipeline definition using actual values from CSV
         pipeline_def = {
             "name": pipeline_display,
-            "catalog": "${var.dest_catalog}",
-            "schema": "${var.dest_schema}",
+            "catalog": target_catalog,
+            "schema": target_schema,
             "ingestion_definition": {
-                "connection_name": "${var.sfdc_connection_name}",
+                "connection_name": connection_name,
                 "objects": []
             }
         }
@@ -197,8 +204,8 @@ def generate_yaml_files(
                 "table": {
                     "source_schema": "objects",  # Salesforce uses 'objects' as source schema
                     "source_table": item["source_table_name"],
-                    "destination_catalog": "${var.dest_catalog}",
-                    "destination_schema": "${var.dest_schema}",
+                    "destination_catalog": item["target_catalog"],
+                    "destination_schema": item["target_schema"],
                     "destination_table": item["target_table_name"]
                 }
             }
@@ -262,10 +269,7 @@ def generate_yaml_files(
     # Generate databricks.yml
     databricks_yaml = create_databricks_yml(
         project_name=project_name,
-        workspace_host=workspace_host or "https://your-workspace.cloud.databricks.com",
-        default_catalog=default_catalog,
-        default_schema=default_schema,
-        connection_name=connection_name
+        workspace_host=workspace_host or "https://your-workspace.cloud.databricks.com"
     )
 
     # Define output paths

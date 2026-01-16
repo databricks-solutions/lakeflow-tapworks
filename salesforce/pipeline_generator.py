@@ -104,12 +104,8 @@ def run_complete_pipeline_generation(
     if workspace_host:
         print(f"  - Workspace host: {workspace_host}")
 
-    # Get connection name from first row (assumes all use same connection)
-    connection_name = pipeline_config_df['connection_name'].iloc[0]
-
     generate_yaml_files(
         df=pipeline_config_df,
-        connection_name=connection_name,
         project_name=project_name,
         workspace_host=workspace_host,
         output_dir=output_dir
