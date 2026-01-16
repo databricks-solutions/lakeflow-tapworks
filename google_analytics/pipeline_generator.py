@@ -30,12 +30,12 @@ import os
 from pathlib import Path
 
 # Import from local modules
-from load_balancing.load_balancer import generate_pipeline_config
+from load_balancing.load_balancer import load_input_csv, process_input_config, generate_pipeline_config
 from deployment.connector_settings_generator import generate_yaml_files
 
 
 def run_complete_pipeline_generation(
-    input_csv: str,
+    df: pd.DataFrame,
     project_name: str = "ga4_ingestion",
     workspace_host: str = None,
     output_dir: str = "dab_deployment",
@@ -45,7 +45,7 @@ def run_complete_pipeline_generation(
     Complete pipeline generation process from GA4 property list to YAML files.
 
     Args:
-        input_csv (str): Path to input CSV with GA4 properties
+        df (pd.DataFrame): Input DataFrame with GA4 properties
         project_name (str): Project name for the bundle (default: "ga4_ingestion")
         workspace_host (str): Workspace host URL (optional, can be set later)
         output_dir (str): Output directory for DAB project (default: "dab_deployment")
@@ -63,18 +63,32 @@ def run_complete_pipeline_generation(
     print("STARTING COMPLETE GA4 PIPELINE GENERATION PROCESS")
     print("="*80)
 
-    # Step 1: Load input CSV
-    print(f"\n[Step 1/3] Loading input CSV: {input_csv}")
-    input_df = pd.read_csv(input_csv)
-    print(f"  ✓ Loaded {len(input_df)} GA4 properties")
+    # Step 1: Normalize and validate configuration
+    print(f"\n[Step 1/3] Normalizing configuration")
+    print(f"  - Input rows: {len(df)}")
+    print(f"  - Default schedule: {default_schedule}")
+
+    # Define required and optional columns for Google Analytics
+    required_columns = [
+        'source_catalog', 'source_schema', 'tables',
+        'target_catalog', 'target_schema',
+        'prefix', 'priority'
+    ]
+    optional_columns = {
+        'schedule': default_schedule
+    }
+
+    normalized_df = process_input_config(
+        df=df,
+        required_columns=required_columns,
+        optional_columns=optional_columns
+    )
 
     # Step 2: Generate pipeline configuration (prefix+priority grouping)
     print(f"\n[Step 2/3] Generating pipeline configuration with prefix+priority grouping")
-    print(f"  - Default schedule: {default_schedule}")
 
     pipeline_config_df = generate_pipeline_config(
-        df=input_df,
-        default_schedule=default_schedule
+        df=normalized_df
     )
 
     # Step 3: Generate YAML files
