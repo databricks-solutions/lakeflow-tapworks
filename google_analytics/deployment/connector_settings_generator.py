@@ -143,8 +143,9 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
 def generate_yaml_files(
     df: pd.DataFrame,
     project_name: str = "ga4_ingestion",
-    workspace_host: str = None,
-    output_dir: str = "dab_deployment"
+    output_dir: str = "dab_deployment",
+    targets: dict = None,
+    workspace_host: str = None
 ) -> None:
     """
     Generate Databricks Asset Bundle YAML files for Google Analytics 4 ingestion pipelines.
@@ -198,16 +199,25 @@ def generate_yaml_files(
     pipelines_yaml = create_pipelines(df, project_name)
     jobs_yaml = create_jobs(df, project_name, connector_type='ga4')
 
-    # Create databricks.yml with both dev and prod targets
-    workspace_url = workspace_host or "https://your-workspace.cloud.databricks.com"
-    databricks_yaml = create_databricks_yml(
-        project_name=project_name,
-        targets={
-            'dev': {'workspace_host': workspace_url},
-            'prod': {'workspace_host': workspace_url}
-        },
-        default_target='dev'
-    )
+    # Create databricks.yml with target environments
+    if targets:
+        # Use provided targets configuration
+        databricks_yaml = create_databricks_yml(
+            project_name=project_name,
+            targets=targets,
+            default_target='dev'
+        )
+    else:
+        # Backward compatibility: build targets from workspace_host
+        workspace_url = workspace_host or "https://your-workspace.cloud.databricks.com"
+        databricks_yaml = create_databricks_yml(
+            project_name=project_name,
+            targets={
+                'dev': {'workspace_host': workspace_url},
+                'prod': {'workspace_host': workspace_url}
+            },
+            default_target='dev'
+        )
 
     # Create directory structure
     resources_dir = Path(output_dir) / 'resources'

@@ -24,9 +24,10 @@ from deployment.connector_settings_generator import generate_yaml_files
 def run_complete_pipeline_generation(
     df: pd.DataFrame,
     project_name: str,
-    workspace_host: str,
-    output_dir: str ,
-    output_config: str =None,
+    output_dir: str,
+    targets: dict = None,
+    workspace_host: str = None,
+    output_config: str = None,
     default_values: dict = None,
     override_input_config: dict = None
 ):
@@ -46,21 +47,44 @@ def run_complete_pipeline_generation(
             Must contain: source_database, source_schema, source_table_name,
                          target_catalog, target_schema, target_table_name,
                          prefix, priority, connection_name (all required)
-        project_name (str): Project name for the bundle (default: "sfdc_ingestion")
-        default_schedule (str): Default cron schedule (default: "*/15 * * * *")
-        workspace_host (str): Workspace host URL (optional, can be updated later in databricks.yml)
-        output_dir (str): Output directory for DAB project (default: "dab_deployment")
-        output_config (str): Output path for intermediate configuration CSV
-        default_values (dict): Optional dict of column defaults to override built-in defaults
-            If provided, will be merged with built-in defaults
-        override_input_config (dict): Optional dict to override specific columns for all rows
-
-    Note:
-        connection_name is now a required column in the DataFrame. Each row must specify
-        which Salesforce connection to use.
+        project_name (str): Project name for the bundle
+        output_dir (str): Output directory for DAB project
+        targets (dict, optional): Target environments configuration dict.
+            Format: {'dev': {'workspace_host': '...'}, 'prod': {'workspace_host': '...'}}
+            If not provided, will use workspace_host parameter for both dev and prod.
+        workspace_host (str, optional): Workspace host URL (backward compatibility)
+            Used only if targets dict is not provided.
+        output_config (str, optional): Output path for intermediate configuration CSV
+        default_values (dict, optional): Column defaults to override built-in defaults
+        override_input_config (dict, optional): Override specific columns for all rows
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
+
+    Example Usage:
+        >>> # Simple usage (backward compatible)
+        >>> run_complete_pipeline_generation(
+        ...     df=df,
+        ...     project_name='my_project',
+        ...     output_dir='output',
+        ...     workspace_host='https://workspace.com'
+        ... )
+
+        >>> # Advanced usage with multiple environments
+        >>> run_complete_pipeline_generation(
+        ...     df=df,
+        ...     project_name='my_project',
+        ...     output_dir='output',
+        ...     targets={
+        ...         'dev': {'workspace_host': 'https://dev.databricks.com'},
+        ...         'staging': {'workspace_host': 'https://staging.databricks.com'},
+        ...         'prod': {'workspace_host': 'https://prod.databricks.com'}
+        ...     }
+        ... )
+
+    Note:
+        connection_name is a required column in the DataFrame. Each row must specify
+        which Salesforce connection to use.
     """
     print("="*80)
     print("SALESFORCE PIPELINE GENERATION")
@@ -117,12 +141,17 @@ def run_complete_pipeline_generation(
     print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
     print(f"  - Project name: {project_name}")
     print(f"  - Output directory: {output_dir}")
-    if workspace_host:
+
+    # Print target environment info
+    if targets:
+        print(f"  - Target environments: {', '.join(targets.keys())}")
+    elif workspace_host:
         print(f"  - Workspace host: {workspace_host}")
 
     generate_yaml_files(
         df=pipeline_config_df,
         project_name=project_name,
+        targets=targets,
         workspace_host=workspace_host,
         output_dir=output_dir
     )

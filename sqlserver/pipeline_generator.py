@@ -24,13 +24,11 @@ def run_complete_pipeline_generation(
     df: pd.DataFrame,
     project_name: str,
     output_dir: str,
-    workspace_host: str,
-    root_path: str,
     max_tables_per_group: int = 250,
-    output_config: str =None,
-    # default_schedule: str = "*/15 * * * *",
-    # default_gateway_worker_type: str = None,
-    # default_gateway_driver_type: str = None,
+    targets: dict = None,
+    workspace_host: str = None,
+    root_path: str = None,
+    output_config: str = None,
     default_values: dict = None,
     override_input_config: dict = None
 ):
@@ -44,25 +42,51 @@ def run_complete_pipeline_generation(
                          connection_name (all required)
         project_name (str): Project name prefix for all resources
         output_dir (str): Output directory for DAB project
-        workspace_host (str): Workspace host URL
-        root_path (str): Root path for bundle deployment
         max_tables_per_group (int): Maximum tables per pipeline group (default: 250)
-        default_schedule (str): Default cron schedule (default: "*/15 * * * *")
-        default_gateway_worker_type (str): Default worker node type if not in CSV (default: None)
-        default_gateway_driver_type (str): Default driver node type if not in CSV (default: None)
-        default_values (dict): Optional dict of column defaults to override built-in defaults
-            If provided, will be merged with built-in defaults
-        override_input_config (dict): Optional dict to override specific columns for all rows
+        targets (dict, optional): Target environments configuration dict.
+            Format: {'dev': {'workspace_host': '...', 'root_path': '...'}}
+            If not provided, uses workspace_host and root_path for both dev and prod.
+        workspace_host (str, optional): Workspace host URL (backward compatibility)
+        root_path (str, optional): Root path for bundle deployment (backward compatibility)
+        output_config (str, optional): Output path for intermediate configuration CSV
+        default_values (dict, optional): Column defaults to override built-in defaults
+        override_input_config (dict, optional): Override specific columns for all rows
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
 
+    Example Usage:
+        >>> # Simple usage (backward compatible)
+        >>> run_complete_pipeline_generation(
+        ...     df=df,
+        ...     project_name='my_project',
+        ...     output_dir='output',
+        ...     workspace_host='https://workspace.com',
+        ...     root_path='/Users/user/.bundle/${bundle.name}/${bundle.target}'
+        ... )
+
+        >>> # Advanced usage with different environments
+        >>> run_complete_pipeline_generation(
+        ...     df=df,
+        ...     project_name='my_project',
+        ...     output_dir='output',
+        ...     targets={
+        ...         'dev': {
+        ...             'workspace_host': 'https://dev.databricks.com',
+        ...             'root_path': '/Users/dev/.bundle/${bundle.name}/${bundle.target}'
+        ...         },
+        ...         'prod': {
+        ...             'workspace_host': 'https://prod.databricks.com',
+        ...             'root_path': '/Workspace/prod/${bundle.name}'
+        ...         }
+        ...     }
+        ... )
+
     Note:
-        - connection_name is a required column in the DataFrame. Each row must specify
-          which SQL Server connection to use.
+        - connection_name is a required column in the DataFrame
         - Gateway settings (gateway_catalog, gateway_schema, gateway_worker_type, gateway_driver_type)
-          are optional and can vary per source_database group.
-        - If gateway_catalog/gateway_schema are not provided, they default to target_catalog/target_schema.
+          are optional and can vary per source_database group
+        - If gateway_catalog/gateway_schema are not provided, they default to target_catalog/target_schema
     """
     print("="*80)
     print("STARTING COMPLETE PIPELINE GENERATION PROCESS")
@@ -128,12 +152,21 @@ def run_complete_pipeline_generation(
     print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
     print(f"  - Project name: {project_name}")
     print(f"  - Output directory: {output_dir}")
-    print(f"  - Root path: {root_path}")
+
+    # Print target environment info
+    if targets:
+        print(f"  - Target environments: {', '.join(targets.keys())}")
+    else:
+        if workspace_host:
+            print(f"  - Workspace host: {workspace_host}")
+        if root_path:
+            print(f"  - Root path: {root_path}")
 
     generate_yaml_files(
         df=pipeline_config_df,
         project_name=project_name,
         output_dir=output_dir,
+        targets=targets,
         workspace_host=workspace_host,
         root_path=root_path
     )
