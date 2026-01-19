@@ -6,7 +6,7 @@ from pathlib import Path
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml
+from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml, generate_resource_names
 
 
 def create_gateways(df, project_name):
@@ -68,7 +68,9 @@ def create_pipelines(df, project_name):
 
     for pipeline_group, group_df in df.groupby('pipeline_group'):
         gateway_id = group_df.iloc[0]['gateway']
-        pipeline_name = f"{project_name}_pipeline_ingestion_{pipeline_group}"
+
+        # Generate resource names using unified naming function
+        names = generate_resource_names(pipeline_group, 'sqlserver')
 
         # Get target catalog and schema from first row (all tables in group should have same target)
         target_catalog = group_df.iloc[0]['target_catalog']
@@ -85,8 +87,8 @@ def create_pipelines(df, project_name):
             }
         } for _, row in group_df.iterrows()]
 
-        pipelines[pipeline_name] = {
-            'name': f"{project_name}_ingestion_{pipeline_group}",
+        pipelines[names['pipeline_resource_name']] = {
+            'name': names['pipeline_name'],
             'configuration': {
                 'pipelines.cdcApplierFetchMetadataTimeoutSeconds': '600'
             },

@@ -10,6 +10,61 @@ from pathlib import Path
 from utilities.cron_utils import convert_cron_to_quartz
 
 
+def generate_resource_names(pipeline_group: str, connector_type: str) -> dict:
+    """
+    Generate consistent resource names for pipelines and jobs across all connectors.
+
+    This function uses the SFDC naming pattern as reference, ensuring consistent
+    naming across Salesforce, SQL Server, and Google Analytics connectors.
+
+    Args:
+        pipeline_group (str): Pipeline group identifier (e.g., 'sales_01', 'business_unit1_p1')
+        connector_type (str): Connector type ('sfdc', 'sqlserver', 'ga4')
+
+    Returns:
+        dict: Dictionary containing all resource names:
+            - pipeline_name: Display name for pipeline (shown in Databricks UI)
+            - pipeline_resource_name: Resource identifier for pipeline (used in YAML)
+            - job_name: Resource identifier for job (used in YAML)
+            - job_display_name: Display name for job (shown in Databricks UI)
+            - task_key: Task key for pipeline task (unified across all connectors)
+
+    Example:
+        >>> names = generate_resource_names('sales_01', 'sfdc')
+        >>> names['pipeline_name']
+        'SFDC Ingestion - sales_01'
+        >>> names['pipeline_resource_name']
+        'pipeline_sfdc_sales_01'
+        >>> names['job_name']
+        'job_sfdc_sales_01'
+        >>> names['job_display_name']
+        'SFDC Pipeline Scheduler - sales_01'
+        >>> names['task_key']
+        'run_pipeline'
+    """
+    # Normalize connector type for display
+    connector_display = {
+        'sfdc': 'SFDC',
+        'sqlserver': 'SQL Server',
+        'ga4': 'GA4'
+    }.get(connector_type, connector_type.upper())
+
+    # Generate names using SFDC pattern (simple and clean)
+    pipeline_name = f"{connector_display} Ingestion - {pipeline_group}"
+    pipeline_resource_name = f"pipeline_{connector_type}_{pipeline_group}"
+    job_name = f"job_{connector_type}_{pipeline_group}"
+    job_display_name = f"{connector_display} Pipeline Scheduler - {pipeline_group}"
+    task_key = "run_pipeline"  # Unified task key across all connectors
+
+    return {
+        'pipeline_name': pipeline_name,
+        'pipeline_resource_name': pipeline_resource_name,
+        'job_name': job_name,
+        'job_display_name': job_display_name,
+        'task_key': task_key
+    }
+
+
 def process_input_config(
     df: pd.DataFrame,
     required_columns: list,
@@ -227,33 +282,22 @@ def create_jobs(
 
         # Only create job if schedule is defined
         if pd.notna(schedule) and schedule and str(schedule).strip():
-            # Generate resource names based on connector type
-            if connector_type == 'sqlserver':
-                # SQL Server uses different naming pattern
-                job_name = f"job_{project_name}_ingestion_{pipeline_group}"
-                job_display = f"{project_name} Pipeline Scheduler - {pipeline_group}"
-                pipeline_resource_name = f"{project_name}_pipeline_ingestion_{pipeline_group}"
-                task_key = f'run_{project_name}_pipeline'
-            else:
-                # Salesforce and GA4 use simpler pattern
-                job_name = f"job_{connector_type}_{pipeline_group}"
-                job_display = f"{connector_type.upper()} Pipeline Scheduler - {pipeline_group}"
-                pipeline_resource_name = f"pipeline_{connector_type}_{pipeline_group}"
-                task_key = f'run_{connector_type}_pipeline'
+            # Generate resource names using unified naming function
+            names = generate_resource_names(pipeline_group, connector_type)
 
             # Convert standard cron to Quartz format
             quartz_schedule = convert_cron_to_quartz(schedule)
 
             job_config = {
-                'name': job_display,
+                'name': names['job_display_name'],
                 'schedule': {
                     'quartz_cron_expression': quartz_schedule,
                     'timezone_id': 'UTC'
                 },
                 'tasks': [{
-                    'task_key': task_key,
+                    'task_key': names['task_key'],
                     'pipeline_task': {
-                        'pipeline_id': f"${{resources.pipelines.{pipeline_resource_name}.id}}"
+                        'pipeline_id': f"${{resources.pipelines.{names['pipeline_resource_name']}.id}}"
                     }
                 }]
             }
@@ -264,7 +308,7 @@ def create_jobs(
                 if pd.notna(pause_status) and pause_status and str(pause_status).strip():
                     job_config['pause_status'] = str(pause_status).upper()
 
-            jobs[job_name] = job_config
+            jobs[names['job_name']] = job_config
 
     return {'resources': {'jobs': jobs}}
 
