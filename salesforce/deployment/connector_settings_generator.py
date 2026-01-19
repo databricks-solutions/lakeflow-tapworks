@@ -27,7 +27,7 @@ from collections import defaultdict
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml
+from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml, generate_resource_names
 
 
 def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
@@ -57,9 +57,8 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
     for pipeline_group in sorted(groups.keys()):
         group_tables = groups[pipeline_group]
 
-        # Create pipeline name
-        pipeline_name = f"pipeline_sfdc_{pipeline_group}"
-        pipeline_display = f"SFDC Ingestion - {pipeline_group}"
+        # Generate resource names using unified naming function
+        names = generate_resource_names(pipeline_group, 'sfdc')
 
         # Get catalog, schema, and connection_name from first table in group
         target_catalog = group_tables[0]['target_catalog']
@@ -67,7 +66,7 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
         connection_name = group_tables[0]['connection_name']
 
         print(f"\nPipeline: {pipeline_group}")
-        print(f"  Name: {pipeline_name}")
+        print(f"  Name: {names['pipeline_resource_name']}")
         print(f"  Target: {target_catalog}.{target_schema}")
         print(f"  Connection: {connection_name}")
         print(f"  Tables: {len(group_tables)}")
@@ -98,7 +97,7 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
 
         # Create pipeline definition using actual values from CSV
         pipeline_def = {
-            "name": pipeline_display,
+            "name": names['pipeline_name'],
             "catalog": target_catalog,
             "schema": target_schema,
             "ingestion_definition": {
@@ -145,7 +144,7 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
                 col_info = f" [excludes: {len(table_config['exclude_columns'])} cols]"
             print(f"    - {table_name} → {dest}{col_info}")
 
-        pipelines[pipeline_name] = pipeline_def
+        pipelines[names['pipeline_resource_name']] = pipeline_def
 
     return {'resources': {'pipelines': pipelines}}
 

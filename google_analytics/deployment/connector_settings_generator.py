@@ -28,7 +28,7 @@ from collections import defaultdict
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml
+from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml, generate_resource_names
 
 
 def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
@@ -58,9 +58,8 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
     for pipeline_group in sorted(groups.keys()):
         group_properties = groups[pipeline_group]
 
-        # Create safe pipeline name
-        pipeline_name = f"pipeline_ga4_{pipeline_group}"
-        pipeline_display = f"GA4 Ingestion - {pipeline_group}"
+        # Generate resource names using unified naming function
+        names = generate_resource_names(pipeline_group, 'ga4')
 
         # Get catalog, schema, and connection_name from first property in group
         target_catalog = group_properties[0]['target_catalog']
@@ -68,7 +67,7 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
         connection_name = group_properties[0]['connection_name']
 
         print(f"\nPipeline: {pipeline_group}")
-        print(f"  Name: {pipeline_name}")
+        print(f"  Name: {names['pipeline_resource_name']}")
         print(f"  Target: {target_catalog}.{target_schema}")
         print(f"  Connection: {connection_name}")
         print(f"  Properties: {len(group_properties)}")
@@ -127,8 +126,8 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
             print(f"    - {source_schema}: {', '.join(tables)}")
 
         # Add pipeline using actual values from CSV
-        pipelines[pipeline_name] = {
-            "name": pipeline_display,
+        pipelines[names['pipeline_resource_name']] = {
+            "name": names['pipeline_name'],
             "catalog": target_catalog,
             "schema": target_schema,
             "ingestion_definition": {
