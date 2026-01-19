@@ -28,7 +28,7 @@ from collections import defaultdict
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from utilities import convert_cron_to_quartz
+from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml
 
 
 def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
@@ -140,86 +140,6 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
     return {'resources': {'pipelines': pipelines}}
 
 
-def create_jobs(df: pd.DataFrame, project_name: str) -> dict:
-    """
-    Create job YAML configuration from dataframe.
-
-    Creates a scheduled job for each pipeline that triggers the pipeline on a cron schedule.
-
-    Args:
-        df (pd.DataFrame): Input dataframe containing pipeline_group and schedule columns
-        project_name (str): Project name prefix for all resources
-
-    Returns:
-        dict: Jobs YAML structure
-    """
-    jobs = {}
-
-    # Group by pipeline_group
-    for pipeline_group, group_df in df.groupby('pipeline_group'):
-        schedule = group_df.iloc[0]['schedule']
-
-        # Only create job if schedule is defined
-        if pd.notna(schedule) and schedule.strip():
-            job_name = f"job_ga4_{pipeline_group}"
-            job_display = f"GA4 Pipeline Scheduler - {pipeline_group}"
-            pipeline_resource_name = f"pipeline_ga4_{pipeline_group}"
-            quartz_schedule = convert_cron_to_quartz(schedule)
-
-            jobs[job_name] = {
-                'name': job_display,
-                'schedule': {
-                    'quartz_cron_expression': quartz_schedule,
-                    'timezone_id': 'UTC'
-                },
-                'tasks': [{
-                    'task_key': 'run_ga4_pipeline',
-                    'pipeline_task': {
-                        'pipeline_id': f"${{resources.pipelines.{pipeline_resource_name}.id}}"
-                    }
-                }]
-            }
-
-            print(f"  Job: {job_name}")
-            print(f"    Quartz cron: {quartz_schedule}")
-
-    return {'resources': {'jobs': jobs}}
-
-
-def create_databricks_yml(project_name: str, workspace_host: str) -> dict:
-    """
-    Create the main databricks.yml file for the GA4 DAB project.
-
-    Args:
-        project_name (str): Project name for the bundle
-        workspace_host (str): Workspace host URL
-
-    Returns:
-        dict: The databricks.yml structure
-
-    Note:
-        Catalog, schema, and connection_name are now specified directly in
-        each pipeline definition from the CSV values, not as variables.
-    """
-    return {
-        'bundle': {
-            'name': project_name
-        },
-        'include': [
-            'resources/*.yml'
-        ],
-        'targets': {
-            'dev': {
-                'mode': 'development',
-                'default': True,
-                'workspace': {
-                    'host': workspace_host
-                }
-            }
-        }
-    }
-
-
 def generate_yaml_files(
     df: pd.DataFrame,
     project_name: str = "ga4_ingestion",
@@ -276,10 +196,17 @@ def generate_yaml_files(
 
     # Generate YAML content using separate functions
     pipelines_yaml = create_pipelines(df, project_name)
-    jobs_yaml = create_jobs(df, project_name)
+    jobs_yaml = create_jobs(df, project_name, connector_type='ga4')
+
+    # Create databricks.yml with both dev and prod targets
+    workspace_url = workspace_host or "https://your-workspace.cloud.databricks.com"
     databricks_yaml = create_databricks_yml(
         project_name=project_name,
-        workspace_host=workspace_host or "https://your-workspace.cloud.databricks.com"
+        targets={
+            'dev': {'workspace_host': workspace_url},
+            'prod': {'workspace_host': workspace_url}
+        },
+        default_target='dev'
     )
 
     # Create directory structure
