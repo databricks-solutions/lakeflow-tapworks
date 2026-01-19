@@ -24,10 +24,8 @@ def run_complete_pipeline_generation(
     df: pd.DataFrame,
     project_name: str,
     output_dir: str,
+    targets: dict,
     max_tables_per_group: int = 250,
-    targets: dict = None,
-    workspace_host: str = None,
-    root_path: str = None,
     output_config: str = None,
     default_values: dict = None,
     override_input_config: dict = None
@@ -42,12 +40,10 @@ def run_complete_pipeline_generation(
                          connection_name (all required)
         project_name (str): Project name prefix for all resources
         output_dir (str): Output directory for DAB project
+        targets (dict): Target environments configuration dict (required)
+            Format: {'env_name': {'workspace_host': '...', 'root_path': '...'}, ...}
+            Supports any number of environments (dev, staging, qa, prod, etc.)
         max_tables_per_group (int): Maximum tables per pipeline group (default: 250)
-        targets (dict, optional): Target environments configuration dict.
-            Format: {'dev': {'workspace_host': '...', 'root_path': '...'}}
-            If not provided, uses workspace_host and root_path for both dev and prod.
-        workspace_host (str, optional): Workspace host URL (backward compatibility)
-        root_path (str, optional): Root path for bundle deployment (backward compatibility)
         output_config (str, optional): Output path for intermediate configuration CSV
         default_values (dict, optional): Column defaults to override built-in defaults
         override_input_config (dict, optional): Override specific columns for all rows
@@ -56,16 +52,20 @@ def run_complete_pipeline_generation(
         pd.DataFrame: The pipeline configuration dataframe
 
     Example Usage:
-        >>> # Simple usage (backward compatible)
+        >>> # Single environment
         >>> run_complete_pipeline_generation(
         ...     df=df,
         ...     project_name='my_project',
         ...     output_dir='output',
-        ...     workspace_host='https://workspace.com',
-        ...     root_path='/Users/user/.bundle/${bundle.name}/${bundle.target}'
+        ...     targets={
+        ...         'dev': {
+        ...             'workspace_host': 'https://workspace.com',
+        ...             'root_path': '/Users/user/.bundle/${bundle.name}/${bundle.target}'
+        ...         }
+        ...     }
         ... )
 
-        >>> # Advanced usage with different environments
+        >>> # Multiple environments with different configs
         >>> run_complete_pipeline_generation(
         ...     df=df,
         ...     project_name='my_project',
@@ -154,21 +154,13 @@ def run_complete_pipeline_generation(
     print(f"  - Output directory: {output_dir}")
 
     # Print target environment info
-    if targets:
-        print(f"  - Target environments: {', '.join(targets.keys())}")
-    else:
-        if workspace_host:
-            print(f"  - Workspace host: {workspace_host}")
-        if root_path:
-            print(f"  - Root path: {root_path}")
+    print(f"  - Target environments: {', '.join(targets.keys())}")
 
     generate_yaml_files(
         df=pipeline_config_df,
         project_name=project_name,
         output_dir=output_dir,
-        targets=targets,
-        workspace_host=workspace_host,
-        root_path=root_path
+        targets=targets
     )
 
     print("\n" + "="*80)
@@ -289,17 +281,28 @@ Note:
     print(f"Loading input CSV: {args.input_csv}")
     input_df = load_input_csv(args.input_csv)
 
+    # Build targets dict from CLI arguments
+    targets = {
+        'dev': {
+            'workspace_host': args.workspace_host,
+            'root_path': args.root_path
+        }
+    }
+
+    # Build default values dict
+    default_values = {
+        'gateway_worker_type': args.worker_type,
+        'gateway_driver_type': args.driver_type
+    }
+
     # Run the complete pipeline generation
     result_df = run_complete_pipeline_generation(
         df=input_df,
         project_name=args.project_name,
         output_dir=args.output_dir,
-        workspace_host=args.workspace_host,
-        root_path=args.root_path,
+        targets=targets,
         max_tables_per_group=args.max_tables,
-        # default_schedule=args.schedule,
-        default_gateway_worker_type=args.worker_type,
-        default_gateway_driver_type=args.driver_type
+        default_values=default_values
     )
 
     # Optional: Save the intermediate pipeline configuration for reference

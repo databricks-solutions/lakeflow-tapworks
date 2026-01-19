@@ -101,7 +101,7 @@ def create_pipelines(df, project_name):
     return {'resources': {'pipelines': pipelines}}
 
 
-def generate_yaml_files(df, project_name, output_dir, targets=None, workspace_host=None, root_path=None):
+def generate_yaml_files(df, project_name, output_dir, targets):
     """Generate gateway and pipeline YAML files from dataframe in a proper DAB structure.
 
     Args:
@@ -122,8 +122,8 @@ def generate_yaml_files(df, project_name, output_dir, targets=None, workspace_ho
             - schedule: Cron schedule (optional, e.g., '0 0 * * *')
         project_name (str): Project name prefix for all resources to avoid naming clashes
         output_dir (str): Output directory for the DAB project (default: 'dab_project')
-        workspace_host (str): Workspace host URL
-        root_path (str): Root path for bundle deployment
+        targets (dict): Target environments configuration (required)
+            Format: {'env_name': {'workspace_host': '...', 'root_path': '...'}, ...}
 
     Note:
         - Creates a proper DAB structure with root databricks.yml and resources subdirectory
@@ -140,29 +140,11 @@ def generate_yaml_files(df, project_name, output_dir, targets=None, workspace_ho
     jobs_yaml = create_jobs(df, project_name, connector_type='sqlserver')
 
     # Create databricks.yml with target environments
-    if targets:
-        # Use provided targets configuration
-        databricks_yaml = create_databricks_yml(
-            project_name=project_name,
-            targets=targets,
-            default_target='dev'
-        )
-    else:
-        # Backward compatibility: build targets from workspace_host and root_path
-        databricks_yaml = create_databricks_yml(
-            project_name=project_name,
-            targets={
-                'dev': {
-                    'workspace_host': workspace_host,
-                    'root_path': root_path
-                },
-                'prod': {
-                    'workspace_host': workspace_host,
-                    'root_path': root_path
-                }
-            },
-            default_target='dev'
-        )
+    databricks_yaml = create_databricks_yml(
+        project_name=project_name,
+        targets=targets,
+        default_target='dev'
+    )
 
     # Define output paths
     databricks_yml_path = os.path.join(output_dir, 'databricks.yml')

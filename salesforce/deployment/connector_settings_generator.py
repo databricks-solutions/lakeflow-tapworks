@@ -152,10 +152,9 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
 
 def generate_yaml_files(
     df: pd.DataFrame,
-    project_name: str = "sfdc_ingestion",
-    output_dir: str = "dab_deployment",
-    targets: dict = None,
-    workspace_host: str = None
+    project_name: str,
+    output_dir: str,
+    targets: dict
 ) -> None:
     """
     Generate Databricks Asset Bundle YAML files for Salesforce ingestion pipelines.
@@ -176,12 +175,10 @@ def generate_yaml_files(
             - schedule: Cron schedule expression
             - include_columns: (optional) Comma-separated list of columns to include
             - exclude_columns: (optional) Comma-separated list of columns to exclude
-        project_name (str): Project name for the bundle (default: "sfdc_ingestion")
-        output_dir (str): Output directory for DAB project (default: "dab_deployment")
-        targets (dict, optional): Target environments configuration.
-            Format: {'dev': {'workspace_host': '...'}, 'prod': {'workspace_host': '...'}}
-            If not provided, uses workspace_host for both dev and prod.
-        workspace_host (str, optional): Workspace host URL (backward compatibility)
+        project_name (str): Project name for the bundle
+        output_dir (str): Output directory for DAB project
+        targets (dict): Target environments configuration (required)
+            Format: {'env_name': {'workspace_host': '...'}, ...}
 
     Returns:
         None (writes YAML files to disk)
@@ -213,24 +210,11 @@ def generate_yaml_files(
     jobs_yaml = create_jobs(df, project_name, connector_type='sfdc')
 
     # Create databricks.yml with target environments
-    if targets:
-        # Use provided targets configuration
-        databricks_yaml = create_databricks_yml(
-            project_name=project_name,
-            targets=targets,
-            default_target='dev'
-        )
-    else:
-        # Backward compatibility: build targets from workspace_host
-        workspace_url = workspace_host or "https://your-workspace.cloud.databricks.com"
-        databricks_yaml = create_databricks_yml(
-            project_name=project_name,
-            targets={
-                'dev': {'workspace_host': workspace_url},
-                'prod': {'workspace_host': workspace_url}
-            },
-            default_target='dev'
-        )
+    databricks_yaml = create_databricks_yml(
+        project_name=project_name,
+        targets=targets,
+        default_target='dev'
+    )
 
     # Create directory structure
     resources_dir = Path(output_dir) / 'resources'
