@@ -25,8 +25,7 @@ def run_complete_pipeline_generation(
     df: pd.DataFrame,
     project_name: str,
     output_dir: str,
-    targets: dict = None,
-    workspace_host: str = None,
+    targets: dict,
     output_config: str = None,
     default_values: dict = None,
     override_input_config: dict = None
@@ -49,11 +48,9 @@ def run_complete_pipeline_generation(
                          prefix, priority, connection_name (all required)
         project_name (str): Project name for the bundle
         output_dir (str): Output directory for DAB project
-        targets (dict, optional): Target environments configuration dict.
-            Format: {'dev': {'workspace_host': '...'}, 'prod': {'workspace_host': '...'}}
-            If not provided, will use workspace_host parameter for both dev and prod.
-        workspace_host (str, optional): Workspace host URL (backward compatibility)
-            Used only if targets dict is not provided.
+        targets (dict): Target environments configuration dict (required)
+            Format: {'env_name': {'workspace_host': '...'}, ...}
+            Supports any number of environments (dev, staging, qa, prod, etc.)
         output_config (str, optional): Output path for intermediate configuration CSV
         default_values (dict, optional): Column defaults to override built-in defaults
         override_input_config (dict, optional): Override specific columns for all rows
@@ -62,15 +59,15 @@ def run_complete_pipeline_generation(
         pd.DataFrame: The pipeline configuration dataframe
 
     Example Usage:
-        >>> # Simple usage (backward compatible)
+        >>> # Single environment
         >>> run_complete_pipeline_generation(
         ...     df=df,
         ...     project_name='my_project',
         ...     output_dir='output',
-        ...     workspace_host='https://workspace.com'
+        ...     targets={'dev': {'workspace_host': 'https://workspace.com'}}
         ... )
 
-        >>> # Advanced usage with multiple environments
+        >>> # Multiple environments
         >>> run_complete_pipeline_generation(
         ...     df=df,
         ...     project_name='my_project',
@@ -141,18 +138,12 @@ def run_complete_pipeline_generation(
     print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
     print(f"  - Project name: {project_name}")
     print(f"  - Output directory: {output_dir}")
-
-    # Print target environment info
-    if targets:
-        print(f"  - Target environments: {', '.join(targets.keys())}")
-    elif workspace_host:
-        print(f"  - Workspace host: {workspace_host}")
+    print(f"  - Target environments: {', '.join(targets.keys())}")
 
     generate_yaml_files(
         df=pipeline_config_df,
         project_name=project_name,
         targets=targets,
-        workspace_host=workspace_host,
         output_dir=output_dir
     )
 
