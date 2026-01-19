@@ -179,6 +179,12 @@ def create_jobs(
 
     Args:
         df (pd.DataFrame): Input dataframe containing pipeline_group and schedule columns
+            Required columns:
+                - pipeline_group: Pipeline group identifier
+                - schedule: Cron schedule expression
+            Optional columns:
+                - pause_status: Job pause status ('PAUSED' or 'UNPAUSED')
+                  Can be set via default_values or override_input_config
         project_name (str): Project name prefix for all resources
         connector_type (str): Connector type identifier (e.g., 'sfdc', 'ga4', 'sqlserver')
             Used for naming resources and tasks
@@ -191,7 +197,8 @@ def create_jobs(
                         'job_name': {
                             'name': 'Job Display Name',
                             'schedule': {...},
-                            'tasks': [...]
+                            'tasks': [...],
+                            'pause_status': 'PAUSED'  # Optional
                         }
                     }
                 }
@@ -204,6 +211,13 @@ def create_jobs(
         >>> jobs = create_jobs(df, 'my_project', 'ga4')
         >>> # For SQL Server
         >>> jobs = create_jobs(df, 'my_project', 'sqlserver')
+        >>> # With pause_status in default_values
+        >>> df = process_input_config(
+        ...     df=input_df,
+        ...     required_columns=required_cols,
+        ...     default_values={'pause_status': 'PAUSED'}
+        ... )
+        >>> jobs = create_jobs(df, 'my_project', 'sfdc')
     """
     jobs = {}
 
@@ -230,7 +244,7 @@ def create_jobs(
             # Convert standard cron to Quartz format
             quartz_schedule = convert_cron_to_quartz(schedule)
 
-            jobs[job_name] = {
+            job_config = {
                 'name': job_display,
                 'schedule': {
                     'quartz_cron_expression': quartz_schedule,
@@ -243,6 +257,14 @@ def create_jobs(
                     }
                 }]
             }
+
+            # Add pause_status if specified
+            if 'pause_status' in group_df.columns:
+                pause_status = group_df.iloc[0]['pause_status']
+                if pd.notna(pause_status) and pause_status and str(pause_status).strip():
+                    job_config['pause_status'] = str(pause_status).upper()
+
+            jobs[job_name] = job_config
 
     return {'resources': {'jobs': jobs}}
 
