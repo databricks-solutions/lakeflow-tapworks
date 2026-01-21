@@ -141,7 +141,6 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
 
 def generate_yaml_files(
     df: pd.DataFrame,
-    project_name: str,
     output_dir: str,
     targets: dict
 ) -> None:
@@ -165,7 +164,6 @@ def generate_yaml_files(
             - pipeline_group: Pipeline group identifier (e.g., "business_unit1_01")
             - schedule: Cron schedule expression
             - project_name: Project name (required)
-        project_name (str): Not used (kept for backward compatibility)
         output_dir (str): Output directory for DAB project(s)
         targets (dict): Target environments configuration (required)
             Format: {'env_name': {'workspace_host': '...'}, ...}

@@ -23,7 +23,6 @@ from deployment.connector_settings_generator import generate_yaml_files
 
 def run_complete_pipeline_generation(
     df: pd.DataFrame,
-    project_name: str,
     output_dir: str,
     targets: dict,
     output_config: str = None,
@@ -46,19 +45,19 @@ def run_complete_pipeline_generation(
             Must contain: source_database, source_schema, source_table_name,
                          target_catalog, target_schema, target_table_name,
                          prefix, priority, connection_name (all required)
-            Optional: project_name (will use default if missing/empty)
-        project_name (str): Default project name used when project_name column is missing or empty
+            Optional: project_name (can be set via default_values or override_input_config)
         output_dir (str): Output directory for DAB project(s)
         targets (dict): Target environments configuration dict (required)
             Format: {'env_name': {'workspace_host': '...'}, ...}
             Supports any number of environments (dev, staging, qa, prod, etc.)
         output_config (str, optional): Output path for intermediate configuration CSV
-        default_values (dict, optional): Column defaults to override built-in defaults
+        default_values (dict, optional): Column defaults (e.g., {'project_name': 'my_project'})
         override_input_config (dict, optional): Override specific columns for all rows
 
     Note:
         - Always creates separate DAB packages per unique project_name
         - Output structure: output/{project_name}/databricks.yml for each project
+        - project_name must be provided via CSV, default_values, or override_input_config
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
@@ -104,21 +103,10 @@ def run_complete_pipeline_generation(
         'prefix', 'priority', 'connection_name'
     ]
 
-    # Build default values - project_name is a default value
-    built_in_defaults = {
-        'project_name': project_name
-    }
-
-    if default_values:
-        # User-provided defaults override built-in defaults
-        final_defaults = {**built_in_defaults, **default_values}
-    else:
-        final_defaults = built_in_defaults
-
     normalized_df = process_input_config(
         df=df,
         required_columns=required_columns,
-        default_values=final_defaults,
+        default_values=default_values,
         override_input_config=override_input_config
     )
 
@@ -138,13 +126,11 @@ def run_complete_pipeline_generation(
 
     # Step 3: Generate YAML files (databricks.yml + resources/sfdc_pipeline.yml)
     print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
-    print(f"  - Project name: {project_name}")
     print(f"  - Output directory: {output_dir}")
     print(f"  - Target environments: {', '.join(targets.keys())}")
 
     generate_yaml_files(
         df=pipeline_config_df,
-        project_name=project_name,
         targets=targets,
         output_dir=output_dir
     )

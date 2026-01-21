@@ -151,7 +151,6 @@ def create_pipelines(df: pd.DataFrame, project_name: str) -> dict:
 
 def generate_yaml_files(
     df: pd.DataFrame,
-    project_name: str,
     output_dir: str,
     targets: dict
 ) -> None:
@@ -176,7 +175,6 @@ def generate_yaml_files(
             - project_name: Project name (required) - each unique value creates separate DAB
             - include_columns: (optional) Comma-separated list of columns to include
             - exclude_columns: (optional) Comma-separated list of columns to exclude
-        project_name (str): Not used (kept for backward compatibility)
         output_dir (str): Output directory for DAB project(s)
         targets (dict): Target environments configuration (required)
             Format: {'env_name': {'workspace_host': '...'}, ...}
@@ -191,7 +189,7 @@ def generate_yaml_files(
           from its rows in the CSV
 
     Example:
-        generate_yaml_files(df, 'default_project', 'output', targets)
+        generate_yaml_files(df, 'output', targets)
         # Creates: output/project1/databricks.yml, output/project2/databricks.yml, etc.
     """
     print("\n" + "="*80)
