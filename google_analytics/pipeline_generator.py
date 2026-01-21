@@ -42,12 +42,17 @@ def run_complete_pipeline_generation(
     df: pd.DataFrame,
     output_dir: str,
     targets: dict,
+    max_tables_per_pipeline: int = 250,
     output_config: str = None,
     default_values: dict = None,
     override_input_config: dict = None
 ):
     """
     Complete pipeline generation process from GA4 property list to YAML files.
+
+    Pipeline grouping is based on prefix + priority combinations from the input DataFrame.
+    Each unique (prefix, priority) pair becomes a separate pipeline, with automatic splitting
+    if the group exceeds max_tables_per_pipeline.
 
     Args:
         df (pd.DataFrame): Input DataFrame with GA4 properties (required)
@@ -59,6 +64,8 @@ def run_complete_pipeline_generation(
         targets (dict): Target environments configuration dict (required)
             Format: {'env_name': {'workspace_host': '...'}, ...}
             Supports any number of environments (dev, staging, qa, prod, etc.)
+        max_tables_per_pipeline (int): Maximum properties per pipeline (default: 250)
+            Groups exceeding this will be split into multiple pipelines (e.g., _g01, _g02)
         output_config (str, optional): Output path for intermediate configuration CSV
         default_values (dict, optional): Column defaults (e.g., {'project_name': 'my_project'})
         override_input_config (dict, optional): Override specific columns for all rows
@@ -128,7 +135,8 @@ def run_complete_pipeline_generation(
     print(f"\n[Step 2/3] Generating pipeline configuration with prefix+priority grouping")
 
     pipeline_config_df = generate_pipeline_config(
-        df=normalized_df
+        df=normalized_df,
+        max_tables_per_pipeline=max_tables_per_pipeline
     )
 
     # Step 3: Generate YAML files

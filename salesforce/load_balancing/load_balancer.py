@@ -29,6 +29,7 @@ from utilities import process_input_config, load_input_csv
 
 def generate_pipeline_config(
     df: pd.DataFrame,
+    max_tables_per_pipeline: int = 250
 ) -> pd.DataFrame:
     """
     Generate pipeline configuration from Salesforce table list using prefix + priority grouping.
@@ -36,10 +37,10 @@ def generate_pipeline_config(
     This function expects a clean DataFrame (output from read_input_config).
 
     Logic:
-    - Each unique combination of (prefix, priority) becomes one pipeline
-    - Pipeline name format: {prefix}_{priority}
-    - Tables with same prefix+priority are grouped together
-    - No load balancing - grouping is explicit via prefix+priority
+    - Each unique combination of (prefix, priority) becomes one base pipeline group
+    - If a group has more tables than max_tables_per_pipeline, it's split into sub-groups
+    - Pipeline name format: {prefix}_{priority} or {prefix}_{priority}_g{NN} if split
+    - Example: business_unit1_01_g01, business_unit1_01_g02, etc.
 
     Args:
         df (pd.DataFrame): Clean input dataframe (from read_input_config) with columns:
@@ -48,10 +49,12 @@ def generate_pipeline_config(
             - prefix, priority
             - connection_name, schedule (already validated)
             - include_columns, exclude_columns (optional, already present)
+        max_tables_per_pipeline (int): Maximum tables per pipeline (default: 250)
+            If a prefix+priority group exceeds this, it will be split into multiple pipelines
 
     Returns:
         pd.DataFrame: Configuration dataframe with additional column:
-            - pipeline_group: Pipeline group identifier (prefix_priority)
+            - pipeline_group: Pipeline group identifier (prefix_priority or prefix_priority_gNN)
 
     Raises:
         ValueError: If required columns are missing
@@ -59,8 +62,34 @@ def generate_pipeline_config(
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
 
-    # Generate pipeline_group by combining prefix + priority
-    df['pipeline_group'] = df['prefix'].astype(str) + '_' + df['priority'].astype(str)
+    # Generate base pipeline_group by combining prefix + priority
+    df['base_group'] = df['prefix'].astype(str) + '_' + df['priority'].astype(str)
+
+    # Initialize pipeline_group column
+    df['pipeline_group'] = ''
+
+    # Split groups that exceed max_tables_per_pipeline
+    for base_group in df['base_group'].unique():
+        group_df = df[df['base_group'] == base_group]
+
+        if len(group_df) > max_tables_per_pipeline:
+            # Split into chunks
+            num_subgroups = (len(group_df) - 1) // max_tables_per_pipeline + 1
+
+            for i in range(num_subgroups):
+                start_idx = i * max_tables_per_pipeline
+                end_idx = min((i + 1) * max_tables_per_pipeline, len(group_df))
+                chunk_indices = group_df.iloc[start_idx:end_idx].index
+
+                # Append subgroup suffix: g01, g02, g03, etc.
+                subgroup_suffix = f"_g{i+1:02d}"
+                df.loc[chunk_indices, 'pipeline_group'] = base_group + subgroup_suffix
+        else:
+            # No split needed - use base group as-is
+            df.loc[group_df.index, 'pipeline_group'] = base_group
+
+    # Drop temporary base_group column
+    df = df.drop(columns=['base_group'])
 
     print("\n" + "="*80)
     print("SALESFORCE PIPELINE CONFIGURATION")
@@ -70,6 +99,7 @@ def generate_pipeline_config(
     unique_pipelines = df['pipeline_group'].unique()
     print(f"\nTotal tables processed: {len(df)}")
     print(f"Total unique pipelines: {len(unique_pipelines)}")
+    print(f"Max tables per pipeline: {max_tables_per_pipeline}")
 
     print("\n" + "-"*80)
     print("Pipeline Breakdown:")
@@ -85,7 +115,10 @@ def generate_pipeline_config(
         connection = pipeline_df['connection_name'].iloc[0]
         schedule = pipeline_df['schedule'].iloc[0]
 
-        print(f"\nPipeline: {pipeline_name}")
+        # Check if this was split
+        split_indicator = " (split)" if "_g" in pipeline_name else ""
+
+        print(f"\nPipeline: {pipeline_name}{split_indicator}")
         print(f"  Prefix: {prefix}")
         print(f"  Priority: {priority}")
         print(f"  Connection: {connection}")
@@ -93,7 +126,7 @@ def generate_pipeline_config(
         print(f"  Tables: {len(pipeline_df)}")
 
         # Show table list
-        for idx, row in pipeline_df.iterrows():
+        for _, row in pipeline_df.iterrows():
             print(f"    - {row['source_table_name']} → {row['target_catalog']}.{row['target_schema']}.{row['target_table_name']}")
 
     print("\n" + "="*80)

@@ -30,12 +30,19 @@ from utilities import process_input_config, load_input_csv
 
 
 def generate_pipeline_config(
-    df: pd.DataFrame
+    df: pd.DataFrame,
+    max_tables_per_pipeline: int = 250
 ) -> pd.DataFrame:
     """
     Generate pipeline configuration with prefix+priority grouping.
 
     This function expects a clean DataFrame (output from process_input_config).
+
+    Logic:
+    - Each unique combination of (prefix, priority) becomes one base pipeline group
+    - If a group has more properties than max_tables_per_pipeline, it's split into sub-groups
+    - Pipeline name format: {prefix}_{priority} or {prefix}_{priority}_g{NN} if split
+    - Example: business_unit1_01_g01, business_unit1_01_g02, etc.
 
     Args:
         df: Clean input DataFrame (from process_input_config) with columns:
@@ -43,6 +50,8 @@ def generate_pipeline_config(
             - target_catalog, target_schema
             - prefix, priority
             - schedule (already validated)
+        max_tables_per_pipeline (int): Maximum properties per pipeline (default: 250)
+            If a prefix+priority group exceeds this, it will be split into multiple pipelines
 
     Returns:
         DataFrame with pipeline_group column added
@@ -54,8 +63,34 @@ def generate_pipeline_config(
     df['prefix'] = df['prefix'].astype(str)
     df['priority'] = df['priority'].astype(str).str.zfill(2)  # Pad to 2 digits
 
-    # Generate pipeline_group: prefix_priority
-    df['pipeline_group'] = df['prefix'] + '_' + df['priority']
+    # Generate base pipeline_group: prefix_priority
+    df['base_group'] = df['prefix'] + '_' + df['priority']
+
+    # Initialize pipeline_group column
+    df['pipeline_group'] = ''
+
+    # Split groups that exceed max_tables_per_pipeline
+    for base_group in df['base_group'].unique():
+        group_df = df[df['base_group'] == base_group]
+
+        if len(group_df) > max_tables_per_pipeline:
+            # Split into chunks
+            num_subgroups = (len(group_df) - 1) // max_tables_per_pipeline + 1
+
+            for i in range(num_subgroups):
+                start_idx = i * max_tables_per_pipeline
+                end_idx = min((i + 1) * max_tables_per_pipeline, len(group_df))
+                chunk_indices = group_df.iloc[start_idx:end_idx].index
+
+                # Append subgroup suffix: g01, g02, g03, etc.
+                subgroup_suffix = f"_g{i+1:02d}"
+                df.loc[chunk_indices, 'pipeline_group'] = base_group + subgroup_suffix
+        else:
+            # No split needed - use base group as-is
+            df.loc[group_df.index, 'pipeline_group'] = base_group
+
+    # Drop temporary base_group column
+    df = df.drop(columns=['base_group'])
 
     # Print summary
     print(f"Pipeline Configuration Summary:")
@@ -63,13 +98,15 @@ def generate_pipeline_config(
     print(f"  Unique prefixes: {df['prefix'].nunique()}")
     print(f"  Unique priorities: {df['priority'].nunique()}")
     print(f"  Total pipeline groups: {df['pipeline_group'].nunique()}")
+    print(f"  Max properties per pipeline: {max_tables_per_pipeline}")
     print()
 
     # Show grouping details
     print("Pipeline Groups:")
     for group_name in sorted(df['pipeline_group'].unique()):
         group_df = df[df['pipeline_group'] == group_name]
-        print(f"  {group_name}:")
+        split_indicator = " (split)" if "_g" in group_name else ""
+        print(f"  {group_name}{split_indicator}:")
         print(f"    Properties: {len(group_df)}")
         print(f"    Schemas: {', '.join(group_df['source_schema'].unique())}")
     print()
