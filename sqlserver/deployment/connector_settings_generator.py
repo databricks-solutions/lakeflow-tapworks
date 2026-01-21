@@ -6,7 +6,7 @@ from pathlib import Path
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from utilities import convert_cron_to_quartz
+from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml, generate_resource_names
 
 
 def create_gateways(df, project_name):
@@ -68,7 +68,9 @@ def create_pipelines(df, project_name):
 
     for pipeline_group, group_df in df.groupby('pipeline_group'):
         gateway_id = group_df.iloc[0]['gateway']
-        pipeline_name = f"{project_name}_pipeline_ingestion_{pipeline_group}"
+
+        # Generate resource names using unified naming function
+        names = generate_resource_names(pipeline_group, 'sqlserver')
 
         # Get target catalog and schema from first row (all tables in group should have same target)
         target_catalog = group_df.iloc[0]['target_catalog']
@@ -85,8 +87,8 @@ def create_pipelines(df, project_name):
             }
         } for _, row in group_df.iterrows()]
 
-        pipelines[pipeline_name] = {
-            'name': f"{project_name}_ingestion_{pipeline_group}",
+        pipelines[names['pipeline_resource_name']] = {
+            'name': names['pipeline_name'],
             'configuration': {
                 'pipelines.***REMOVED***': '600'
             },
@@ -101,78 +103,10 @@ def create_pipelines(df, project_name):
     return {'resources': {'pipelines': pipelines}}
 
 
-def create_jobs(df, project_name):
-    """Create job YAML configuration from dataframe.
-
-    Creates a scheduled job for each pipeline that triggers the pipeline on a cron schedule.
-
-    Args:
-        df (pd.DataFrame): Input dataframe containing pipeline_group and schedule columns
-        project_name (str): Project name prefix for all resources
-
-    Returns:
-        dict: Jobs YAML structure
-    """
-    jobs = {}
-
-    for pipeline_group, group_df in df.groupby('pipeline_group'):
-        schedule = group_df.iloc[0]['schedule']
-        job_name = f"job_{project_name}_ingestion_{pipeline_group}"
-        pipeline_resource_name = f"{project_name}_pipeline_ingestion_{pipeline_group}"
-
-        # Convert standard cron to Quartz format
-        quartz_cron = convert_cron_to_quartz(schedule)
-
-        jobs[job_name] = {
-            'name': f"{project_name} Pipeline Scheduler - {pipeline_group}",
-            'schedule': {
-                'quartz_cron_expression': quartz_cron,
-                'timezone_id': 'UTC'
-            },
-            'tasks': [{
-                'task_key': f'run_{project_name}_pipeline',
-                'pipeline_task': {
-                    'pipeline_id': f"${{resources.pipelines.{pipeline_resource_name}.id}}"
-                }
-            }]
-        }
-
-    return {'resources': {'jobs': jobs}}
-
-
-def create_databricks_yml(project_name, workspace_host, root_path):
-    """Create the main databricks.yml file for the DAB project.
-
-    Args:
-        project_name (str): Project name for the bundle
-        workspace_host (str): Workspace host URL
-        root_path (str): Root path for bundle deployment
-
-    Returns:
-        dict: The databricks.yml structure
-    """
-
-    return {
-        'bundle': {
-            'name': project_name
-        },
-        'include': [
-            'resources/*.yml'
-        ],
-        'targets': {
-            'prod': {
-                'mode': 'production',
-                'workspace': {
-                    'host': f'{workspace_host}',
-                    'root_path': f'{root_path}'
-                }
-            }
-        }
-    }
-
-
-def generate_yaml_files(df, project_name, output_dir, workspace_host, root_path):
+def generate_yaml_files(df, output_dir, targets):
     """Generate gateway and pipeline YAML files from dataframe in a proper DAB structure.
+
+    Creates separate DAB packages for each unique project_name in the dataframe.
 
     Args:
         df (pd.DataFrame): Input dataframe with the following required columns:
@@ -190,47 +124,58 @@ def generate_yaml_files(df, project_name, output_dir, workspace_host, root_path)
             - gateway: Gateway identifier (e.g., 'sqlserver_gateway_1')
             - connection_name: Databricks connection name (e.g., 'sql_server_prod')
             - schedule: Cron schedule (optional, e.g., '0 0 * * *')
-        project_name (str): Project name prefix for all resources to avoid naming clashes
-        output_dir (str): Output directory for the DAB project (default: 'dab_project')
-        workspace_host (str): Workspace host URL
-        root_path (str): Root path for bundle deployment
+            - project_name: Project name (required)
+        output_dir (str): Output directory for the DAB project(s)
+        targets (dict): Target environments configuration (required)
+            Format: {'env_name': {'workspace_host': '...', 'root_path': '...'}, ...}
 
     Note:
+        - Always creates separate DAB package for each unique project_name
+        - Output structure: output/{project_name}/databricks.yml
         - Creates a proper DAB structure with root databricks.yml and resources subdirectory
         - Pipelines use target_catalog and target_schema from the dataframe for each table
         - Gateway catalog, schema, and node types are read from the dataframe and can vary per gateway
     """
-    # Create directory structure
-    resources_dir = os.path.join(output_dir, 'resources')
-    os.makedirs(resources_dir, exist_ok=True)
+    # Group by project_name and create separate DAB packages
+    for project, project_df in df.groupby('project_name'):
+        project_output_dir = os.path.join(output_dir, str(project))
+        print(f"\nCreating DAB for project: {project}")
+        print(f"  Tables: {len(project_df)}")
+        print(f"  Pipelines: {project_df['pipeline_group'].nunique()}")
+        print(f"  Output: {project_output_dir}")
 
-    # Generate YAML content
-    gateways_yaml = create_gateways(df, project_name)
-    pipelines_yaml = create_pipelines(df, project_name)
-    jobs_yaml = create_jobs(df, project_name)
-    databricks_yaml = create_databricks_yml(project_name, workspace_host, root_path)
+        # Create directory structure
+        resources_dir = os.path.join(project_output_dir, 'resources')
+        os.makedirs(resources_dir, exist_ok=True)
 
-    # Define output paths
-    databricks_yml_path = os.path.join(output_dir, 'databricks.yml')
-    gateway_yml_path = os.path.join(resources_dir, 'gateways.yml')
-    pipeline_yml_path = os.path.join(resources_dir, 'pipelines.yml')
-    jobs_yml_path = os.path.join(resources_dir, 'jobs.yml')
+        # Generate YAML content for this project
+        gateways_yaml = create_gateways(project_df, str(project))
+        pipelines_yaml = create_pipelines(project_df, str(project))
+        jobs_yaml = create_jobs(project_df, str(project), connector_type='sqlserver')
+        databricks_yaml = create_databricks_yml(
+            project_name=str(project),
+            targets=targets,
+            default_target='dev'
+        )
 
-    # Write databricks.yml
-    with open(databricks_yml_path, 'w') as f:
-        yaml.dump(databricks_yaml, f, default_flow_style=False, sort_keys=False)
+        # Define output paths
+        databricks_yml_path = os.path.join(project_output_dir, 'databricks.yml')
+        gateway_yml_path = os.path.join(resources_dir, 'gateways.yml')
+        pipeline_yml_path = os.path.join(resources_dir, 'pipelines.yml')
+        jobs_yml_path = os.path.join(resources_dir, 'jobs.yml')
 
-    # Write gateway resources
-    with open(gateway_yml_path, 'w') as f:
-        yaml.dump(gateways_yaml, f, default_flow_style=False, sort_keys=False)
+        # Write YAML files
+        with open(databricks_yml_path, 'w') as f:
+            yaml.dump(databricks_yaml, f, default_flow_style=False, sort_keys=False)
 
-    # Write pipeline resources
-    with open(pipeline_yml_path, 'w') as f:
-        yaml.dump(pipelines_yaml, f, default_flow_style=False, sort_keys=False)
+        with open(gateway_yml_path, 'w') as f:
+            yaml.dump(gateways_yaml, f, default_flow_style=False, sort_keys=False)
 
-    # Write job resources
-    with open(jobs_yml_path, 'w') as f:
-        yaml.dump(jobs_yaml, f, default_flow_style=False, sort_keys=False)
+        with open(pipeline_yml_path, 'w') as f:
+            yaml.dump(pipelines_yaml, f, default_flow_style=False, sort_keys=False)
+
+        with open(jobs_yml_path, 'w') as f:
+            yaml.dump(jobs_yaml, f, default_flow_style=False, sort_keys=False)
 
     print(f"Generated DAB project structure in: {output_dir}")
     print(f"  - {databricks_yml_path}")

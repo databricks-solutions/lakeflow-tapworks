@@ -1,0 +1,18 @@
+resources:
+  pipelines:
+    pipeline_sqlserver_2:
+      name: SQL Server Ingestion - 2
+      configuration:
+        pipelines.***REMOVED***: '600'
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.tapworks_sqlserver_1_pipeline_tapworks_sqlserver_1_gateway_1.id}
+        objects:
+        - table:
+            source_catalog: db1
+            source_schema: dbo
+            source_table: products
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks
+            destination_table: products
+      schema: tapworks
+      catalog: tapworks_catalog
