@@ -1,9 +1,9 @@
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,priority,connection_name,schedule,include_columns,exclude_columns
-Salesforce,standard,Account,tapworks_catalog,sfdc_test,Account,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,"Id,Name,Type,Industry,AnnualRevenue,SystemModstamp,IsDeleted",
-Salesforce,standard,Contact,tapworks_catalog,sfdc_test,Contact,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,
-Salesforce,standard,Campaign,tapworks_catalog,sfdc_test,Campaign,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,
-Salesforce,standard,Opportunity,tapworks_catalog,sfdc_test,Opportunity,tapworks_business_unit1,02,sfdc-pravin-dabs,*/15 * * * *,,"Description"
-Salesforce,standard,Lead,tapworks_catalog,sfdc_test,Lead,tapworks_business_unit2,01,sfdc-pravin-dabs,*/30 * * * *,,
-Salesforce,standard,Case,tapworks_catalog,sfdc_test,Case,tapworks_business_unit2,01,sfdc-pravin-dabs,*/30 * * * *,,
-Salesforce,standard,Task,tapworks_catalog,sfdc_test,Task,tapworks_business_unit3,01,sfdc-pravin-dabs,0 * * * *,,
-Salesforce,standard,Event,tapworks_catalog,sfdc_test,Event,tapworks_business_unit3,01,sfdc-pravin-dabs,0 * * * *,,
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,priority,connection_name,schedule,include_columns,exclude_columns
+tapworks_sfdc,Salesforce,standard,Account,tapworks_catalog,sfdc_test,Account,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,"Id,Name,Type,Industry,AnnualRevenue,SystemModstamp,IsDeleted",
+tapworks_sfdc,Salesforce,standard,Contact,tapworks_catalog,sfdc_test,Contact,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,
+tapworks_sfdc,Salesforce,standard,Campaign,tapworks_catalog,sfdc_test,Campaign,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,
+tapworks_sfdc,Salesforce,standard,Opportunity,tapworks_catalog,sfdc_test,Opportunity,tapworks_business_unit1,02,sfdc-pravin-dabs,*/15 * * * *,,"Description"
+tapworks_sfdc,Salesforce,standard,Lead,tapworks_catalog,sfdc_test,Lead,tapworks_business_unit2,01,sfdc-pravin-dabs,*/30 * * * *,,
+tapworks_sfdc,Salesforce,standard,Case,tapworks_catalog,sfdc_test,Case,tapworks_business_unit2,01,sfdc-pravin-dabs,*/30 * * * *,,
+tapworks_sfdc,Salesforce,standard,Task,tapworks_catalog,sfdc_test,Task,tapworks_business_unit3,01,sfdc-pravin-dabs,0 * * * *,,
+tapworks_sfdc,Salesforce,standard,Event,tapworks_catalog,sfdc_test,Event,tapworks_business_unit3,01,sfdc-pravin-dabs,0 * * * *,,

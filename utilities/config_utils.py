@@ -7,6 +7,62 @@ across all connectors.
 
 import pandas as pd
 from pathlib import Path
+from utilities.cron_utils import convert_cron_to_quartz
+
+
+def generate_resource_names(pipeline_group: str, connector_type: str) -> dict:
+    """
+    Generate consistent resource names for pipelines and jobs across all connectors.
+
+    This function uses the SFDC naming pattern as reference, ensuring consistent
+    naming across Salesforce, SQL Server, and Google Analytics connectors.
+
+    Args:
+        pipeline_group (str): Pipeline group identifier (e.g., 'sales_01', 'business_unit1_p1')
+        connector_type (str): Connector type ('sfdc', 'sqlserver', 'ga4')
+
+    Returns:
+        dict: Dictionary containing all resource names:
+            - pipeline_name: Display name for pipeline (shown in Databricks UI)
+            - pipeline_resource_name: Resource identifier for pipeline (used in YAML)
+            - job_name: Resource identifier for job (used in YAML)
+            - job_display_name: Display name for job (shown in Databricks UI)
+            - task_key: Task key for pipeline task (unified across all connectors)
+
+    Example:
+        >>> names = generate_resource_names('sales_01', 'sfdc')
+        >>> names['pipeline_name']
+        'SFDC Ingestion - sales_01'
+        >>> names['pipeline_resource_name']
+        'pipeline_sfdc_sales_01'
+        >>> names['job_name']
+        'job_sfdc_sales_01'
+        >>> names['job_display_name']
+        'SFDC Pipeline Scheduler - sales_01'
+        >>> names['task_key']
+        'run_pipeline'
+    """
+    # Normalize connector type for display
+    connector_display = {
+        'sfdc': 'SFDC',
+        'sqlserver': 'SQL Server',
+        'ga4': 'GA4'
+    }.get(connector_type, connector_type.upper())
+
+    # Generate names using SFDC pattern (simple and clean)
+    pipeline_name = f"{connector_display} Ingestion - {pipeline_group}"
+    pipeline_resource_name = f"pipeline_{connector_type}_{pipeline_group}"
+    job_name = f"job_{connector_type}_{pipeline_group}"
+    job_display_name = f"{connector_display} Pipeline Scheduler - {pipeline_group}"
+    task_key = "run_pipeline"  # Unified task key across all connectors
+
+    return {
+        'pipeline_name': pipeline_name,
+        'pipeline_resource_name': pipeline_resource_name,
+        'job_name': job_name,
+        'job_display_name': job_display_name,
+        'task_key': task_key
+    }
 
 
 def process_input_config(
@@ -163,3 +219,223 @@ def load_input_csv(
     print(f"✓ Loaded {len(df)} rows from {input_csv}")
 
     return df
+
+
+def create_jobs(
+    df: pd.DataFrame,
+    project_name: str,
+    connector_type: str
+) -> dict:
+    """
+    Create job YAML configuration from dataframe for any connector.
+
+    Creates a scheduled job for each pipeline that triggers the pipeline on a cron schedule.
+    This is a shared function used across all connectors (Salesforce, SQL Server, Google Analytics).
+
+    Args:
+        df (pd.DataFrame): Input dataframe containing pipeline_group and schedule columns
+            Required columns:
+                - pipeline_group: Pipeline group identifier
+                - schedule: Cron schedule expression
+            Optional columns:
+                - pause_status: Job pause status ('PAUSED' or 'UNPAUSED')
+                  Can be set via default_values or override_input_config
+        project_name (str): Project name prefix for all resources
+        connector_type (str): Connector type identifier (e.g., 'sfdc', 'ga4', 'sqlserver')
+            Used for naming resources and tasks
+
+    Returns:
+        dict: Jobs YAML structure with format:
+            {
+                'resources': {
+                    'jobs': {
+                        'job_name': {
+                            'name': 'Job Display Name',
+                            'schedule': {...},
+                            'tasks': [...],
+                            'pause_status': 'PAUSED'  # Optional
+                        }
+                    }
+                }
+            }
+
+    Example Usage:
+        >>> # For Salesforce
+        >>> jobs = create_jobs(df, 'my_project', 'sfdc')
+        >>> # For Google Analytics
+        >>> jobs = create_jobs(df, 'my_project', 'ga4')
+        >>> # For SQL Server
+        >>> jobs = create_jobs(df, 'my_project', 'sqlserver')
+        >>> # With pause_status in default_values
+        >>> df = process_input_config(
+        ...     df=input_df,
+        ...     required_columns=required_cols,
+        ...     default_values={'pause_status': 'PAUSED'}
+        ... )
+        >>> jobs = create_jobs(df, 'my_project', 'sfdc')
+    """
+    jobs = {}
+
+    # Group by pipeline_group
+    for pipeline_group, group_df in df.groupby('pipeline_group'):
+        schedule = group_df.iloc[0]['schedule']
+
+        # Only create job if schedule is defined
+        if pd.notna(schedule) and schedule and str(schedule).strip():
+            # Generate resource names using unified naming function
+            names = generate_resource_names(pipeline_group, connector_type)
+
+            # Convert standard cron to Quartz format
+            quartz_schedule = convert_cron_to_quartz(schedule)
+
+            job_config = {
+                'name': names['job_display_name'],
+                'schedule': {
+                    'quartz_cron_expression': quartz_schedule,
+                    'timezone_id': 'UTC'
+                },
+                'tasks': [{
+                    'task_key': names['task_key'],
+                    'pipeline_task': {
+                        'pipeline_id': f"${{resources.pipelines.{names['pipeline_resource_name']}.id}}"
+                    }
+                }]
+            }
+
+            # Add pause_status if specified
+            if 'pause_status' in group_df.columns:
+                pause_status = group_df.iloc[0]['pause_status']
+                if pd.notna(pause_status) and pause_status and str(pause_status).strip():
+                    job_config['pause_status'] = str(pause_status).upper()
+
+            jobs[names['job_name']] = job_config
+
+    return {'resources': {'jobs': jobs}}
+
+
+def create_databricks_yml(
+    project_name: str,
+    targets: dict,
+    default_target: str = 'dev'
+) -> dict:
+    """
+    Create the main databricks.yml file for any connector with flexible target environments.
+
+    Supports any number of environments (dev, staging, qa, prod, etc.).
+
+    Args:
+        project_name (str): Project name for the bundle
+        targets (dict): Dictionary of target configurations where key is environment name
+            and value is the configuration dict.
+
+            Format:
+            {
+                'env_name': {
+                    'workspace_host': 'https://workspace.com',  # Required
+                    'root_path': '/path/to/bundle',  # Optional
+                    'mode': 'development' | 'production'  # Optional, auto-determined if not provided
+                },
+                ...
+            }
+
+        default_target (str): Which target should be the default (default: 'dev')
+
+    Returns:
+        dict: The databricks.yml structure with all specified targets
+
+    Example Usage:
+        >>> # Simple: Just dev and prod with same workspace
+        >>> yml = create_databricks_yml(
+        ...     'my_project',
+        ...     targets={
+        ...         'dev': {'workspace_host': 'https://workspace.com'},
+        ...         'prod': {'workspace_host': 'https://workspace.com'}
+        ...     }
+        ... )
+
+        >>> # Advanced: Multiple environments with different configs
+        >>> yml = create_databricks_yml(
+        ...     'my_project',
+        ...     targets={
+        ...         'dev': {
+        ...             'workspace_host': 'https://dev.databricks.com',
+        ...             'root_path': '/Users/dev/.bundle/${bundle.name}/${bundle.target}'
+        ...         },
+        ...         'staging': {
+        ...             'workspace_host': 'https://staging.databricks.com',
+        ...             'root_path': '/Workspace/staging/${bundle.name}',
+        ...             'mode': 'development'
+        ...         },
+        ...         'qa': {
+        ...             'workspace_host': 'https://qa.databricks.com'
+        ...         },
+        ...         'prod': {
+        ...             'workspace_host': 'https://prod.databricks.com',
+        ...             'root_path': '/Workspace/prod/${bundle.name}',
+        ...             'mode': 'production'
+        ...         }
+        ...     },
+        ...     default_target='dev'
+        ... )
+
+        >>> # SQL Server with root_path
+        >>> yml = create_databricks_yml(
+        ...     'sql_project',
+        ...     targets={
+        ...         'dev': {
+        ...             'workspace_host': 'https://workspace.com',
+        ...             'root_path': '/Users/user/.bundle/${bundle.name}/${bundle.target}'
+        ...         },
+        ...         'prod': {
+        ...             'workspace_host': 'https://workspace.com',
+        ...             'root_path': '/Workspace/prod/.bundle/${bundle.name}/${bundle.target}'
+        ...         }
+        ...     }
+        ... )
+
+    Note:
+        - Mode is auto-determined: 'production' for 'prod', 'development' for others
+        - Users deploy to specific targets: databricks bundle deploy -t <target_name>
+        - The default_target gets 'default: true' in the config
+    """
+    if not targets:
+        raise ValueError("At least one target must be provided")
+
+    if default_target not in targets:
+        raise ValueError(f"default_target '{default_target}' must be one of the provided targets: {list(targets.keys())}")
+
+    config = {
+        'bundle': {'name': project_name},
+        'include': ['resources/*.yml'],
+        'targets': {}
+    }
+
+    # Build each target
+    for target_name, target_config in targets.items():
+        if 'workspace_host' not in target_config:
+            raise ValueError(f"Target '{target_name}' must have 'workspace_host'")
+
+        # Auto-determine mode if not explicitly provided
+        mode = target_config.get('mode')
+        if not mode:
+            mode = 'production' if target_name == 'prod' else 'development'
+
+        # Build target configuration
+        target_def = {
+            'mode': mode,
+            'workspace': {
+                'host': target_config['workspace_host']
+            }
+        }
+
+        # Add root_path if provided
+        if 'root_path' in target_config and target_config['root_path']:
+            target_def['workspace']['root_path'] = target_config['root_path']
+
+        # Mark as default if this is the default target
+        if target_name == default_target:
+            target_def['default'] = True
+
+        config['targets'][target_name] = target_def
+
+    return config

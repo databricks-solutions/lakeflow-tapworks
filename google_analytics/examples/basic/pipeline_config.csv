@@ -1,6 +1,6 @@
-source_catalog,source_schema,tables,target_catalog,target_schema,prefix,priority,schedule
-my-gcp-project,analytics_123456789,"events,events_intraday,users",ga4_connector,google_analytics,business_unit1,01,0 */6 * * *
-my-gcp-project,analytics_987654321,"events,events_intraday",ga4_connector,google_analytics,business_unit1,01,0 */6 * * *
-my-gcp-project,analytics_111222333,"events,users",ga4_connector,google_analytics,business_unit1,02,0 */6 * * *
-my-gcp-project,analytics_444555666,"events,events_intraday,users",ga4_connector,google_analytics,business_unit2,01,0 */12 * * *
-my-gcp-project,analytics_777888999,"events",ga4_connector,google_analytics,business_unit2,02,0 */12 * * *
+project_name,source_catalog,source_schema,tables,target_catalog,target_schema,connection_name,prefix,priority,schedule
+ga4_ingestion,my-gcp-project,analytics_123456789,"events,events_intraday,users",ga4_connector,google_analytics,ga4_connection,business_unit1,01,0 */6 * * *
+ga4_ingestion,my-gcp-project,analytics_987654321,"events,events_intraday",ga4_connector,google_analytics,ga4_connection,business_unit1,01,0 */6 * * *
+ga4_ingestion,my-gcp-project,analytics_111222333,"events,users",ga4_connector,google_analytics,ga4_connection,business_unit1,02,0 */6 * * *
+ga4_ingestion,my-gcp-project,analytics_444555666,"events,events_intraday,users",ga4_connector,google_analytics,ga4_connection,business_unit2,01,0 */12 * * *
+ga4_ingestion,my-gcp-project,analytics_777888999,"events",ga4_connector,google_analytics,ga4_connection,business_unit2,02,0 */12 * * *

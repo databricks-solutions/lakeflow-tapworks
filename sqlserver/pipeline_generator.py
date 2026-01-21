@@ -22,15 +22,10 @@ from deployment.connector_settings_generator import generate_yaml_files
 
 def run_complete_pipeline_generation(
     df: pd.DataFrame,
-    project_name: str,
     output_dir: str,
-    workspace_host: str,
-    root_path: str,
+    targets: dict,
     max_tables_per_group: int = 250,
-    output_config: str =None,
-    # default_schedule: str = "*/15 * * * *",
-    # default_gateway_worker_type: str = None,
-    # default_gateway_driver_type: str = None,
+    output_config: str = None,
     default_values: dict = None,
     override_input_config: dict = None
 ):
@@ -42,27 +37,60 @@ def run_complete_pipeline_generation(
             Must contain: source_database, source_schema, source_table_name,
                          target_catalog, target_schema, target_table_name,
                          connection_name (all required)
-        project_name (str): Project name prefix for all resources
-        output_dir (str): Output directory for DAB project
-        workspace_host (str): Workspace host URL
-        root_path (str): Root path for bundle deployment
+            Optional: project_name (can be set via default_values or override_input_config)
+        output_dir (str): Output directory for DAB project(s)
+        targets (dict): Target environments configuration dict (required)
+            Format: {'env_name': {'workspace_host': '...', 'root_path': '...'}, ...}
+            Supports any number of environments (dev, staging, qa, prod, etc.)
         max_tables_per_group (int): Maximum tables per pipeline group (default: 250)
-        default_schedule (str): Default cron schedule (default: "*/15 * * * *")
-        default_gateway_worker_type (str): Default worker node type if not in CSV (default: None)
-        default_gateway_driver_type (str): Default driver node type if not in CSV (default: None)
-        default_values (dict): Optional dict of column defaults to override built-in defaults
-            If provided, will be merged with built-in defaults
-        override_input_config (dict): Optional dict to override specific columns for all rows
+        output_config (str, optional): Output path for intermediate configuration CSV
+        default_values (dict, optional): Column defaults (e.g., {'project_name': 'my_project'})
+        override_input_config (dict, optional): Override specific columns for all rows
+
+    Note:
+        - Always creates separate DAB packages per unique project_name
+        - Output structure: output/{project_name}/databricks.yml for each project
+        - project_name must be provided via CSV, default_values, or override_input_config
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
 
+    Example Usage:
+        >>> # Single environment with project_name via default_values
+        >>> run_complete_pipeline_generation(
+        ...     df=df,
+        ...     output_dir='output',
+        ...     targets={
+        ...         'dev': {
+        ...             'workspace_host': 'https://workspace.com',
+        ...             'root_path': '/Users/user/.bundle/${bundle.name}/${bundle.target}'
+        ...         }
+        ...     },
+        ...     default_values={'project_name': 'my_project'}
+        ... )
+
+        >>> # Multiple environments with project_name via override_input_config
+        >>> run_complete_pipeline_generation(
+        ...     df=df,
+        ...     output_dir='output',
+        ...     targets={
+        ...         'dev': {
+        ...             'workspace_host': 'https://dev.databricks.com',
+        ...             'root_path': '/Users/dev/.bundle/${bundle.name}/${bundle.target}'
+        ...         },
+        ...         'prod': {
+        ...             'workspace_host': 'https://prod.databricks.com',
+        ...             'root_path': '/Workspace/prod/${bundle.name}'
+        ...         }
+        ...     },
+        ...     override_input_config={'project_name': 'my_project'}
+        ... )
+
     Note:
-        - connection_name is a required column in the DataFrame. Each row must specify
-          which SQL Server connection to use.
+        - connection_name is a required column in the DataFrame
         - Gateway settings (gateway_catalog, gateway_schema, gateway_worker_type, gateway_driver_type)
-          are optional and can vary per source_database group.
-        - If gateway_catalog/gateway_schema are not provided, they default to target_catalog/target_schema.
+          are optional and can vary per source_database group
+        - If gateway_catalog/gateway_schema are not provided, they default to target_catalog/target_schema
     """
     print("="*80)
     print("STARTING COMPLETE PIPELINE GENERATION PROCESS")
@@ -82,23 +110,9 @@ def run_complete_pipeline_generation(
         'connection_name'
     ]
 
-    # Build default values (merge built-in with user-provided)
-    # built_in_defaults = {
-    #     'priority_flag': 0,
-    #     'gateway_catalog': None,  # Will be set to target_catalog if None
-    #     'gateway_schema': None,   # Will be set to target_schema if None
-    #     'gateway_worker_type': default_gateway_worker_type,
-    #     'gateway_driver_type': default_gateway_driver_type,
-    #     'schedule': default_schedule
-    # }
-
-    # if default_values:
-    #     # User-provided defaults override built-in defaults
-    #     final_defaults = {**built_in_defaults, **default_values}
-    # else:
-    #     final_defaults = built_in_defaults
-    
-    final_defaults = default_values
+    # Add default project_name if not provided
+    built_in_defaults = {'project_name': 'sqlserver_ingestion'}
+    final_defaults = {**built_in_defaults, **(default_values or {})}
 
     normalized_df = process_input_config(
         df=df,
@@ -126,16 +140,15 @@ def run_complete_pipeline_generation(
 
     # Step 3: Generate YAML files
     print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
-    print(f"  - Project name: {project_name}")
     print(f"  - Output directory: {output_dir}")
-    print(f"  - Root path: {root_path}")
+
+    # Print target environment info
+    print(f"  - Target environments: {', '.join(targets.keys())}")
 
     generate_yaml_files(
         df=pipeline_config_df,
-        project_name=project_name,
         output_dir=output_dir,
-        workspace_host=workspace_host,
-        root_path=root_path
+        targets=targets
     )
 
     print("\n" + "="*80)
@@ -256,17 +269,28 @@ Note:
     print(f"Loading input CSV: {args.input_csv}")
     input_df = load_input_csv(args.input_csv)
 
+    # Build targets dict from CLI arguments
+    targets = {
+        'dev': {
+            'workspace_host': args.workspace_host,
+            'root_path': args.root_path
+        }
+    }
+
+    # Build default values dict
+    default_values = {
+        'project_name': args.project_name,
+        'gateway_worker_type': args.worker_type,
+        'gateway_driver_type': args.driver_type
+    }
+
     # Run the complete pipeline generation
     result_df = run_complete_pipeline_generation(
         df=input_df,
-        project_name=args.project_name,
         output_dir=args.output_dir,
-        workspace_host=args.workspace_host,
-        root_path=args.root_path,
+        targets=targets,
         max_tables_per_group=args.max_tables,
-        # default_schedule=args.schedule,
-        default_gateway_worker_type=args.worker_type,
-        default_gateway_driver_type=args.driver_type
+        default_values=default_values
     )
 
     # Optional: Save the intermediate pipeline configuration for reference
