@@ -24,7 +24,8 @@ def run_complete_pipeline_generation(
     df: pd.DataFrame,
     output_dir: str,
     targets: dict,
-    max_tables_per_group: int = 250,
+    max_tables_per_gateway: int = 250,
+    max_tables_per_pipeline: int = 250,
     output_config: str = None,
     default_values: dict = None,
     override_input_config: dict = None
@@ -32,17 +33,23 @@ def run_complete_pipeline_generation(
     """
     Complete pipeline generation process from source table list to YAML files.
 
+    Pipeline grouping is based on prefix + priority combinations from the input DataFrame.
+    Each unique (prefix, priority) pair becomes a base group, then:
+    - Split into gateways if exceeds max_tables_per_gateway
+    - Split into pipelines within each gateway if exceeds max_tables_per_pipeline
+
     Args:
         df (pd.DataFrame): Input DataFrame with source table list (required)
             Must contain: source_database, source_schema, source_table_name,
                          target_catalog, target_schema, target_table_name,
-                         connection_name (all required)
+                         prefix, priority, connection_name (all required)
             Optional: project_name (can be set via default_values or override_input_config)
         output_dir (str): Output directory for DAB project(s)
         targets (dict): Target environments configuration dict (required)
             Format: {'env_name': {'workspace_host': '...', 'root_path': '...'}, ...}
             Supports any number of environments (dev, staging, qa, prod, etc.)
-        max_tables_per_group (int): Maximum tables per pipeline group (default: 250)
+        max_tables_per_gateway (int): Maximum tables per gateway (default: 250)
+        max_tables_per_pipeline (int): Maximum tables per pipeline within gateway (default: 250)
         output_config (str, optional): Output path for intermediate configuration CSV
         default_values (dict, optional): Column defaults (e.g., {'project_name': 'my_project'})
         override_input_config (dict, optional): Override specific columns for all rows
@@ -87,10 +94,11 @@ def run_complete_pipeline_generation(
         ... )
 
     Note:
-        - connection_name is a required column in the DataFrame
+        - connection_name, prefix, and priority are required columns in the DataFrame
         - Gateway settings (gateway_catalog, gateway_schema, gateway_worker_type, gateway_driver_type)
-          are optional and can vary per source_database group
+          are optional and can vary per row
         - If gateway_catalog/gateway_schema are not provided, they default to target_catalog/target_schema
+        - Tables are grouped by prefix+priority, NOT by source_database
     """
     print("="*80)
     print("STARTING COMPLETE PIPELINE GENERATION PROCESS")
@@ -99,15 +107,14 @@ def run_complete_pipeline_generation(
     # Step 1: Normalize and validate configuration
     print(f"\n[Step 1/3] Normalizing configuration")
     print(f"  - Input rows: {len(df)}")
-    print(f"  - Databases: {df['source_database'].nunique()}")
-    print(f"  - Max tables per group: {max_tables_per_group}")
-    # print(f"  - Default schedule: {default_schedule}")
+    print(f"  - Max tables per gateway: {max_tables_per_gateway}")
+    print(f"  - Max tables per pipeline: {max_tables_per_pipeline}")
 
     # Define required columns for SQL Server
     required_columns = [
         'source_database', 'source_schema', 'source_table_name',
         'target_catalog', 'target_schema', 'target_table_name',
-        'connection_name'
+        'prefix', 'priority', 'connection_name'
     ]
 
     # Add default project_name if not provided
@@ -130,12 +137,13 @@ def run_complete_pipeline_generation(
         mask = normalized_df['gateway_schema'].isna()
         normalized_df.loc[mask, 'gateway_schema'] = normalized_df.loc[mask, 'target_schema']
 
-    # Step 2: Generate pipeline configuration (load balancing)
-    print(f"\n[Step 2/3] Generating pipeline configuration with load balancing")
+    # Step 2: Generate pipeline configuration (prefix + priority grouping with gateway/pipeline splitting)
+    print(f"\n[Step 2/3] Generating pipeline configuration with prefix+priority grouping")
 
     pipeline_config_df = generate_pipeline_config(
         df=normalized_df,
-        max_tables_per_group=max_tables_per_group
+        max_tables_per_gateway=max_tables_per_gateway,
+        max_tables_per_pipeline=max_tables_per_pipeline
     )
 
     # Step 3: Generate YAML files
@@ -233,10 +241,16 @@ Note:
 
     # Optional arguments
     parser.add_argument(
-        '--max-tables',
+        '--max-tables-gateway',
         type=int,
         default=250,
-        help='Maximum tables per pipeline group (default: 250)'
+        help='Maximum tables per gateway (default: 250)'
+    )
+    parser.add_argument(
+        '--max-tables-pipeline',
+        type=int,
+        default=250,
+        help='Maximum tables per pipeline within gateway (default: 250)'
     )
     parser.add_argument(
         '--schedule',
@@ -289,7 +303,8 @@ Note:
         df=input_df,
         output_dir=args.output_dir,
         targets=targets,
-        max_tables_per_group=args.max_tables,
+        max_tables_per_gateway=args.max_tables_gateway,
+        max_tables_per_pipeline=args.max_tables_pipeline,
         default_values=default_values
     )
 

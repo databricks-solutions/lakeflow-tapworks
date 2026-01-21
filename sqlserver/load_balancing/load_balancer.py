@@ -9,7 +9,8 @@ from utilities import process_input_config
 
 def generate_pipeline_config(
     df: pd.DataFrame,
-    max_tables_per_group: int = 250
+    max_tables_per_gateway: int = 250,
+    max_tables_per_pipeline: int = 250
 ):
     """
     Generate pipeline configuration from a list of source tables.
@@ -17,116 +18,125 @@ def generate_pipeline_config(
     This function expects a clean DataFrame (output from process_input_config).
 
     This script groups tables into pipeline_groups with the following logic:
-    - Each source_database gets its own set of pipelines (gateways)
-    - Tables are grouped into pipeline_groups with a maximum of max_tables_per_group per group
-    - Priority tables (priority_flag=1) are placed in separate pipeline_groups from non-priority tables
+    - Each unique combination of (prefix, priority) becomes one base group
+    - If group exceeds max_tables_per_gateway, split into multiple gateways
+    - Within each gateway, if tables exceed max_tables_per_pipeline, split into multiple pipelines
+    - Naming: prefix_priority_gw01_p01 (gateway 1, pipeline 1)
 
     Args:
         df (pd.DataFrame): Clean input dataframe (from process_input_config) with columns:
             - source_database, source_schema, source_table_name
             - target_catalog, target_schema, target_table_name
-            - priority_flag: 1 for priority tables, 0 for normal tables
+            - prefix, priority
             - connection_name, schedule (already validated)
             - gateway_catalog, gateway_schema (already validated)
             - gateway_worker_type, gateway_driver_type (already validated)
-        max_tables_per_group (int): Maximum tables per pipeline group (default: 250)
+        max_tables_per_gateway (int): Maximum tables per gateway (default: 250)
+        max_tables_per_pipeline (int): Maximum tables per pipeline within gateway (default: 250)
 
     Returns:
         pd.DataFrame: The generated configuration dataframe with additional columns:
             - pipeline_group: Pipeline group identifier
-            - gateway: Gateway identifier
+            - gateway: Gateway identifier (string format: prefix_priority_gw01)
     """
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
 
     # Initialize new columns
-    df['pipeline_group'] = 0
-    df['gateway'] = 0
+    df['pipeline_group'] = ''
+    df['gateway'] = ''
 
-    # Group by project_name first to ensure independent numbering per project
+    # Generate base group from prefix + priority
+    df['base_group'] = df['prefix'].astype(str) + '_' + df['priority'].astype(str)
+
+    print("\n" + "="*80)
+    print("SQL SERVER PIPELINE CONFIGURATION")
+    print("="*80)
+    print(f"Max tables per gateway: {max_tables_per_gateway}")
+    print(f"Max tables per pipeline: {max_tables_per_pipeline}")
+
+    # Group by project_name first to ensure independent processing per project
     for project_name, project_group in df.groupby('project_name'):
         print(f"\n{'='*60}")
         print(f"Processing project: {project_name} ({len(project_group)} tables)")
         print(f"{'='*60}")
 
-        # Track per-project gateway and pipeline group counters (start from 1 for each project)
-        project_gateway_id = 1
-        project_pipeline_group_id = 1
+        # Group by base_group (prefix_priority) within this project
+        for base_group, group_df in project_group.groupby('base_group'):
+            print(f"\n  Group: {base_group} ({len(group_df)} tables)")
 
-        # Group by source_database within this project
-        for source_db, db_group in project_group.groupby('source_database'):
-            print(f"\n  Database: {source_db} ({len(db_group)} tables)")
+            # Step 1: Split into gateways if needed
+            num_gateways = (len(group_df) - 1) // max_tables_per_gateway + 1
 
-            # Assign gateway ID for this database (per-project numbering)
-            gateway_id = project_gateway_id
-            project_gateway_id += 1
+            for gw_idx in range(num_gateways):
+                gw_start = gw_idx * max_tables_per_gateway
+                gw_end = min((gw_idx + 1) * max_tables_per_gateway, len(group_df))
+                gateway_tables = group_df.iloc[gw_start:gw_end]
 
-            # Separate priority and non-priority tables
-            priority_tables = db_group[db_group['priority_flag'] == 1]
-            normal_tables = db_group[db_group['priority_flag'] == 0]
+                # Gateway naming
+                if num_gateways > 1:
+                    gateway_name = f"{base_group}_gw{gw_idx+1:02d}"
+                else:
+                    gateway_name = base_group
 
-            # Process priority tables first
-            if len(priority_tables) > 0:
-                print(f"    Processing {len(priority_tables)} priority tables")
-                num_priority_groups = (len(priority_tables) - 1) // max_tables_per_group + 1
+                print(f"    Gateway: {gateway_name} ({len(gateway_tables)} tables)")
 
-                for i in range(num_priority_groups):
-                    start_idx = i * max_tables_per_group
-                    end_idx = min((i + 1) * max_tables_per_group, len(priority_tables))
-                    group_indices = priority_tables.iloc[start_idx:end_idx].index
+                # Step 2: Split gateway into pipelines if needed
+                num_pipelines = (len(gateway_tables) - 1) // max_tables_per_pipeline + 1
 
-                    df.loc[group_indices, 'pipeline_group'] = project_pipeline_group_id
-                    df.loc[group_indices, 'gateway'] = gateway_id
+                for p_idx in range(num_pipelines):
+                    p_start = p_idx * max_tables_per_pipeline
+                    p_end = min((p_idx + 1) * max_tables_per_pipeline, len(gateway_tables))
+                    pipeline_tables_indices = gateway_tables.iloc[p_start:p_end].index
 
-                    print(f"      Created priority pipeline_group {project_pipeline_group_id} with {len(group_indices)} tables")
-                    project_pipeline_group_id += 1
+                    # Pipeline naming
+                    if num_pipelines > 1:
+                        if num_gateways > 1:
+                            pipeline_name = f"{base_group}_gw{gw_idx+1:02d}_p{p_idx+1:02d}"
+                        else:
+                            pipeline_name = f"{base_group}_p{p_idx+1:02d}"
+                    else:
+                        pipeline_name = gateway_name
 
-            # Process normal tables
-            if len(normal_tables) > 0:
-                print(f"    Processing {len(normal_tables)} normal tables")
-                num_normal_groups = (len(normal_tables) - 1) // max_tables_per_group + 1
+                    # Assign to dataframe
+                    df.loc[pipeline_tables_indices, 'gateway'] = gateway_name
+                    df.loc[pipeline_tables_indices, 'pipeline_group'] = pipeline_name
 
-                for i in range(num_normal_groups):
-                    start_idx = i * max_tables_per_group
-                    end_idx = min((i + 1) * max_tables_per_group, len(normal_tables))
-                    group_indices = normal_tables.iloc[start_idx:end_idx].index
+                    print(f"      Pipeline: {pipeline_name} ({len(pipeline_tables_indices)} tables)")
 
-                    df.loc[group_indices, 'pipeline_group'] = project_pipeline_group_id
-                    df.loc[group_indices, 'gateway'] = gateway_id
-
-                    print(f"      Created pipeline_group {project_pipeline_group_id} with {len(group_indices)} tables")
-                    project_pipeline_group_id += 1
+    # Drop temporary base_group column
+    df = df.drop(columns=['base_group'])
 
     # Reorder columns to match expected output format
     output_columns = ['project_name', 'source_database', 'source_schema', 'source_table_name',
                      'target_catalog', 'target_schema', 'target_table_name',
                      'gateway_catalog', 'gateway_schema',
                      'gateway_worker_type', 'gateway_driver_type',
-                     'pipeline_group', 'gateway', 'connection_name', 'schedule']
+                     'prefix', 'priority', 'pipeline_group', 'gateway', 'connection_name', 'schedule']
     df_output = df[output_columns]
 
     # Print summary statistics
-    print("\n" + "="*60)
+    print("\n" + "="*80)
     print("SUMMARY")
-    print("="*60)
+    print("="*80)
     print(f"Total tables processed: {len(df_output)}")
     print(f"Total projects: {df_output['project_name'].nunique()}")
-    print(f"Total databases: {df_output['source_database'].nunique()}")
 
     print("\nBreakdown by project:")
     for project in df_output['project_name'].unique():
         project_data = df_output[df_output['project_name'] == project]
         print(f"\n  {project}:")
         print(f"    - Tables: {len(project_data)}")
-        print(f"    - Databases: {project_data['source_database'].nunique()}")
+        print(f"    - Prefix+Priority groups: {project_data['base_group'].nunique() if 'base_group' in project_data.columns else 'N/A'}")
         print(f"    - Gateways: {project_data['gateway'].nunique()}")
-        print(f"    - Pipeline groups: {project_data['pipeline_group'].nunique()}")
+        print(f"    - Pipelines: {project_data['pipeline_group'].nunique()}")
 
-        # Show database breakdown within project
-        for db in project_data['source_database'].unique():
-            db_data = project_data[project_data['source_database'] == db]
-            print(f"      • {db}: {len(db_data)} tables, gateway {db_data['gateway'].iloc[0]}, {db_data['pipeline_group'].nunique()} pipeline groups")
-    print("="*60)
+        # Show group breakdown within project
+        for prefix in project_data['prefix'].unique():
+            for priority in project_data[project_data['prefix'] == prefix]['priority'].unique():
+                group_data = project_data[(project_data['prefix'] == prefix) & (project_data['priority'] == priority)]
+                print(f"      • {prefix}_{priority}: {len(group_data)} tables, {group_data['gateway'].nunique()} gateways, {group_data['pipeline_group'].nunique()} pipelines")
+    print("="*80)
 
     return df_output
 
