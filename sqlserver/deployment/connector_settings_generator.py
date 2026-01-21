@@ -103,7 +103,7 @@ def create_pipelines(df, project_name):
     return {'resources': {'pipelines': pipelines}}
 
 
-def generate_yaml_files(df, project_name, output_dir, targets):
+def generate_yaml_files(df, output_dir, targets):
     """Generate gateway and pipeline YAML files from dataframe in a proper DAB structure.
 
     Creates separate DAB packages for each unique project_name in the dataframe.
@@ -125,7 +125,6 @@ def generate_yaml_files(df, project_name, output_dir, targets):
             - connection_name: Databricks connection name (e.g., 'sql_server_prod')
             - schedule: Cron schedule (optional, e.g., '0 0 * * *')
             - project_name: Project name (required)
-        project_name (str): Not used (kept for backward compatibility)
         output_dir (str): Output directory for the DAB project(s)
         targets (dict): Target environments configuration (required)
             Format: {'env_name': {'workspace_host': '...', 'root_path': '...'}, ...}
