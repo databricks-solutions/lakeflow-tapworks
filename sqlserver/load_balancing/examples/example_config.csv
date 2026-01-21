@@ -1,4 +1,0 @@
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,project_name,priority_flag,schedule
-db1,dbo,products,jack_demos,ingestion_schema,products,conn_1,sqlserver_ingestion,0,*/15 * * * *
-db1,dbo,customers,jack_demos,ingestion_schema,customers,conn_1,sqlserver_ingestion,0,*/15 * * * *
-db1,dbo,transactions,jack_demos,ingestion_schema,transactions_clean,conn_1,sqlserver_ingestion,1,*/15 * * * *
