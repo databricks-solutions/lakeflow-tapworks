@@ -5,7 +5,7 @@ This module provides common functionality used across all connectors
 (Salesforce, SQL Server, Google Analytics).
 """
 
-from .config_utils import process_input_config, load_input_csv, create_jobs, create_databricks_yml
+from .config_utils import process_input_config, load_input_csv, create_jobs, create_databricks_yml, generate_resource_names
 from .cron_utils import convert_cron_to_quartz
 
 __all__ = [
@@ -13,5 +13,6 @@ __all__ = [
     'load_input_csv',
     'create_jobs',
     'create_databricks_yml',
+    'generate_resource_names',
     'convert_cron_to_quartz'
 ]
