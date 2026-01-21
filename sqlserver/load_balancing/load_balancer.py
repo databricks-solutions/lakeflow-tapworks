@@ -92,7 +92,7 @@ def generate_pipeline_config(
                 global_pipeline_group_id += 1
 
     # Reorder columns to match expected output format
-    output_columns = ['source_database', 'source_schema', 'source_table_name',
+    output_columns = ['project_name', 'source_database', 'source_schema', 'source_table_name',
                      'target_catalog', 'target_schema', 'target_table_name',
                      'gateway_catalog', 'gateway_schema',
                      'gateway_worker_type', 'gateway_driver_type',
