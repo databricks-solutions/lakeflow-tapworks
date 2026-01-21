@@ -28,7 +28,8 @@ def run_complete_pipeline_generation(
     targets: dict,
     output_config: str = None,
     default_values: dict = None,
-    override_input_config: dict = None
+    override_input_config: dict = None,
+    separate_dabs_per_project: bool = False
 ):
     """
     Complete pipeline generation process from Salesforce objects to YAML files.
@@ -45,15 +46,18 @@ def run_complete_pipeline_generation(
         df (pd.DataFrame): Input DataFrame with Salesforce objects (required)
             Must contain: source_database, source_schema, source_table_name,
                          target_catalog, target_schema, target_table_name,
-                         prefix, priority, connection_name (all required)
-        project_name (str): Project name for the bundle
-        output_dir (str): Output directory for DAB project
+                         prefix, priority, connection_name, project_name (all required)
+        project_name (str): Default project name for the bundle (used when separate_dabs_per_project=False)
+        output_dir (str): Output directory for DAB project(s)
         targets (dict): Target environments configuration dict (required)
             Format: {'env_name': {'workspace_host': '...'}, ...}
             Supports any number of environments (dev, staging, qa, prod, etc.)
         output_config (str, optional): Output path for intermediate configuration CSV
         default_values (dict, optional): Column defaults to override built-in defaults
         override_input_config (dict, optional): Override specific columns for all rows
+        separate_dabs_per_project (bool, optional): If True, creates separate DAB package for each
+            project_name in the dataframe. Each project gets its own directory with databricks.yml
+            and resources/. Default: False
 
     Returns:
         pd.DataFrame: The pipeline configuration dataframe
@@ -96,7 +100,7 @@ def run_complete_pipeline_generation(
     required_columns = [
         'source_database', 'source_schema', 'source_table_name',
         'target_catalog', 'target_schema', 'target_table_name',
-        'prefix', 'priority', 'connection_name'
+        'prefix', 'priority', 'connection_name', 'project_name'
     ]
 
     # Build default values (merge built-in with user-provided)
@@ -144,7 +148,8 @@ def run_complete_pipeline_generation(
         df=pipeline_config_df,
         project_name=project_name,
         targets=targets,
-        output_dir=output_dir
+        output_dir=output_dir,
+        separate_dabs_per_project=separate_dabs_per_project
     )
 
     print("\n" + "="*80)

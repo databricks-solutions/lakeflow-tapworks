@@ -143,7 +143,8 @@ def generate_yaml_files(
     df: pd.DataFrame,
     project_name: str,
     output_dir: str,
-    targets: dict
+    targets: dict,
+    separate_dabs_per_project: bool = False
 ) -> None:
     """
     Generate Databricks Asset Bundle YAML files for Google Analytics 4 ingestion pipelines.
@@ -163,10 +164,13 @@ def generate_yaml_files(
             - connection_name: GA4 connection name in Databricks
             - pipeline_group: Pipeline group identifier (e.g., "business_unit1_01")
             - schedule: Cron schedule expression
-        project_name (str): Project name for the bundle
-        output_dir (str): Output directory for DAB project
+            - project_name: Project name (required)
+        project_name (str): Default project name for the bundle (used when separate_dabs_per_project=False)
+        output_dir (str): Output directory for DAB project(s)
         targets (dict): Target environments configuration (required)
             Format: {'env_name': {'workspace_host': '...'}, ...}
+        separate_dabs_per_project (bool): If True, creates separate DAB package for each project_name
+            in the dataframe. Default: False
 
     Returns:
         None (writes YAML files to disk)
@@ -184,7 +188,7 @@ def generate_yaml_files(
     required_columns = [
         'source_catalog', 'source_schema', 'tables',
         'target_catalog', 'target_schema', 'connection_name',
-        'pipeline_group', 'schedule'
+        'pipeline_group', 'schedule', 'project_name'
     ]
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
@@ -194,35 +198,77 @@ def generate_yaml_files(
     print(f"  Total properties: {len(df)}")
     print(f"  Unique pipelines: {df['pipeline_group'].nunique()}")
 
-    # Generate YAML content using separate functions
-    pipelines_yaml = create_pipelines(df, project_name)
-    jobs_yaml = create_jobs(df, project_name, connector_type='ga4')
+    if separate_dabs_per_project:
+        print(f"  Unique projects: {df['project_name'].nunique()}")
+        print(f"  Mode: Separate DAB per project")
 
-    # Create databricks.yml with target environments
-    databricks_yaml = create_databricks_yml(
-        project_name=project_name,
-        targets=targets,
-        default_target='dev'
-    )
+        # Group by project_name and create separate DAB packages
+        for project, project_df in df.groupby('project_name'):
+            project_output_dir = Path(output_dir) / str(project)
+            print(f"\n  Creating DAB for project: {project}")
+            print(f"    - Properties: {len(project_df)}")
+            print(f"    - Pipelines: {project_df['pipeline_group'].nunique()}")
+            print(f"    - Output: {project_output_dir}")
 
-    # Create directory structure
-    resources_dir = Path(output_dir) / 'resources'
-    resources_dir.mkdir(parents=True, exist_ok=True)
+            # Generate YAML content for this project
+            pipelines_yaml = create_pipelines(project_df, str(project))
+            jobs_yaml = create_jobs(project_df, str(project), connector_type='ga4')
+            databricks_yaml = create_databricks_yml(
+                project_name=str(project),
+                targets=targets,
+                default_target='dev'
+            )
 
-    # Define output paths
-    databricks_yml_path = Path(output_dir) / 'databricks.yml'
-    pipelines_yml_path = resources_dir / 'pipelines.yml'
-    jobs_yml_path = resources_dir / 'jobs.yml'
+            # Create directory structure
+            resources_dir = project_output_dir / 'resources'
+            resources_dir.mkdir(parents=True, exist_ok=True)
 
-    # Write YAML files
-    with open(databricks_yml_path, 'w') as f:
-        yaml.dump(databricks_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+            # Define output paths
+            databricks_yml_path = project_output_dir / 'databricks.yml'
+            pipelines_yml_path = resources_dir / 'pipelines.yml'
+            jobs_yml_path = resources_dir / 'jobs.yml'
 
-    with open(pipelines_yml_path, 'w') as f:
-        yaml.dump(pipelines_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+            # Write YAML files
+            with open(databricks_yml_path, 'w') as f:
+                yaml.dump(databricks_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
 
-    with open(jobs_yml_path, 'w') as f:
-        yaml.dump(jobs_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+            with open(pipelines_yml_path, 'w') as f:
+                yaml.dump(pipelines_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+
+            with open(jobs_yml_path, 'w') as f:
+                yaml.dump(jobs_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+    else:
+        print(f"  Mode: Single DAB package")
+
+        # Generate YAML content using separate functions
+        pipelines_yaml = create_pipelines(df, project_name)
+        jobs_yaml = create_jobs(df, project_name, connector_type='ga4')
+
+        # Create databricks.yml with target environments
+        databricks_yaml = create_databricks_yml(
+            project_name=project_name,
+            targets=targets,
+            default_target='dev'
+        )
+
+        # Create directory structure
+        resources_dir = Path(output_dir) / 'resources'
+        resources_dir.mkdir(parents=True, exist_ok=True)
+
+        # Define output paths
+        databricks_yml_path = Path(output_dir) / 'databricks.yml'
+        pipelines_yml_path = resources_dir / 'pipelines.yml'
+        jobs_yml_path = resources_dir / 'jobs.yml'
+
+        # Write YAML files
+        with open(databricks_yml_path, 'w') as f:
+            yaml.dump(databricks_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+
+        with open(pipelines_yml_path, 'w') as f:
+            yaml.dump(pipelines_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+
+        with open(jobs_yml_path, 'w') as f:
+            yaml.dump(jobs_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
 
     print("\n" + "="*80)
     print("YAML GENERATION COMPLETE")
