@@ -114,6 +114,7 @@ def generate_pipeline_config(
 
     # Reorder columns for output
     output_columns = [
+        'project_name',
         'source_database', 'source_schema', 'source_table_name',
         'target_catalog', 'target_schema', 'target_table_name',
         'prefix', 'priority', 'pipeline_group',

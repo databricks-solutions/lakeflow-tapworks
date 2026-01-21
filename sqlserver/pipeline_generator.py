@@ -110,10 +110,14 @@ def run_complete_pipeline_generation(
         'connection_name'
     ]
 
+    # Add default project_name if not provided
+    built_in_defaults = {'project_name': 'sqlserver_ingestion'}
+    final_defaults = {**built_in_defaults, **(default_values or {})}
+
     normalized_df = process_input_config(
         df=df,
         required_columns=required_columns,
-        default_values=default_values,
+        default_values=final_defaults,
         override_input_config=override_input_config
     )
 
