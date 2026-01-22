@@ -37,11 +37,11 @@ Tests pipeline generation when the input CSV **has all values specified with dif
 **Test Data**: Matches `tapworks_config.csv`
 - db1: Fully specified with m5d.large workers, c5a.8xlarge driver
 - db2: Fully specified with c5a.xlarge workers, c5a.2xlarge driver
-- db3: Connection/catalog/schema specified, node types None (serverless)
+- db3: Connection/catalog/schema specified, node types None
 - Tests:
   - Each database can have different gateway configurations
   - Serverless gateways (None node types) don't include cluster config
-  - Non-serverless gateways include cluster config with correct node types
+  - Gateways with specified node types include cluster config
 
 ### 4. Integration Tests (`TestCompleteIntegration`)
 End-to-end tests for the complete pipeline generation workflow.
@@ -92,8 +92,8 @@ python -m unittest tests.test_pipeline_generation.TestCompleteIntegration -v
 # Test that empty values use defaults
 python -m unittest tests.test_pipeline_generation.TestMixedConfig.test_empty_values_use_defaults -v
 
-# Test serverless gateway configuration
-python -m unittest tests.test_pipeline_generation.TestFullConfig.test_serverless_gateway_no_cluster_config -v
+# Test gateway without cluster configuration
+python -m unittest tests.test_pipeline_generation.TestFullConfig.test_gateway_without_cluster_config -v
 ```
 
 ## Test Output
@@ -108,7 +108,7 @@ Example output:
 test_different_configs_per_database (tests.test_pipeline_generation.TestFullConfig) ... ok
 test_empty_values_use_defaults (tests.test_pipeline_generation.TestMixedConfig) ... ok
 test_generate_pipeline_config_uses_defaults (tests.test_pipeline_generation.TestSimpleConfig) ... ok
-test_serverless_gateway_no_cluster_config (tests.test_pipeline_generation.TestFullConfig) ... ok
+test_gateway_without_cluster_config (tests.test_pipeline_generation.TestFullConfig) ... ok
 test_yaml_no_null_values (tests.test_pipeline_generation.TestMixedConfig) ... ok
 
 ----------------------------------------------------------------------
@@ -149,7 +149,7 @@ self.assertEqual(db1_rows['gateway_worker_type'].iloc[0], 'm5d.large')
 ```
 
 ### 4. Serverless Configuration
-Tests verify that serverless gateways (None node types) don't include cluster config:
+Tests verify that gateways with None node types don't include cluster config:
 
 ```python
 # Serverless gateway should not have cluster configuration
