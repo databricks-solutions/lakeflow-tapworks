@@ -92,7 +92,7 @@ def generate_pipeline_config(
                     # Pipeline naming
                     if num_pipelines > 1:
                         if num_gateways > 1:
-                            pipeline_name = f"{base_group}_gw{gw_idx+1:02d}_p{p_idx+1:02d}"
+                            pipeline_name = f"{base_group}_gw{gw_idx+1:02d}_g{p_idx+1:02d}"
                         else:
                             # Single gateway, multiple pipelines: use _g01, _g02 (consistent with SaaS)
                             pipeline_name = f"{base_group}_g{p_idx+1:02d}"
