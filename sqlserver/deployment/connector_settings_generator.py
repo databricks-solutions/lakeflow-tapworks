@@ -14,7 +14,7 @@ def create_gateways(df, project_name):
 
     Note: All gateway configuration is read from the dataframe columns:
     - gateway_catalog, gateway_schema, connection_name
-    - gateway_worker_type, gateway_driver_type (optional, for non-serverless)
+    - gateway_worker_type, gateway_driver_type (optional)
     """
     gateways = {}
     unique_gateways = df.groupby('gateway').first()
@@ -43,7 +43,7 @@ def create_gateways(df, project_name):
         }
 
         # Add cluster configuration if node types are provided
-        # If both are None/empty/NaN, use serverless (no cluster config)
+        # If both are None/empty/NaN, no cluster config is added
         # Check for valid non-NaN values using pd.notna()
         has_worker_type = pd.notna(worker_type) and worker_type != '' and worker_type is not None
         has_driver_type = pd.notna(driver_type) and driver_type != '' and driver_type is not None
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     # Generate YAML files with proper DAB structure
     # Note: The dataframe should contain these columns:
     # - gateway_catalog, gateway_schema, connection_name
-    # - gateway_worker_type, gateway_driver_type (optional for serverless)
+    # - gateway_worker_type, gateway_driver_type (optional)
     # generate_yaml_files(
     #     df=df,
     #     project_name='my_project',

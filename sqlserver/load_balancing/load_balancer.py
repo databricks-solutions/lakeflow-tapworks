@@ -59,8 +59,8 @@ if __name__ == "__main__":
         'connection_name': 'conn_1',
         'gateway_catalog': None,  # Will be set to target_catalog if None
         'gateway_schema': None,   # Will be set to target_schema if None
-        'gateway_worker_type': None,  # None for serverless
-        'gateway_driver_type': None,  # None for serverless
+        'gateway_worker_type': None,
+        'gateway_driver_type': None,
         'schedule': '*/15 * * * *'
     }
 
