@@ -77,60 +77,6 @@ def generate_pipeline_config(
     # Drop temporary base_group column
     df = df.drop(columns=['base_group'])
 
-    print("\n" + "="*80)
-    print("SALESFORCE PIPELINE CONFIGURATION")
-    print("="*80)
-
-    # Get unique pipeline groups
-    unique_pipelines = df['pipeline_group'].unique()
-    print(f"\nTotal tables processed: {len(df)}")
-    print(f"Total unique pipelines: {len(unique_pipelines)}")
-    print(f"Max tables per pipeline: {max_tables_per_pipeline}")
-
-    print("\n" + "-"*80)
-    print("Pipeline Breakdown:")
-    print("-"*80)
-
-    # Group by pipeline and show details
-    for pipeline_name in sorted(unique_pipelines):
-        pipeline_df = df[df['pipeline_group'] == pipeline_name]
-
-        # Extract prefix and priority
-        prefix = pipeline_df['prefix'].iloc[0]
-        priority = pipeline_df['priority'].iloc[0]
-        connection = pipeline_df['connection_name'].iloc[0]
-        schedule = pipeline_df['schedule'].iloc[0]
-
-        # Check if this was split
-        split_indicator = " (split)" if "_g" in pipeline_name else ""
-
-        print(f"\nPipeline: {pipeline_name}{split_indicator}")
-        print(f"  Prefix: {prefix}")
-        print(f"  Priority: {priority}")
-        print(f"  Connection: {connection}")
-        print(f"  Schedule: {schedule}")
-        print(f"  Tables: {len(pipeline_df)}")
-
-        # Show table list
-        for _, row in pipeline_df.iterrows():
-            print(f"    - {row['source_table_name']} → {row['target_catalog']}.{row['target_schema']}.{row['target_table_name']}")
-
-    print("\n" + "="*80)
-    print("Summary by Prefix:")
-    print("="*80)
-
-    # Group by prefix to show high-level summary
-    for prefix in sorted(df['prefix'].unique()):
-        prefix_df = df[df['prefix'] == prefix]
-        priorities = sorted([str(p) for p in prefix_df['priority'].unique()])
-
-        print(f"\nPrefix: {prefix}")
-        print(f"  Priorities: {', '.join(priorities)}")
-        print(f"  Pipelines: {prefix_df['pipeline_group'].nunique()}")
-        print(f"  Total tables: {len(prefix_df)}")
-
-    print("\n" + "="*80)
-
     # Reorder columns for output
     output_columns = [
         'project_name',
@@ -219,7 +165,63 @@ Note: connection_name is now a required column in the CSV file.
         )
 
         # Generate pipeline configuration
-        output_df = generate_pipeline_config(df=normalized_df)
+        max_tables_per_pipeline = 250
+
+        print("\n" + "="*80)
+        print("SALESFORCE PIPELINE CONFIGURATION")
+        print("="*80)
+
+        output_df = generate_pipeline_config(df=normalized_df, max_tables_per_pipeline=max_tables_per_pipeline)
+
+        # Get unique pipeline groups
+        unique_pipelines = output_df['pipeline_group'].unique()
+        print(f"\nTotal tables processed: {len(output_df)}")
+        print(f"Total unique pipelines: {len(unique_pipelines)}")
+        print(f"Max tables per pipeline: {max_tables_per_pipeline}")
+
+        print("\n" + "-"*80)
+        print("Pipeline Breakdown:")
+        print("-"*80)
+
+        # Group by pipeline and show details
+        for pipeline_name in sorted(unique_pipelines):
+            pipeline_df = output_df[output_df['pipeline_group'] == pipeline_name]
+
+            # Extract prefix and priority
+            prefix = pipeline_df['prefix'].iloc[0]
+            priority = pipeline_df['priority'].iloc[0]
+            connection = pipeline_df['connection_name'].iloc[0]
+            schedule = pipeline_df['schedule'].iloc[0]
+
+            # Check if this was split
+            split_indicator = " (split)" if "_g" in pipeline_name else ""
+
+            print(f"\nPipeline: {pipeline_name}{split_indicator}")
+            print(f"  Prefix: {prefix}")
+            print(f"  Priority: {priority}")
+            print(f"  Connection: {connection}")
+            print(f"  Schedule: {schedule}")
+            print(f"  Tables: {len(pipeline_df)}")
+
+            # Show table list
+            for _, row in pipeline_df.iterrows():
+                print(f"    - {row['source_table_name']} → {row['target_catalog']}.{row['target_schema']}.{row['target_table_name']}")
+
+        print("\n" + "="*80)
+        print("Summary by Prefix:")
+        print("="*80)
+
+        # Group by prefix to show high-level summary
+        for prefix in sorted(output_df['prefix'].unique()):
+            prefix_df = output_df[output_df['prefix'] == prefix]
+            priorities = sorted([str(p) for p in prefix_df['priority'].unique()])
+
+            print(f"\nPrefix: {prefix}")
+            print(f"  Priorities: {', '.join(priorities)}")
+            print(f"  Pipelines: {prefix_df['pipeline_group'].nunique()}")
+            print(f"  Total tables: {len(prefix_df)}")
+
+        print("\n" + "="*80)
 
         # Ensure output directory exists
         output_path = Path(args.output_csv)
