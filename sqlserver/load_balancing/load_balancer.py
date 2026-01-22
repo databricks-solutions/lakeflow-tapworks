@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from utilities import process_input_config, split_groups_by_size
+from utilities import process_input_config, split_groups_by_size, load_input_csv
 
 
 def generate_pipeline_config(
@@ -69,59 +69,58 @@ def generate_pipeline_config(
         suffix='g'
     )
 
-    # # Print detailed breakdown
-    # for project_name, project_group in df.groupby('project_name'):
-    #     print(f"\n{'='*60}")
-    #     print(f"Processing project: {project_name} ({len(project_group)} tables)")
-    #     print(f"{'='*60}")
+    # Print detailed breakdown
+    for project_name, project_group in df.groupby('project_name'):
+        print(f"\n{'='*60}")
+        print(f"Processing project: {project_name} ({len(project_group)} tables)")
+        print(f"{'='*60}")
 
-    #     for base_group in sorted(project_group['base_group'].unique()):
-    #         group_df = project_group[project_group['base_group'] == base_group]
-    #         print(f"\n  Group: {base_group} ({len(group_df)} tables)")
+        for base_group in sorted(project_group['base_group'].unique()):
+            group_df = project_group[project_group['base_group'] == base_group]
+            print(f"\n  Group: {base_group} ({len(group_df)} tables)")
 
-    #         for gateway in sorted(group_df['gateway'].unique()):
-    #             gateway_tables = group_df[group_df['gateway'] == gateway]
-    #             print(f"    Gateway: {gateway} ({len(gateway_tables)} tables)")
+            for gateway in sorted(group_df['gateway'].unique()):
+                gateway_tables = group_df[group_df['gateway'] == gateway]
+                print(f"    Gateway: {gateway} ({len(gateway_tables)} tables)")
 
-    #             for pipeline in sorted(gateway_tables['pipeline_group'].unique()):
-    #                 pipeline_tables = gateway_tables[gateway_tables['pipeline_group'] == pipeline]
-    #                 print(f"      Pipeline: {pipeline} ({len(pipeline_tables)} tables)")
+                for pipeline in sorted(gateway_tables['pipeline_group'].unique()):
+                    pipeline_tables = gateway_tables[gateway_tables['pipeline_group'] == pipeline]
+                    print(f"      Pipeline: {pipeline} ({len(pipeline_tables)} tables)")
 
-    # # Drop temporary base_group column
-    # df = df.drop(columns=['base_group'])
+    # Drop temporary base_group column
+    df = df.drop(columns=['base_group'])
 
-    # # Reorder columns to match expected output format
-    # output_columns = ['project_name', 'source_database', 'source_schema', 'source_table_name',
-    #                  'target_catalog', 'target_schema', 'target_table_name',
-    #                  'gateway_catalog', 'gateway_schema',
-    #                  'gateway_worker_type', 'gateway_driver_type',
-    #                  'prefix', 'priority', 'pipeline_group', 'gateway', 'connection_name', 'schedule']
-    # df_output = df[output_columns]
+    # Reorder columns to match expected output format
+    output_columns = ['project_name', 'source_database', 'source_schema', 'source_table_name',
+                     'target_catalog', 'target_schema', 'target_table_name',
+                     'gateway_catalog', 'gateway_schema',
+                     'gateway_worker_type', 'gateway_driver_type',
+                     'prefix', 'priority', 'pipeline_group', 'gateway', 'connection_name', 'schedule']
+    df_output = df[output_columns]
 
-    # # Print summary statistics
-    # print("\n" + "="*80)
-    # print("SUMMARY")
-    # print("="*80)
-    # print(f"Total tables processed: {len(df_output)}")
-    # print(f"Total projects: {df_output['project_name'].nunique()}")
+    # Print summary statistics
+    print("\n" + "="*80)
+    print("SUMMARY")
+    print("="*80)
+    print(f"Total tables processed: {len(df_output)}")
+    print(f"Total projects: {df_output['project_name'].nunique()}")
 
-    # print("\nBreakdown by project:")
-    # for project in df_output['project_name'].unique():
-    #     project_data = df_output[df_output['project_name'] == project]
-    #     print(f"\n  {project}:")
-    #     print(f"    - Tables: {len(project_data)}")
-    #     print(f"    - Prefix+Priority groups: {project_data['base_group'].nunique() if 'base_group' in project_data.columns else 'N/A'}")
-    #     print(f"    - Gateways: {project_data['gateway'].nunique()}")
-    #     print(f"    - Pipelines: {project_data['pipeline_group'].nunique()}")
+    print("\nBreakdown by project:")
+    for project in df_output['project_name'].unique():
+        project_data = df_output[df_output['project_name'] == project]
+        print(f"\n  {project}:")
+        print(f"    - Tables: {len(project_data)}")
+        print(f"    - Gateways: {project_data['gateway'].nunique()}")
+        print(f"    - Pipelines: {project_data['pipeline_group'].nunique()}")
 
-    #     # Show group breakdown within project
-    #     for prefix in project_data['prefix'].unique():
-    #         for priority in project_data[project_data['prefix'] == prefix]['priority'].unique():
-    #             group_data = project_data[(project_data['prefix'] == prefix) & (project_data['priority'] == priority)]
-    #             print(f"      • {prefix}_{priority}: {len(group_data)} tables, {group_data['gateway'].nunique()} gateways, {group_data['pipeline_group'].nunique()} pipelines")
-    # print("="*80)
+        # Show group breakdown within project
+        for prefix in project_data['prefix'].unique():
+            for priority in project_data[project_data['prefix'] == prefix]['priority'].unique():
+                group_data = project_data[(project_data['prefix'] == prefix) & (project_data['priority'] == priority)]
+                print(f"      • {prefix}_{priority}: {len(group_data)} tables, {group_data['gateway'].nunique()} gateways, {group_data['pipeline_group'].nunique()} pipelines")
+    print("="*80)
 
-    # return df_output
+    return df_output
 
 
 if __name__ == "__main__":
