@@ -220,13 +220,13 @@ class TestFullConfig(unittest.TestCase):
         self.assertEqual(db2_rows['gateway_worker_type'].iloc[0], 'c5a.xlarge')
         self.assertEqual(db2_rows['gateway_driver_type'].iloc[0], 'c5a.2xlarge')
 
-        # Check db3 configuration (serverless - None for node types)
+        # Check db3 configuration (None for node types)
         db3_rows = result_df[result_df['source_database'] == 'db3']
         self.assertEqual(db3_rows['connection_name'].iloc[0], 'sqlserver_conn_3')
         self.assertIsNone(db3_rows['gateway_worker_type'].iloc[0])
         self.assertIsNone(db3_rows['gateway_driver_type'].iloc[0])
 
-    def test_serverless_gateway_no_cluster_config(self):
+    def test_gateway_without_cluster_config(self):
         """Test that gateways with None node types don't have cluster configuration."""
         result_df = generate_pipeline_config(
             df=self.test_data,
@@ -244,7 +244,7 @@ class TestFullConfig(unittest.TestCase):
         self.assertIn('clusters', gateway_1)
         self.assertIn('clusters', gateway_2)
 
-        # Gateway 3 (db3) should NOT have cluster config (serverless)
+        # Gateway 3 (db3) should NOT have cluster config
         gateway_3 = gateway_yaml['resources']['pipelines']['test_project_pipeline_test_project_gateway_3']
         self.assertNotIn('clusters', gateway_3)
 
