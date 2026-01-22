@@ -26,7 +26,7 @@ from pathlib import Path
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from utilities import process_input_config, load_input_csv
+from utilities import process_input_config, load_input_csv, split_groups_by_size
 
 
 def generate_pipeline_config(
@@ -66,28 +66,14 @@ def generate_pipeline_config(
     # Generate base pipeline_group: prefix_priority
     df['base_group'] = df['prefix'] + '_' + df['priority']
 
-    # Initialize pipeline_group column
-    df['pipeline_group'] = ''
-
-    # Split groups that exceed max_tables_per_pipeline
-    for base_group in df['base_group'].unique():
-        group_df = df[df['base_group'] == base_group]
-
-        if len(group_df) > max_tables_per_pipeline:
-            # Split into chunks
-            num_subgroups = (len(group_df) - 1) // max_tables_per_pipeline + 1
-
-            for i in range(num_subgroups):
-                start_idx = i * max_tables_per_pipeline
-                end_idx = min((i + 1) * max_tables_per_pipeline, len(group_df))
-                chunk_indices = group_df.iloc[start_idx:end_idx].index
-
-                # Append subgroup suffix: g01, g02, g03, etc.
-                subgroup_suffix = f"_g{i+1:02d}"
-                df.loc[chunk_indices, 'pipeline_group'] = base_group + subgroup_suffix
-        else:
-            # No split needed - use base group as-is
-            df.loc[group_df.index, 'pipeline_group'] = base_group
+    # Use shared splitting function to handle capacity limits
+    df = split_groups_by_size(
+        df=df,
+        group_column='base_group',
+        max_size=max_tables_per_pipeline,
+        output_column='pipeline_group',
+        suffix='g'
+    )
 
     # Drop temporary base_group column
     df = df.drop(columns=['base_group'])

@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from utilities import process_input_config
+from utilities import process_input_config, split_groups_by_size
 
 
 def generate_pipeline_config(
@@ -42,10 +42,6 @@ def generate_pipeline_config(
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
 
-    # Initialize new columns
-    df['pipeline_group'] = ''
-    df['gateway'] = ''
-
     # Generate base group from prefix + priority
     df['base_group'] = df['prefix'].astype(str) + '_' + df['priority'].astype(str)
 
@@ -55,55 +51,41 @@ def generate_pipeline_config(
     print(f"Max tables per gateway: {max_tables_per_gateway}")
     print(f"Max tables per pipeline: {max_tables_per_pipeline}")
 
-    # Group by project_name first to ensure independent processing per project
+    # Step 1: Split by gateway capacity using shared function
+    df = split_groups_by_size(
+        df=df,
+        group_column='base_group',
+        max_size=max_tables_per_gateway,
+        output_column='gateway',
+        suffix='gw'
+    )
+
+    # Step 2: Split each gateway by pipeline capacity using shared function
+    df = split_groups_by_size(
+        df=df,
+        group_column='gateway',
+        max_size=max_tables_per_pipeline,
+        output_column='pipeline_group',
+        suffix='g'
+    )
+
+    # Print detailed breakdown
     for project_name, project_group in df.groupby('project_name'):
         print(f"\n{'='*60}")
         print(f"Processing project: {project_name} ({len(project_group)} tables)")
         print(f"{'='*60}")
 
-        # Group by base_group (prefix_priority) within this project
-        for base_group, group_df in project_group.groupby('base_group'):
+        for base_group in sorted(project_group['base_group'].unique()):
+            group_df = project_group[project_group['base_group'] == base_group]
             print(f"\n  Group: {base_group} ({len(group_df)} tables)")
 
-            # Step 1: Split into gateways if needed
-            num_gateways = (len(group_df) - 1) // max_tables_per_gateway + 1
+            for gateway in sorted(group_df['gateway'].unique()):
+                gateway_tables = group_df[group_df['gateway'] == gateway]
+                print(f"    Gateway: {gateway} ({len(gateway_tables)} tables)")
 
-            for gw_idx in range(num_gateways):
-                gw_start = gw_idx * max_tables_per_gateway
-                gw_end = min((gw_idx + 1) * max_tables_per_gateway, len(group_df))
-                gateway_tables = group_df.iloc[gw_start:gw_end]
-
-                # Gateway naming
-                if num_gateways > 1:
-                    gateway_name = f"{base_group}_gw{gw_idx+1:02d}"
-                else:
-                    gateway_name = base_group
-
-                print(f"    Gateway: {gateway_name} ({len(gateway_tables)} tables)")
-
-                # Step 2: Split gateway into pipelines if needed
-                num_pipelines = (len(gateway_tables) - 1) // max_tables_per_pipeline + 1
-
-                for p_idx in range(num_pipelines):
-                    p_start = p_idx * max_tables_per_pipeline
-                    p_end = min((p_idx + 1) * max_tables_per_pipeline, len(gateway_tables))
-                    pipeline_tables_indices = gateway_tables.iloc[p_start:p_end].index
-
-                    # Pipeline naming
-                    if num_pipelines > 1:
-                        if num_gateways > 1:
-                            pipeline_name = f"{base_group}_gw{gw_idx+1:02d}_g{p_idx+1:02d}"
-                        else:
-                            # Single gateway, multiple pipelines: use _g01, _g02 (consistent with SaaS)
-                            pipeline_name = f"{base_group}_g{p_idx+1:02d}"
-                    else:
-                        pipeline_name = gateway_name
-
-                    # Assign to dataframe
-                    df.loc[pipeline_tables_indices, 'gateway'] = gateway_name
-                    df.loc[pipeline_tables_indices, 'pipeline_group'] = pipeline_name
-
-                    print(f"      Pipeline: {pipeline_name} ({len(pipeline_tables_indices)} tables)")
+                for pipeline in sorted(gateway_tables['pipeline_group'].unique()):
+                    pipeline_tables = gateway_tables[gateway_tables['pipeline_group'] == pipeline]
+                    print(f"      Pipeline: {pipeline} ({len(pipeline_tables)} tables)")
 
     # Drop temporary base_group column
     df = df.drop(columns=['base_group'])
