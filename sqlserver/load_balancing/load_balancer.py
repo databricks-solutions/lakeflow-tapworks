@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from utilities import process_input_config, split_groups_by_size, load_input_csv
+from utilities import process_input_config, generate_database_pipeline_config, load_input_csv
 
 
 def generate_pipeline_config(
@@ -39,38 +39,8 @@ def generate_pipeline_config(
             - pipeline_group: Pipeline group identifier
             - gateway: Gateway identifier (string format: prefix_priority_gw01)
     """
-    # Make a copy to avoid modifying the original dataframe
-    df = df.copy()
-
-    # Ensure consistent string formatting
-    df['prefix'] = df['prefix'].astype(str)
-    df['priority'] = df['priority'].astype(str).str.zfill(2)  # Pad to 2 digits
-
-    # Generate base group from prefix + priority
-    df['base_group'] = df['prefix'] + '_' + df['priority']
-
-    # Step 1: Split by gateway capacity using shared function
-    df = split_groups_by_size(
-        df=df,
-        group_column='base_group',
-        max_size=max_tables_per_gateway,
-        output_column='gateway',
-        suffix='gw'
-    )
-
-    # Step 2: Split each gateway by pipeline capacity using shared function
-    df = split_groups_by_size(
-        df=df,
-        group_column='gateway',
-        max_size=max_tables_per_pipeline,
-        output_column='pipeline_group',
-        suffix='g'
-    )
-
-    # Drop temporary base_group column
-    df = df.drop(columns=['base_group'])
-
-    return df
+    # Use shared database pipeline configuration function
+    return generate_database_pipeline_config(df, max_tables_per_gateway, max_tables_per_pipeline)
 
 
 if __name__ == "__main__":
