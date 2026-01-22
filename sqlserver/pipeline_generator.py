@@ -42,8 +42,11 @@ def run_complete_pipeline_generation(
         df (pd.DataFrame): Input DataFrame with source table list (required)
             Must contain: source_database, source_schema, source_table_name,
                          target_catalog, target_schema, target_table_name,
-                         prefix, priority, connection_name (all required)
-            Optional: project_name (can be set via default_values or override_input_config)
+                         connection_name (all required)
+            Optional: project_name, prefix, priority
+                - project_name: can be set via default_values or override_input_config
+                - prefix: defaults to project_name if missing/empty
+                - priority: defaults to "01" if missing/empty
         output_dir (str): Output directory for DAB project(s)
         targets (dict): Target environments configuration dict (required)
             Format: {'env_name': {'workspace_host': '...', 'root_path': '...'}, ...}
@@ -94,7 +97,8 @@ def run_complete_pipeline_generation(
         ... )
 
     Note:
-        - connection_name, prefix, and priority are required columns in the DataFrame
+        - connection_name is a required column in the DataFrame
+        - prefix and priority are optional (prefix defaults to project_name, priority defaults to "01")
         - Gateway settings (gateway_catalog, gateway_schema, gateway_worker_type, gateway_driver_type)
           are optional and can vary per row
         - If gateway_catalog/gateway_schema are not provided, they default to target_catalog/target_schema
@@ -114,7 +118,7 @@ def run_complete_pipeline_generation(
     required_columns = [
         'source_database', 'source_schema', 'source_table_name',
         'target_catalog', 'target_schema', 'target_table_name',
-        'prefix', 'priority', 'connection_name'
+        'connection_name'
     ]
 
     # Add default project_name if not provided
@@ -127,6 +131,21 @@ def run_complete_pipeline_generation(
         default_values=final_defaults,
         override_input_config=override_input_config
     )
+
+    # Handle prefix and priority defaults
+    # If prefix is missing or empty, use project_name
+    if 'prefix' not in normalized_df.columns:
+        normalized_df['prefix'] = normalized_df['project_name']
+    else:
+        mask = normalized_df['prefix'].isna() | (normalized_df['prefix'].astype(str).str.strip() == '')
+        normalized_df.loc[mask, 'prefix'] = normalized_df.loc[mask, 'project_name']
+
+    # If priority is missing or empty, use "01"
+    if 'priority' not in normalized_df.columns:
+        normalized_df['priority'] = '01'
+    else:
+        mask = normalized_df['priority'].isna() | (normalized_df['priority'].astype(str).str.strip() == '')
+        normalized_df.loc[mask, 'priority'] = '01'
 
     # Handle gateway_catalog and gateway_schema defaults (use target values if None)
     if 'gateway_catalog' in normalized_df.columns:
