@@ -46,8 +46,11 @@ def run_complete_pipeline_generation(
         df (pd.DataFrame): Input DataFrame with Salesforce objects (required)
             Must contain: source_database, source_schema, source_table_name,
                          target_catalog, target_schema, target_table_name,
-                         prefix, priority, connection_name (all required)
-            Optional: project_name (can be set via default_values or override_input_config)
+                         connection_name (all required)
+            Optional: project_name, prefix, priority
+                - project_name: can be set via default_values or override_input_config
+                - prefix: defaults to project_name if missing/empty
+                - priority: defaults to "01" if missing/empty
         output_dir (str): Output directory for DAB project(s)
         targets (dict): Target environments configuration dict (required)
             Format: {'env_name': {'workspace_host': '...'}, ...}
@@ -104,7 +107,7 @@ def run_complete_pipeline_generation(
     required_columns = [
         'source_database', 'source_schema', 'source_table_name',
         'target_catalog', 'target_schema', 'target_table_name',
-        'prefix', 'priority', 'connection_name'
+        'connection_name'
     ]
 
     # Add default project_name if not provided
@@ -117,6 +120,21 @@ def run_complete_pipeline_generation(
         default_values=final_defaults,
         override_input_config=override_input_config
     )
+
+    # Handle prefix and priority defaults
+    # If prefix is missing or empty, use project_name
+    if 'prefix' not in normalized_df.columns:
+        normalized_df['prefix'] = normalized_df['project_name']
+    else:
+        mask = normalized_df['prefix'].isna() | (normalized_df['prefix'].astype(str).str.strip() == '')
+        normalized_df.loc[mask, 'prefix'] = normalized_df.loc[mask, 'project_name']
+
+    # If priority is missing or empty, use "01"
+    if 'priority' not in normalized_df.columns:
+        normalized_df['priority'] = '01'
+    else:
+        mask = normalized_df['priority'].isna() | (normalized_df['priority'].astype(str).str.strip() == '')
+        normalized_df.loc[mask, 'priority'] = '01'
 
     # Step 2: Generate pipeline configuration (prefix + priority grouping)
     print(f"\n[Step 2/3] Generating pipeline configuration using prefix + priority")
