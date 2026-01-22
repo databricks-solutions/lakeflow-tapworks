@@ -62,8 +62,12 @@ def generate_pipeline_config(
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
 
+    # Ensure consistent string formatting
+    df['prefix'] = df['prefix'].astype(str)
+    df['priority'] = df['priority'].astype(str).str.zfill(2)  # Pad to 2 digits
+
     # Generate base pipeline_group by combining prefix + priority
-    df['base_group'] = df['prefix'].astype(str) + '_' + df['priority'].astype(str)
+    df['base_group'] = df['prefix'] + '_' + df['priority']
 
     # Use shared splitting function to handle capacity limits
     df = split_groups_by_size(
@@ -77,23 +81,7 @@ def generate_pipeline_config(
     # Drop temporary base_group column
     df = df.drop(columns=['base_group'])
 
-    # Reorder columns for output
-    output_columns = [
-        'project_name',
-        'source_database', 'source_schema', 'source_table_name',
-        'target_catalog', 'target_schema', 'target_table_name',
-        'prefix', 'priority', 'pipeline_group',
-        'connection_name', 'schedule'
-    ]
-
-    # Add any additional columns that might be in the input (e.g., include_columns, exclude_columns)
-    extra_columns = [col for col in df.columns if col not in output_columns]
-    if extra_columns:
-        output_columns.extend(extra_columns)
-
-    df_output = df[output_columns]
-
-    return df_output
+    return df
 
 
 def main():

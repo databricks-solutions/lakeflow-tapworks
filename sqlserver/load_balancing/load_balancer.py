@@ -42,8 +42,12 @@ def generate_pipeline_config(
     # Make a copy to avoid modifying the original dataframe
     df = df.copy()
 
+    # Ensure consistent string formatting
+    df['prefix'] = df['prefix'].astype(str)
+    df['priority'] = df['priority'].astype(str).str.zfill(2)  # Pad to 2 digits
+
     # Generate base group from prefix + priority
-    df['base_group'] = df['prefix'].astype(str) + '_' + df['priority'].astype(str)
+    df['base_group'] = df['prefix'] + '_' + df['priority']
 
     # Step 1: Split by gateway capacity using shared function
     df = split_groups_by_size(
@@ -66,15 +70,7 @@ def generate_pipeline_config(
     # Drop temporary base_group column
     df = df.drop(columns=['base_group'])
 
-    # Reorder columns to match expected output format
-    output_columns = ['project_name', 'source_database', 'source_schema', 'source_table_name',
-                     'target_catalog', 'target_schema', 'target_table_name',
-                     'gateway_catalog', 'gateway_schema',
-                     'gateway_worker_type', 'gateway_driver_type',
-                     'prefix', 'priority', 'pipeline_group', 'gateway', 'connection_name', 'schedule']
-    df_output = df[output_columns]
-
-    return df_output
+    return df
 
 
 if __name__ == "__main__":
