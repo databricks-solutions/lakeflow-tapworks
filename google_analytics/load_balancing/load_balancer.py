@@ -78,25 +78,6 @@ def generate_pipeline_config(
     # Drop temporary base_group column
     df = df.drop(columns=['base_group'])
 
-    # Print summary
-    print(f"Pipeline Configuration Summary:")
-    print(f"  Total properties: {len(df)}")
-    print(f"  Unique prefixes: {df['prefix'].nunique()}")
-    print(f"  Unique priorities: {df['priority'].nunique()}")
-    print(f"  Total pipeline groups: {df['pipeline_group'].nunique()}")
-    print(f"  Max properties per pipeline: {max_tables_per_pipeline}")
-    print()
-
-    # Show grouping details
-    print("Pipeline Groups:")
-    for group_name in sorted(df['pipeline_group'].unique()):
-        group_df = df[df['pipeline_group'] == group_name]
-        split_indicator = " (split)" if "_g" in group_name else ""
-        print(f"  {group_name}{split_indicator}:")
-        print(f"    Properties: {len(group_df)}")
-        print(f"    Schemas: {', '.join(group_df['source_schema'].unique())}")
-    print()
-
     return df
 
 
@@ -179,7 +160,28 @@ Output:
         )
 
         # Step 4: Generate configuration with pipeline groups
-        df_with_groups = generate_pipeline_config(normalized_df)
+        max_tables_per_pipeline = 250
+
+        df_with_groups = generate_pipeline_config(normalized_df, max_tables_per_pipeline=max_tables_per_pipeline)
+
+        # Print summary
+        print(f"\nPipeline Configuration Summary:")
+        print(f"  Total properties: {len(df_with_groups)}")
+        print(f"  Unique prefixes: {df_with_groups['prefix'].nunique()}")
+        print(f"  Unique priorities: {df_with_groups['priority'].nunique()}")
+        print(f"  Total pipeline groups: {df_with_groups['pipeline_group'].nunique()}")
+        print(f"  Max properties per pipeline: {max_tables_per_pipeline}")
+        print()
+
+        # Show grouping details
+        print("Pipeline Groups:")
+        for group_name in sorted(df_with_groups['pipeline_group'].unique()):
+            group_df = df_with_groups[df_with_groups['pipeline_group'] == group_name]
+            split_indicator = " (split)" if "_g" in group_name else ""
+            print(f"  {group_name}{split_indicator}:")
+            print(f"    Properties: {len(group_df)}")
+            print(f"    Schemas: {', '.join(group_df['source_schema'].unique())}")
+        print()
 
         # Write output
         write_output_csv(df_with_groups, output_file)

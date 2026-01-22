@@ -45,12 +45,6 @@ def generate_pipeline_config(
     # Generate base group from prefix + priority
     df['base_group'] = df['prefix'].astype(str) + '_' + df['priority'].astype(str)
 
-    print("\n" + "="*80)
-    print("SQL SERVER PIPELINE CONFIGURATION")
-    print("="*80)
-    print(f"Max tables per gateway: {max_tables_per_gateway}")
-    print(f"Max tables per pipeline: {max_tables_per_pipeline}")
-
     # Step 1: Split by gateway capacity using shared function
     df = split_groups_by_size(
         df=df,
@@ -69,24 +63,6 @@ def generate_pipeline_config(
         suffix='g'
     )
 
-    # Print detailed breakdown
-    for project_name, project_group in df.groupby('project_name'):
-        print(f"\n{'='*60}")
-        print(f"Processing project: {project_name} ({len(project_group)} tables)")
-        print(f"{'='*60}")
-
-        for base_group in sorted(project_group['base_group'].unique()):
-            group_df = project_group[project_group['base_group'] == base_group]
-            print(f"\n  Group: {base_group} ({len(group_df)} tables)")
-
-            for gateway in sorted(group_df['gateway'].unique()):
-                gateway_tables = group_df[group_df['gateway'] == gateway]
-                print(f"    Gateway: {gateway} ({len(gateway_tables)} tables)")
-
-                for pipeline in sorted(gateway_tables['pipeline_group'].unique()):
-                    pipeline_tables = gateway_tables[gateway_tables['pipeline_group'] == pipeline]
-                    print(f"      Pipeline: {pipeline} ({len(pipeline_tables)} tables)")
-
     # Drop temporary base_group column
     df = df.drop(columns=['base_group'])
 
@@ -97,28 +73,6 @@ def generate_pipeline_config(
                      'gateway_worker_type', 'gateway_driver_type',
                      'prefix', 'priority', 'pipeline_group', 'gateway', 'connection_name', 'schedule']
     df_output = df[output_columns]
-
-    # Print summary statistics
-    print("\n" + "="*80)
-    print("SUMMARY")
-    print("="*80)
-    print(f"Total tables processed: {len(df_output)}")
-    print(f"Total projects: {df_output['project_name'].nunique()}")
-
-    print("\nBreakdown by project:")
-    for project in df_output['project_name'].unique():
-        project_data = df_output[df_output['project_name'] == project]
-        print(f"\n  {project}:")
-        print(f"    - Tables: {len(project_data)}")
-        print(f"    - Gateways: {project_data['gateway'].nunique()}")
-        print(f"    - Pipelines: {project_data['pipeline_group'].nunique()}")
-
-        # Show group breakdown within project
-        for prefix in project_data['prefix'].unique():
-            for priority in project_data[project_data['prefix'] == prefix]['priority'].unique():
-                group_data = project_data[(project_data['prefix'] == prefix) & (project_data['priority'] == priority)]
-                print(f"      • {prefix}_{priority}: {len(group_data)} tables, {group_data['gateway'].nunique()} gateways, {group_data['pipeline_group'].nunique()} pipelines")
-    print("="*80)
 
     return df_output
 
@@ -165,12 +119,64 @@ if __name__ == "__main__":
     # Step 4: Generate pipeline configuration
     # Note: CSV can contain connection_name, gateway_catalog, gateway_schema,
     #       gateway_worker_type, gateway_driver_type per row
+    max_tables_per_gateway = 250
+    max_tables_per_pipeline = 250
+
+    print("\n" + "="*80)
+    print("SQL SERVER PIPELINE CONFIGURATION")
+    print("="*80)
+    print(f"Max tables per gateway: {max_tables_per_gateway}")
+    print(f"Max tables per pipeline: {max_tables_per_pipeline}")
+
     output_df = generate_pipeline_config(
         df=normalized_df,
-        max_tables_per_group=1000
+        max_tables_per_gateway=max_tables_per_gateway,
+        max_tables_per_pipeline=max_tables_per_pipeline
     )
+
+    # Print detailed breakdown
+    for project_name, project_group in output_df.groupby('project_name'):
+        print(f"\n{'='*60}")
+        print(f"Processing project: {project_name} ({len(project_group)} tables)")
+        print(f"{'='*60}")
+
+        for prefix in sorted(project_group['prefix'].unique()):
+            for priority in sorted(project_group[project_group['prefix'] == prefix]['priority'].unique()):
+                group_df = project_group[(project_group['prefix'] == prefix) & (project_group['priority'] == priority)]
+                base_group = f"{prefix}_{priority}"
+                print(f"\n  Group: {base_group} ({len(group_df)} tables)")
+
+                for gateway in sorted(group_df['gateway'].unique()):
+                    gateway_tables = group_df[group_df['gateway'] == gateway]
+                    print(f"    Gateway: {gateway} ({len(gateway_tables)} tables)")
+
+                    for pipeline in sorted(gateway_tables['pipeline_group'].unique()):
+                        pipeline_tables = gateway_tables[gateway_tables['pipeline_group'] == pipeline]
+                        print(f"      Pipeline: {pipeline} ({len(pipeline_tables)} tables)")
+
+    # Print summary statistics
+    print("\n" + "="*80)
+    print("SUMMARY")
+    print("="*80)
+    print(f"Total tables processed: {len(output_df)}")
+    print(f"Total projects: {output_df['project_name'].nunique()}")
+
+    print("\nBreakdown by project:")
+    for project in output_df['project_name'].unique():
+        project_data = output_df[output_df['project_name'] == project]
+        print(f"\n  {project}:")
+        print(f"    - Tables: {len(project_data)}")
+        print(f"    - Gateways: {project_data['gateway'].nunique()}")
+        print(f"    - Pipelines: {project_data['pipeline_group'].nunique()}")
+
+        # Show group breakdown within project
+        for prefix in project_data['prefix'].unique():
+            for priority in project_data[project_data['prefix'] == prefix]['priority'].unique():
+                group_data = project_data[(project_data['prefix'] == prefix) & (project_data['priority'] == priority)]
+                print(f"      • {prefix}_{priority}: {len(group_data)} tables, {group_data['gateway'].nunique()} gateways, {group_data['pipeline_group'].nunique()} pipelines")
+    print("="*80)
 
     # Write output to CSV
     output_csv_path = 'examples/output_config.csv'
     output_df.to_csv(output_csv_path, index=False)
-    print(f"\nOutput written to: {output_csv_path}")
+    print(f"\n✓ Output written to: {output_csv_path}")
