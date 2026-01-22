@@ -26,7 +26,7 @@ from pathlib import Path
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from utilities import process_input_config, load_input_csv, split_groups_by_size
+from utilities import process_input_config, load_input_csv, generate_saas_pipeline_config
 
 
 def generate_pipeline_config(
@@ -56,29 +56,8 @@ def generate_pipeline_config(
     Returns:
         DataFrame with pipeline_group column added
     """
-    # Make a copy to avoid modifying the original dataframe
-    df = df.copy()
-
-    # Ensure prefix and priority are strings for consistent concatenation
-    df['prefix'] = df['prefix'].astype(str)
-    df['priority'] = df['priority'].astype(str).str.zfill(2)  # Pad to 2 digits
-
-    # Generate base pipeline_group: prefix_priority
-    df['base_group'] = df['prefix'] + '_' + df['priority']
-
-    # Use shared splitting function to handle capacity limits
-    df = split_groups_by_size(
-        df=df,
-        group_column='base_group',
-        max_size=max_tables_per_pipeline,
-        output_column='pipeline_group',
-        suffix='g'
-    )
-
-    # Drop temporary base_group column
-    df = df.drop(columns=['base_group'])
-
-    return df
+    # Use shared SaaS pipeline configuration function
+    return generate_saas_pipeline_config(df, max_tables_per_pipeline)
 
 
 def write_output_csv(df: pd.DataFrame, output_file: str):
