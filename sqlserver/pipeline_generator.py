@@ -281,13 +281,13 @@ Note:
         '--worker-type',
         type=str,
         default=None,
-        help='Default gateway worker node type if not in CSV (default: None for serverless)'
+        help='Default gateway worker node type if not in CSV (default: None)'
     )
     parser.add_argument(
         '--driver-type',
         type=str,
         default=None,
-        help='Default gateway driver node type if not in CSV (default: None for serverless)'
+        help='Default gateway driver node type if not in CSV (default: None)'
     )
     parser.add_argument(
         '--output-dir',
