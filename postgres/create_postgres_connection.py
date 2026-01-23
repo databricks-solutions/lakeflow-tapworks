@@ -7,17 +7,16 @@ stored in Databricks secrets.
 
 Usage:
     python create_postgres_connection.py <connection_name> <secret_scope> \\
-        --host <hostname> --port <port> --database <database>
+        --host <hostname> --port <port>
 
 Examples:
-    # Basic usage (prompts for host/port/database if not provided)
+    # Basic usage (prompts for host if not provided)
     python create_postgres_connection.py postgres_prod_conn jdbc_secrets
 
     # With all options
     python create_postgres_connection.py postgres_prod_conn jdbc_secrets \\
         --host postgres.example.com \\
         --port 5432 \\
-        --database mydb \\
         --username-key postgres_username \\
         --password-key postgres_password
 """
@@ -27,7 +26,7 @@ from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.catalog import ConnectionType
 
 
-def create_postgres_connection(connection_name, secret_scope, host, port, database,
+def create_postgres_connection(connection_name, secret_scope, host, port,
                                username_key='postgres_username',
                                password_key='postgres_password'):
     """
@@ -38,7 +37,6 @@ def create_postgres_connection(connection_name, secret_scope, host, port, databa
         secret_scope: Databricks secret scope containing credentials
         host: PostgreSQL hostname
         port: PostgreSQL port
-        database: Database name
         username_key: Secret key for username
         password_key: Secret key for password
 
@@ -56,10 +54,12 @@ def create_postgres_connection(connection_name, secret_scope, host, port, databa
     print(f"  Type: POSTGRESQL")
     print(f"  Host: {host}")
     print(f"  Port: {port}")
-    print(f"  Database: {database}")
     print(f"  Secret Scope: {secret_scope}")
     print(f"  Username Key: {username_key}")
     print(f"  Password Key: {password_key}")
+    print("\nNote:")
+    print("  - Unity Catalog POSTGRESQL connections do not accept a 'database' option.")
+    print("  - Choose the database per-table in your pipeline config (source_database).")
 
     print(f"\nCreating connection '{connection_name}'...")
 
@@ -68,7 +68,7 @@ def create_postgres_connection(connection_name, secret_scope, host, port, databa
             name=connection_name,
             connection_type=ConnectionType.POSTGRESQL,
             options={
-                "host": f"{host}/{database}",
+                "host": str(host),
                 "port": str(port),
                 "user": f"{{{{secrets/{secret_scope}/{username_key}}}}}",
                 "password": f"{{{{secrets/{secret_scope}/{password_key}}}}}"
@@ -118,14 +118,12 @@ Examples:
   # Specify all options
   python create_postgres_connection.py postgres_prod_conn jdbc_secrets \\
       --host postgres.example.com \\
-      --port 5432 \\
-      --database mydb
+      --port 5432
 
   # Custom secret keys
   python create_postgres_connection.py postgres_prod_conn jdbc_secrets \\
       --host postgres.example.com \\
       --port 5432 \\
-      --database mydb \\
       --username-key pg_user \\
       --password-key pg_pass
 
@@ -153,7 +151,6 @@ Prerequisites:
     parser.add_argument('secret_scope', help='Databricks secret scope containing credentials')
     parser.add_argument('--host', help='PostgreSQL hostname (e.g., postgres.example.com)')
     parser.add_argument('--port', type=int, default=5432, help='PostgreSQL port (default: 5432)')
-    parser.add_argument('--database', help='PostgreSQL database name')
     parser.add_argument('--username-key', default='postgres_username',
                        help='Secret key for username (default: postgres_username)')
     parser.add_argument('--password-key', default='postgres_password',
@@ -169,19 +166,11 @@ Prerequisites:
             print("[FAIL] Error: Hostname is required")
             sys.exit(1)
 
-    database = args.database
-    if not database:
-        database = input("PostgreSQL Database: ").strip()
-        if not database:
-            print("[FAIL] Error: Database name is required")
-            sys.exit(1)
-
     create_postgres_connection(
         connection_name=args.connection_name,
         secret_scope=args.secret_scope,
         host=host,
         port=args.port,
-        database=database,
         username_key=args.username_key,
         password_key=args.password_key
     )
