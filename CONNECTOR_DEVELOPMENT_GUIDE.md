@@ -94,7 +94,6 @@ def generate_pipeline_config(
 - `target_catalog` - Target Databricks catalog
 - `target_schema` - Target Databricks schema
 - `target_table_name` - Destination table name
-- `priority_flag` - Optional: 0=normal, 1=priority
 
 **Required Input Columns (SaaS):**
 - `source_schema` - Source schema (optional, e.g., "standard", "custom")
@@ -251,9 +250,9 @@ db1,dbo,orders,bronze,sales,orders
 
 **With Optional Columns:**
 ```csv
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,priority_flag,gateway_catalog,gateway_schema,connection_name,schedule,gateway_worker_type,gateway_driver_type
-db1,dbo,customers,bronze,sales,customers,0,bronze_gw,ingestion,sql_conn,*/15 * * * *,,
-db1,dbo,orders,bronze,sales,orders,1,bronze_gw,ingestion,sql_conn,*/15 * * * *,m5d.large,m5d.large
+source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,gateway_catalog,gateway_schema,connection_name,schedule,gateway_worker_type,gateway_driver_type
+db1,dbo,customers,bronze,sales,customers,bronze_gw,ingestion,sql_conn,*/15 * * * *,,
+db1,dbo,orders,bronze,sales,orders,bronze_gw,ingestion,sql_conn,*/15 * * * *,m5d.large,m5d.large
 ```
 
 **Note:** Schedule column is placed after connection_name so users can omit trailing optional columns (gateway_worker_type, gateway_driver_type) without adding empty commas.
@@ -401,15 +400,17 @@ touch {connector_name}/run_pipeline_generation.py
 
 **For Database Connectors:**
 1. Read CSV with source tables
-2. Group by `source_database`
-3. Separate priority tables (if `priority_flag=1`)
-4. Group tables into chunks (max_tables_per_group)
-5. Assign `pipeline_group` and `gateway` IDs
+2. Group by `(prefix, subgroup)` combinations
+3. Split groups exceeding max_tables_per_gateway into multiple gateways
+4. Split gateways exceeding max_tables_per_pipeline into multiple pipelines
+5. Assign `gateway` and `pipeline_group` IDs with format `prefix_subgroup_gw01_g01`
 
 **For SaaS Connectors:**
 1. Read CSV with source objects
-2. Generate `pipeline_group = {prefix}_{priority}`
-3. No gateway assignment needed
+2. Group by `(prefix, subgroup)` combinations
+3. Split groups exceeding max_tables_per_pipeline into multiple pipelines
+4. Generate `pipeline_group = {prefix}_{subgroup}_g01`
+5. No gateway assignment needed
 
 **Template:** See `sqlserver/load_balancing/load_balancer.py` (database) or `salesforce/load_balancing/load_balancer.py` (SaaS)
 

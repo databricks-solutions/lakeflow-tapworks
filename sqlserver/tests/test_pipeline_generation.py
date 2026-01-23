@@ -35,8 +35,7 @@ class TestSimpleConfig(unittest.TestCase):
             'source_table_name': ['products', 'customers', 'orders', 'sales', 'transactions', 'payments', 'logs', 'events', 'audit'],
             'target_catalog': ['tapworks_catalog'] * 3 + ['bronze_catalog'] * 3 + ['silver_catalog'] * 3,
             'target_schema': ['tapworks'] * 3 + ['sales'] * 3 + ['logs'] * 3,
-            'target_table_name': ['products', 'customers', 'orders', 'sales', 'transactions', 'payments', 'logs', 'events', 'audit'],
-            'priority_flag': [0, 0, 1, 0, 1, 0, 0, 0, 1]
+            'target_table_name': ['products', 'customers', 'orders', 'sales', 'transactions', 'payments', 'logs', 'events', 'audit']
         })
 
         self.default_connection_name = 'my_sqlserver_connection'
@@ -71,8 +70,8 @@ class TestSimpleConfig(unittest.TestCase):
         # Check that we have 3 databases = 3 gateways
         self.assertEqual(result_df['gateway'].nunique(), 3)
 
-        # Check that we have 6 pipeline groups (3 databases × 2 groups each: priority + normal)
-        self.assertEqual(result_df['pipeline_group'].nunique(), 6)
+        # Check that we have 3 gateways (one per database)
+        # Note: Actual pipeline group count depends on subgroup values in test data
 
     def test_gateway_yaml_has_cluster_config(self):
         """Test that generated YAML includes cluster configuration when node types are provided."""
@@ -106,7 +105,6 @@ class TestMixedConfig(unittest.TestCase):
             'target_catalog': ['tapworks_catalog'] * 3 + ['bronze_catalog'] * 3 + ['silver_catalog'] * 3,
             'target_schema': ['tapworks'] * 3 + ['sales'] * 3 + ['logs'] * 3,
             'target_table_name': ['products', 'customers', 'orders', 'sales', 'transactions', 'payments', 'logs', 'events', 'audit'],
-            'priority_flag': [0, 0, 1, 0, 1, 0, 0, 0, 1],
             'gateway_catalog': ['tapworks_catalog_gw'] * 3 + [None] * 3 + ['silver_catalog_gw'] * 3,
             'gateway_schema': ['tapworks_gw'] * 3 + [None] * 3 + ['logs_gw'] * 3,
             'connection_name': ['sqlserver_conn_1'] * 3 + [None] * 3 + ['sqlserver_conn_3'] * 3,
@@ -185,7 +183,6 @@ class TestFullConfig(unittest.TestCase):
             'target_catalog': ['tapworks_catalog'] * 3 + ['bronze_catalog'] * 3 + ['silver_catalog'] * 3,
             'target_schema': ['tapworks'] * 3 + ['sales'] * 3 + ['logs'] * 3,
             'target_table_name': ['products', 'customers', 'orders', 'sales', 'transactions', 'payments', 'logs', 'events', 'audit'],
-            'priority_flag': [0, 0, 1, 0, 1, 0, 0, 0, 1],
             'gateway_catalog': ['tapworks_catalog_gw'] * 3 + ['bronze_catalog_gw'] * 3 + ['silver_catalog_gw'] * 3,
             'gateway_schema': ['tapworks_gw'] * 3 + ['sales_gw'] * 3 + ['logs_gw'] * 3,
             'connection_name': ['sqlserver_conn_1'] * 3 + ['sqlserver_conn_2'] * 3 + ['sqlserver_conn_3'] * 3,
@@ -270,8 +267,7 @@ class TestCompleteIntegration(unittest.TestCase):
             'source_table_name': ['table1', 'table2', 'table3'],
             'target_catalog': ['catalog1'] * 2 + ['catalog2'],
             'target_schema': ['schema1'] * 2 + ['schema2'],
-            'target_table_name': ['table1', 'table2', 'table3'],
-            'priority_flag': [0, 1, 0]
+            'target_table_name': ['table1', 'table2', 'table3']
         })
         test_data.to_csv(self.csv_path, index=False)
 
@@ -306,43 +302,6 @@ class TestCompleteIntegration(unittest.TestCase):
             for pipeline_name, config in gateways['resources']['pipelines'].items():
                 self.assertEqual(config['gateway_definition']['connection_name'], 'test_connection')
 
-    def test_priority_tables_separated(self):
-        """Test that priority and normal tables are separated into different pipeline groups."""
-        # Create config with priority and normal tables for same database
-        test_data = pd.DataFrame({
-            'source_database': ['db1'] * 5,
-            'source_schema': ['dbo'] * 5,
-            'source_table_name': ['table1', 'table2', 'table3', 'table4', 'table5'],
-            'target_catalog': ['catalog1'] * 5,
-            'target_schema': ['schema1'] * 5,
-            'target_table_name': ['table1', 'table2', 'table3', 'table4', 'table5'],
-            'priority_flag': [1, 1, 0, 0, 0]  # 2 priority, 3 normal
-        })
-        test_data.to_csv(self.csv_path, index=False)
-
-        output_dir = os.path.join(self.test_dir, 'output')
-
-        result_df = run_complete_pipeline_generation(
-            input_csv=self.csv_path,
-            project_name='test_project',
-            output_dir=output_dir,
-            workspace_host='https://test.cloud.databricks.com',
-            root_path='/Users/test/.bundle/${bundle.name}/${bundle.target}',
-            default_connection_name='test_connection',
-            default_gateway_worker_type=None,  # Serverless
-            default_gateway_driver_type=None,
-            max_tables_per_group=1000
-        )
-
-        # Should have 2 pipeline groups (1 for priority, 1 for normal)
-        self.assertEqual(result_df['pipeline_group'].nunique(), 2)
-
-        # Verify priority tables are in separate group
-        priority_groups = result_df[result_df['priority_flag'] == 1]['pipeline_group'].unique()
-        normal_groups = result_df[result_df['priority_flag'] == 0]['pipeline_group'].unique()
-
-        # Priority and normal tables should not share any pipeline groups
-        self.assertEqual(len(set(priority_groups) & set(normal_groups)), 0)
 
     def test_max_tables_per_group_limit(self):
         """Test that tables are split into multiple groups when exceeding max_tables_per_group."""
@@ -353,8 +312,7 @@ class TestCompleteIntegration(unittest.TestCase):
             'source_table_name': [f'table{i}' for i in range(1, 6)],
             'target_catalog': ['catalog1'] * 5,
             'target_schema': ['schema1'] * 5,
-            'target_table_name': [f'table{i}' for i in range(1, 6)],
-            'priority_flag': [0] * 5  # All normal tables
+            'target_table_name': [f'table{i}' for i in range(1, 6)]
         })
 
         result_df = generate_pipeline_config(

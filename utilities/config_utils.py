@@ -95,8 +95,7 @@ def process_input_config(
             If None, no default values will be applied.
             Example:
             {
-                'schedule': '*/15 * * * *',
-                'priority_flag': 0
+                'schedule': '*/15 * * * *'
             }
         override_input_config (dict, optional): Dictionary of column overrides.
             Values in these columns will be replaced with the override value for ALL rows.
@@ -123,8 +122,7 @@ def process_input_config(
         ...     'connection_name'
         ... ]
         >>> defaults = {
-        ...     'schedule': '*/15 * * * *',
-        ...     'priority_flag': 0
+        ...     'schedule': '*/15 * * * *'
         ... }
         >>> override = {'schedule': '*/30 * * * *'}
         >>> normalized_df = process_input_config(df, required, defaults, override)

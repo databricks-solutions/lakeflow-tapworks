@@ -18,16 +18,16 @@ def generate_pipeline_config(
     This function expects a clean DataFrame (output from process_input_config).
 
     This script groups tables into pipeline_groups with the following logic:
-    - Each unique combination of (prefix, priority) becomes one base group
+    - Each unique combination of (prefix, subgroup) becomes one base group
     - If group exceeds max_tables_per_gateway, split into multiple gateways
     - Within each gateway, if tables exceed max_tables_per_pipeline, split into multiple pipelines
-    - Naming: prefix_priority_gw01_p01 (gateway 1, pipeline 1)
+    - Naming: prefix_subgroup_gw01_p01 (gateway 1, pipeline 1)
 
     Args:
         df (pd.DataFrame): Clean input dataframe (from process_input_config) with columns:
             - source_database, source_schema, source_table_name
             - target_catalog, target_schema, target_table_name
-            - prefix, priority
+            - prefix, subgroup
             - connection_name, schedule (already validated)
             - gateway_catalog, gateway_schema (already validated)
             - gateway_worker_type, gateway_driver_type (already validated)
@@ -37,7 +37,7 @@ def generate_pipeline_config(
     Returns:
         pd.DataFrame: The generated configuration dataframe with additional columns:
             - pipeline_group: Pipeline group identifier
-            - gateway: Gateway identifier (string format: prefix_priority_gw01)
+            - gateway: Gateway identifier (string format: prefix_subgroup_gw01)
     """
     # Use shared database pipeline configuration function
     return generate_database_pipeline_config(df, max_tables_per_gateway, max_tables_per_pipeline)
@@ -55,7 +55,6 @@ if __name__ == "__main__":
         'target_catalog', 'target_schema', 'target_table_name'
     ]
     default_values = {
-        'priority_flag': 0,
         'connection_name': 'conn_1',
         'gateway_catalog': None,  # Will be set to target_catalog if None
         'gateway_schema': None,   # Will be set to target_schema if None
@@ -107,9 +106,9 @@ if __name__ == "__main__":
         print(f"{'='*60}")
 
         for prefix in sorted(project_group['prefix'].unique()):
-            for priority in sorted(project_group[project_group['prefix'] == prefix]['priority'].unique()):
-                group_df = project_group[(project_group['prefix'] == prefix) & (project_group['priority'] == priority)]
-                base_group = f"{prefix}_{priority}"
+            for subgroup in sorted(project_group[project_group['prefix'] == prefix]['subgroup'].unique()):
+                group_df = project_group[(project_group['prefix'] == prefix) & (project_group['subgroup'] == subgroup)]
+                base_group = f"{prefix}_{subgroup}"
                 print(f"\n  Group: {base_group} ({len(group_df)} tables)")
 
                 for gateway in sorted(group_df['gateway'].unique()):
@@ -137,9 +136,9 @@ if __name__ == "__main__":
 
         # Show group breakdown within project
         for prefix in project_data['prefix'].unique():
-            for priority in project_data[project_data['prefix'] == prefix]['priority'].unique():
-                group_data = project_data[(project_data['prefix'] == prefix) & (project_data['priority'] == priority)]
-                print(f"      • {prefix}_{priority}: {len(group_data)} tables, {group_data['gateway'].nunique()} gateways, {group_data['pipeline_group'].nunique()} pipelines")
+            for subgroup in project_data[project_data['prefix'] == prefix]['subgroup'].unique():
+                group_data = project_data[(project_data['prefix'] == prefix) & (project_data['subgroup'] == subgroup)]
+                print(f"      • {prefix}_{subgroup}: {len(group_data)} tables, {group_data['gateway'].nunique()} gateways, {group_data['pipeline_group'].nunique()} pipelines")
     print("="*80)
 
     # Write output to CSV
