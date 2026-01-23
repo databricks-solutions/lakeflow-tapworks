@@ -39,7 +39,6 @@ Your CSV should include these columns:
 | `target_catalog` | Yes | Target Databricks catalog | `bronze` |
 | `target_schema` | Yes | Target schema | `sales` |
 | `target_table_name` | Yes | Target table name | `customers` |
-| `priority_flag` | No | 1 for priority, 0 for normal | `0` |
 | `gateway_catalog` | No | Gateway metadata catalog | `bronze_gw` |
 | `gateway_schema` | No | Gateway metadata schema | `ingestion` |
 | `connection_name` | No | Databricks connection name | `sql_conn` |
@@ -49,10 +48,10 @@ Your CSV should include these columns:
 
 **Example CSV:**
 ```csv
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,priority_flag,gateway_catalog,gateway_schema,connection_name,schedule,gateway_worker_type,gateway_driver_type
-db1,dbo,products,tapworks_catalog,tapworks,products,0,tapworks_catalog,tapworks,tapworks_sql_connection,*/15 * * * *,,
-db1,dbo,customers,tapworks_catalog,tapworks,customers,0,tapworks_catalog,tapworks,tapworks_sql_connection,0 */6 * * *,,
-db1,dbo,orders,tapworks_catalog,tapworks,orders,1,tapworks_catalog,tapworks,tapworks_sql_connection,0 */7 * * *,m5d.large,m5d.large
+source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,gateway_catalog,gateway_schema,connection_name,schedule,gateway_worker_type,gateway_driver_type
+db1,dbo,products,tapworks_catalog,tapworks,products,tapworks_catalog,tapworks,tapworks_sql_connection,*/15 * * * *,,
+db1,dbo,customers,tapworks_catalog,tapworks,customers,tapworks_catalog,tapworks,tapworks_sql_connection,0 */6 * * *,,
+db1,dbo,orders,tapworks_catalog,tapworks,orders,tapworks_catalog,tapworks,tapworks_sql_connection,0 */7 * * *,m5d.large,m5d.large
 ```
 
 ## Key Features
@@ -78,10 +77,10 @@ examples/{example_name}/deployment/
 
 ## Load Balancing Strategy
 
-1. **Database Separation** - Each `source_database` gets its own gateway
-2. **Priority Separation** - Tables with `priority_flag=1` go to separate pipelines
-3. **Load Balancing** - Tables grouped by `max_tables_per_group` (default 1000)
-4. **Sequential Assignment** - Pipeline groups assigned globally sequential IDs
+1. **Prefix + Subgroup Grouping** - Tables are grouped by `(prefix, subgroup)` combinations
+2. **Gateway Splitting** - Groups exceeding `max_tables_per_gateway` are split into multiple gateways
+3. **Pipeline Splitting** - Gateways exceeding `max_tables_per_pipeline` are split into multiple pipelines
+4. **Naming Convention** - Uses format `prefix_subgroup_gw01_g01` for gateway and pipeline identifiers
 
 ## Configuration
 

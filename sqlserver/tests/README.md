@@ -10,7 +10,7 @@ The test suite covers three main scenarios based on real usage patterns:
 Tests pipeline generation when the input CSV **does not have gateway configuration columns**.
 
 **Test Data**: Matches `simple_tapworks_config.csv`
-- CSV has only required columns (source/target info, priority_flag)
+- CSV has only required columns (source/target info)
 - All gateway configs should use default values
 - Tests:
   - Default connection name is applied to all databases
