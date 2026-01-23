@@ -16,7 +16,6 @@ from collections import defaultdict
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from core import SaaSConnector
-from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml, generate_resource_names
 
 
 class GoogleAnalyticsConnector(SaaSConnector):
@@ -106,7 +105,7 @@ class GoogleAnalyticsConnector(SaaSConnector):
             group_properties = groups[pipeline_group]
 
             # Generate resource names
-            names = generate_resource_names(pipeline_group, 'ga4')
+            names = self._generate_resource_names(pipeline_group)
 
             # Get catalog, schema, and connection_name from first property in group
             target_catalog = group_properties[0]['target_catalog']
@@ -204,8 +203,8 @@ class GoogleAnalyticsConnector(SaaSConnector):
 
             # Generate YAML content for this project
             pipelines_yaml = self._create_pipelines(project_df, str(project))
-            jobs_yaml = create_jobs(project_df, str(project), connector_type='ga4')
-            databricks_yaml = create_databricks_yml(
+            jobs_yaml = self._create_jobs(project_df, str(project))
+            databricks_yaml = self._create_databricks_yml(
                 project_name=str(project),
                 targets=targets,
                 default_target='dev'
