@@ -28,7 +28,7 @@ Complete example with all gateway configuration options specified in CSV:
 ### simple
 Minimal example without gateway configuration columns in CSV:
 - Uses default values for all gateway settings
-- Demonstrates serverless gateway configuration
+- Demonstrates gateway configuration without cluster settings
 
 **Input**: `simple/pipeline_config.csv`
 **Generated**: `simple/deployment/`

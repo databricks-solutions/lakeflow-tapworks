@@ -1,4 +1,4 @@
-project_name,source_catalog,source_schema,tables,target_catalog,target_schema,connection_name,prefix,priority,schedule
+project_name,source_catalog,source_schema,tables,target_catalog,target_schema,connection_name,prefix,subgroup,schedule
 ga4_ingestion,my-gcp-project,analytics_123456789,"events,events_intraday,users",ga4_connector,google_analytics,ga4_connection,business_unit1,01,0 */6 * * *
 ga4_ingestion,my-gcp-project,analytics_987654321,"events,events_intraday",ga4_connector,google_analytics,ga4_connection,business_unit1,01,0 */6 * * *
 ga4_ingestion,my-gcp-project,analytics_111222333,"events,users",ga4_connector,google_analytics,ga4_connection,business_unit1,02,0 */6 * * *

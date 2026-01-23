@@ -1,18 +1,14 @@
 """
-Shared utilities for lakehouse-tapworks connectors.
+Utility functions for lakehouse-tapworks connectors.
 
-This module provides common functionality used across all connectors
-(Salesforce, SQL Server, Google Analytics).
+This module provides only true utility functions that are not part of
+the connector class hierarchy. All configuration processing, YAML generation,
+and resource naming logic is implemented in core.BaseConnector.
 """
 
-from .config_utils import process_input_config, load_input_csv, create_jobs, create_databricks_yml, generate_resource_names
-from .cron_utils import convert_cron_to_quartz
+from .utilities import load_input_csv, convert_cron_to_quartz
 
 __all__ = [
-    'process_input_config',
     'load_input_csv',
-    'create_jobs',
-    'create_databricks_yml',
-    'generate_resource_names',
     'convert_cron_to_quartz'
 ]
