@@ -24,7 +24,7 @@ from utilities import process_input_config
 REQUIRED_COLUMNS = [
     'source_database', 'source_schema', 'source_table_name',
     'target_catalog', 'target_schema', 'target_table_name',
-    'prefix', 'priority', 'connection_name'
+    'prefix', 'subgroup', 'connection_name'
 ]
 
 DEFAULT_VALUES = {
@@ -47,7 +47,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc', 'sfdc'],
             'target_table_name': ['Account', 'MyCustom'],
             'prefix': ['sales', 'sales'],
-            'priority': ['01', '02'],
+            'subgroup': ['01', '02'],
             'connection_name': ['sfdc_conn', 'sfdc_conn'],
             'schedule': ['*/15 * * * *', '*/30 * * * *'],
             'include_columns': ['Id,Name', ''],
@@ -85,7 +85,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['Account'],
             'prefix': ['sales'],
-            'priority': ['01']
+            'subgroup': ['01']
         })
 
         with pytest.raises(ValueError, match="Missing required columns"):
@@ -119,7 +119,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['Account'],
             'prefix': ['sales'],
-            'priority': ['01'],
+            'subgroup': ['01'],
             'connection_name': ['my_conn']  # Now required
         })
 
@@ -155,7 +155,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc', 'sfdc'],
             'target_table_name': ['Account', 'Contact'],
             'prefix': ['sales', 'sales'],
-            'priority': ['01', '01'],
+            'subgroup': ['01', '01'],
             'connection_name': ['conn1', 'custom_conn'],  # Required, must have valid values
             'schedule': ['*/15 * * * *', None],  # NaN in optional
             'include_columns': [None, 'Id,Name'],  # NaN in optional
@@ -196,7 +196,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc', 'sfdc'],
             'target_table_name': ['Account', 'Contact'],
             'prefix': ['sales', 'sales'],
-            'priority': ['01', '01'],
+            'subgroup': ['01', '01'],
             'connection_name': ['conn1', 'my_conn'],  # Required, must have valid values
             'schedule': ['*/15 * * * *', ''],  # Empty string in optional
             'include_columns': ['', ''],  # Empty strings (default is also empty)
@@ -237,7 +237,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['Account'],
             'prefix': ['sales'],
-            'priority': ['01'],
+            'subgroup': ['01'],
             'connection_name': ['my_conn'],  # Required, must have valid value
             'schedule': ['\t\n'],  # Whitespace only in optional
         })
@@ -267,7 +267,7 @@ class TestProcessInputConfig:
             'target_schema': [],
             'target_table_name': [],
             'prefix': [],
-            'priority': []
+            'subgroup': []
         })
 
         with pytest.raises(ValueError, match="Input DataFrame is empty"):
@@ -287,7 +287,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc', 'sfdc', 'sfdc'],
             'target_table_name': ['Account', 'MyCustom', 'Contact'],
             'prefix': ['sales', 'marketing', 'sales'],
-            'priority': ['01', '02', '01'],
+            'subgroup': ['01', '02', '01'],
             'connection_name': ['conn1', 'conn2', 'conn3'],  # Required, all valid
             'schedule': [None, '*/30 * * * *', ''],  # NaN, valid, empty
             'include_columns': ['Id,Name', '', None],
@@ -328,7 +328,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc', 'sfdc'],
             'target_table_name': ['Account', 'MyCustom'],
             'prefix': ['sales', 'marketing'],
-            'priority': [1, 2],  # integers instead of strings
+            'subgroup': [1, 2],  # integers instead of strings
             'connection_name': ['conn1', 'conn2']
         })
 
@@ -340,7 +340,7 @@ class TestProcessInputConfig:
 
         # Should handle different types
         assert len(result) == 2
-        assert 'priority' in result.columns
+        assert 'subgroup' in result.columns
 
     def test_custom_defaults_applied_correctly(self):
         """Test that custom default values are applied correctly"""
@@ -352,7 +352,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['Account'],
             'prefix': ['sales'],
-            'priority': ['01'],
+            'subgroup': ['01'],
             'connection_name': ['my_custom_connection']
         })
 
@@ -383,7 +383,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['Account'],
             'prefix': ['sales'],
-            'priority': ['01'],
+            'subgroup': ['01'],
             'connection_name': ['my_conn']
         })
 
@@ -416,7 +416,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'] * num_rows,
             'target_table_name': [f'Table{i}' for i in range(num_rows)],
             'prefix': ['sales'] * num_rows,
-            'priority': ['01'] * num_rows,
+            'subgroup': ['01'] * num_rows,
             'connection_name': ['sfdc_connection'] * num_rows
         })
 
@@ -440,7 +440,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['My_Custom'],
             'prefix': ['sales-team-1'],
-            'priority': ['01'],
+            'subgroup': ['01'],
             'connection_name': ['conn@special!'],
             'include_columns': ['Id,Name__c,Custom_Field__c']
         })
@@ -467,7 +467,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc', 'sfdc'],
             'target_table_name': ['Account', 'Contact'],
             'prefix': ['sales', 'sales'],
-            'priority': ['01', '02'],
+            'subgroup': ['01', '02'],
             'connection_name': ['conn1', 'conn2'],
             'schedule': ['*/15 * * * *', '*/30 * * * *']
         })
@@ -499,7 +499,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc', 'sfdc', 'sfdc'],
             'target_table_name': ['Account', 'Contact', 'Lead'],
             'prefix': ['sales', 'marketing', 'sales'],
-            'priority': ['01', '02', '01'],
+            'subgroup': ['01', '02', '01'],
             'connection_name': ['conn1', 'conn2', 'conn3'],
             'schedule': ['*/15 * * * *', '*/30 * * * *', '*/45 * * * *']
         })
@@ -534,7 +534,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['Account'],
             'prefix': ['sales'],
-            'priority': ['01'],
+            'subgroup': ['01'],
             'connection_name': ['original_conn'],
             'schedule': ['*/15 * * * *']
         })
@@ -565,7 +565,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['Account'],
             'prefix': ['sales'],
-            'priority': ['01'],
+            'subgroup': ['01'],
             'connection_name': ['my_conn'],
             'schedule': ['*/15 * * * *']
         })
@@ -591,7 +591,7 @@ class TestProcessInputConfig:
             'target_schema': ['sfdc'],
             'target_table_name': ['Account'],
             'prefix': ['sales'],
-            'priority': ['01'],
+            'subgroup': ['01'],
             'connection_name': ['my_conn']
         })
 

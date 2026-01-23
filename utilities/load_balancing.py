@@ -40,12 +40,12 @@ def split_groups_by_size(
 
     Examples:
         >>> # Split SaaS connector pipelines (single-level)
-        >>> df['base_group'] = df['prefix'] + '_' + df['priority']
+        >>> df['base_group'] = df['prefix'] + '_' + df['subgroup']
         >>> df = split_groups_by_size(df, 'base_group', 250, 'pipeline_group', 'g')
         >>> # Result: marketing_01 (300 tables) → marketing_01_g01 (250), marketing_01_g02 (50)
 
         >>> # Split SQL Server gateways (two-level)
-        >>> df['base_group'] = df['prefix'] + '_' + df['priority']
+        >>> df['base_group'] = df['prefix'] + '_' + df['subgroup']
         >>> df = split_groups_by_size(df, 'base_group', 250, 'gateway', 'gw')
         >>> df = split_groups_by_size(df, 'gateway', 250, 'pipeline_group', 'g')
         >>> # Result: sales_01_gw01_g01, sales_01_gw01_g02, sales_01_gw02_g01
@@ -93,13 +93,13 @@ def generate_saas_pipeline_config(
     Generate pipeline configuration for SaaS connectors using single-level grouping.
 
     This is the standard implementation for SaaS connectors like Salesforce and Google Analytics
-    that don't require gateway resources. Uses prefix + priority grouping with automatic splitting
+    that don't require gateway resources. Uses prefix + subgroup grouping with automatic splitting
     when groups exceed capacity.
 
     Args:
         df (pd.DataFrame): Input DataFrame with required columns:
             - prefix: Business unit or grouping identifier
-            - priority: Priority level (will be padded to 2 digits)
+            - subgroup: Subgroup identifier (will be padded to 2 digits)
             Plus connector-specific columns (source/target tables, catalogs, schemas, etc.)
         max_tables_per_pipeline (int): Maximum items per pipeline (default: 250)
             Groups exceeding this will be split into multiple pipelines (_g01, _g02, etc.)
@@ -111,7 +111,7 @@ def generate_saas_pipeline_config(
         >>> # Salesforce with 300 tables in one group
         >>> df = pd.DataFrame({
         ...     'prefix': ['sales'] * 300,
-        ...     'priority': ['1'] * 300,
+        ...     'subgroup': ['1'] * 300,
         ...     'source_table_name': [f'table_{i}' for i in range(300)],
         ...     ...
         ... })
@@ -129,10 +129,10 @@ def generate_saas_pipeline_config(
 
     # Ensure consistent string formatting
     df['prefix'] = df['prefix'].astype(str)
-    df['priority'] = df['priority'].astype(str).str.zfill(2)  # Pad to 2 digits (01, 02, etc.)
+    df['subgroup'] = df['subgroup'].astype(str).str.zfill(2)  # Pad to 2 digits (01, 02, etc.)
 
-    # Generate base group from prefix + priority
-    df['base_group'] = df['prefix'] + '_' + df['priority']
+    # Generate base group from prefix + subgroup
+    df['base_group'] = df['prefix'] + '_' + df['subgroup']
 
     # Split groups by capacity using shared function
     df = split_groups_by_size(
@@ -158,14 +158,14 @@ def generate_database_pipeline_config(
     Generate pipeline configuration for database connectors using two-level grouping.
 
     This is the standard implementation for database connectors like SQL Server, MySQL, PostgreSQL
-    that require gateway resources. Uses prefix + priority grouping with two-level splitting:
+    that require gateway resources. Uses prefix + subgroup grouping with two-level splitting:
     1. Gateway level: Groups tables into gateways (max_tables_per_gateway)
     2. Pipeline level: Splits large gateways into multiple pipelines (max_tables_per_pipeline)
 
     Args:
         df (pd.DataFrame): Input DataFrame with required columns:
             - prefix: Business unit or grouping identifier
-            - priority: Priority level (will be padded to 2 digits)
+            - subgroup: Subgroup identifier (will be padded to 2 digits)
             Plus connector-specific columns (source/target tables, catalogs, schemas, gateway settings, etc.)
         max_tables_per_gateway (int): Maximum tables per gateway (default: 250)
             Groups exceeding this will be split into multiple gateways (_gw01, _gw02, etc.)
@@ -174,14 +174,14 @@ def generate_database_pipeline_config(
 
     Returns:
         pd.DataFrame: Input DataFrame with added columns:
-            - gateway: Gateway identifier (prefix_priority or prefix_priority_gw01, _gw02, etc.)
+            - gateway: Gateway identifier (prefix_subgroup or prefix_subgroup_gw01, _gw02, etc.)
             - pipeline_group: Pipeline group identifier
 
     Example:
         >>> # SQL Server with 600 tables in one group
         >>> df = pd.DataFrame({
         ...     'prefix': ['sales'] * 600,
-        ...     'priority': ['1'] * 600,
+        ...     'subgroup': ['1'] * 600,
         ...     'source_table_name': [f'table_{i}' for i in range(600)],
         ...     ...
         ... })
@@ -196,10 +196,10 @@ def generate_database_pipeline_config(
         array(['sales_01_gw01', 'sales_01_gw02', 'sales_01_gw03'])
 
     Naming conventions:
-        - Single gateway, single pipeline: prefix_priority (e.g., sales_01)
-        - Multiple gateways, single pipeline each: prefix_priority_gw01, prefix_priority_gw02
-        - Single gateway, multiple pipelines: prefix_priority_g01, prefix_priority_g02
-        - Multiple gateways, multiple pipelines: prefix_priority_gw01_g01, prefix_priority_gw01_g02
+        - Single gateway, single pipeline: prefix_subgroup (e.g., sales_01)
+        - Multiple gateways, single pipeline each: prefix_subgroup_gw01, prefix_subgroup_gw02
+        - Single gateway, multiple pipelines: prefix_subgroup_g01, prefix_subgroup_g02
+        - Multiple gateways, multiple pipelines: prefix_subgroup_gw01_g01, prefix_subgroup_gw01_g02
 
     Used by:
         - sqlserver/load_balancing/load_balancer.py
@@ -210,10 +210,10 @@ def generate_database_pipeline_config(
 
     # Ensure consistent string formatting
     df['prefix'] = df['prefix'].astype(str)
-    df['priority'] = df['priority'].astype(str).str.zfill(2)  # Pad to 2 digits (01, 02, etc.)
+    df['subgroup'] = df['subgroup'].astype(str).str.zfill(2)  # Pad to 2 digits (01, 02, etc.)
 
-    # Generate base group from prefix + priority
-    df['base_group'] = df['prefix'] + '_' + df['priority']
+    # Generate base group from prefix + subgroup
+    df['base_group'] = df['prefix'] + '_' + df['subgroup']
 
     # Step 1: Split by gateway capacity using shared function
     df = split_groups_by_size(

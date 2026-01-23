@@ -1,4 +1,4 @@
-project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,priority,connection_name,schedule,include_columns,exclude_columns
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,subgroup,connection_name,schedule,include_columns,exclude_columns
 sfdc_ingestion,Salesforce,standard,Account,main,sfdc_test,Account,business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,"Id,Name,Type,Industry,AnnualRevenue",
 sfdc_ingestion,Salesforce,standard,Contact,main,sfdc_test,Contact,business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,
 sfdc_ingestion,Salesforce,standard,Campaign,main,sfdc_test,Campaign,business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,

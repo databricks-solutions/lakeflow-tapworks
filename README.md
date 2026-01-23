@@ -13,28 +13,28 @@ Lakehouse Tapworks generates Lakeflow connect ingestion pipelines from user defi
 
 **Key principle:** One project = One DAB package = One deployment unit
 
-### Prefix + Priority Grouping
+### Prefix + Subgroup Grouping
 
-Tables are organized using **prefix** and **priority** to control pipeline grouping:
+Tables are organized using **prefix** and **subgroup** to control pipeline grouping:
 
 ```csv
-source_table_name,prefix,priority
+source_table_name,prefix,subgroup
 customers,sales,01
 orders,sales,01
 invoices,finance,02
 ```
 
 - **prefix**: Logical grouping identifier (e.g., 'sales', 'finance', 'marketing')
-- **priority**: subgroups, one groups might break into smaller ones ('01', '02', '03', etc.)
+- **subgroup**: subgroups, one groups might break into smaller ones ('01', '02', '03', etc.)
 
 **Grouping behavior:**
-- Tables with the same `(prefix, priority)` combination are grouped together
+- Tables with the same `(prefix, subgroup)` combination are grouped together
 - If prefix is missing/empty, defaults to `project_name`
-- If priority is missing/empty, defaults to `'01'`
+- If subgroup is missing/empty, defaults to `'01'`
 
 **Example grouping:**
 
-| Prefix | Priority | Result Group | Execution Order |
+| Prefix | Subgroup | Result Group | Execution Order |
 |--------|----------|--------------|-----------------|
 | sales  | 01       | sales_01     | 1st             |
 | sales  | 02       | sales_02     | 2nd             |
@@ -42,20 +42,20 @@ invoices,finance,02
 
 ### Load Balancing
 
-The toolkit automatically splits tables into multiple pipelines based on prefix, priority and max number of tables specified for diferent components:
+The toolkit automatically splits tables into multiple pipelines based on prefix, subgroup and max number of tables specified for diferent components:
 
 **SaaS Connectors (Salesforce, GA4):**
-- Single-level splitting: `prefix_priority` → pipelines
+- Single-level splitting: `prefix_subgroup` → pipelines
 - Splits when group exceeds `max_tables_per_pipeline` (default: 250)
 - Creates: `sales_01_g01`, `sales_01_g02`, etc.
 
 **Database Connectors (SQL Server):**
-- Two-level splitting: `prefix_priority` → gateways → pipelines
+- Two-level splitting: `prefix_subgroup` → gateways → pipelines
 - First splits into gateways at `max_tables_per_gateway` (default: 250)
 - Then splits each gateway into pipelines at `max_tables_per_pipeline` (default: 250)
 - Creates: `sales_01_gw01_g01`, `sales_01_gw01_g02`, `sales_01_gw02_g01`, etc.
 
-**Example:** 600 tables with prefix='sales', priority='01':
+**Example:** 600 tables with prefix='sales', subgroup='01':
 ```
 Database connector:
   sales_01 → sales_01_gw01 (250 tables) → sales_01_gw01_g01 (250 tables)
@@ -175,7 +175,7 @@ salesdb,dbo,customers,bronze,sales,customers,sql_server_prod
 **Optional columns:**
 - `project_name`: Project identifier (default: 'sqlserver_ingestion')
 - `prefix`: Grouping prefix (default: project_name)
-- `priority`: Execution priority (default: '01')
+- `subgroup`: Execution subgroup (default: '01')
 - `gateway_catalog`: Gateway storage catalog (default: target_catalog)
 - `gateway_schema`: Gateway storage schema (default: target_schema)
 - `gateway_worker_type`: Worker node type (e.g., 'm5d.large', default: None)
@@ -193,7 +193,7 @@ Account,bronze,salesforce,accounts,salesforce_prod
 **Optional columns:**
 - `project_name`: Project identifier (default: 'salesforce_ingestion')
 - `prefix`: Grouping prefix (default: project_name)
-- `priority`: Execution priority (default: '01')
+- `subgroup`: Execution subgroup (default: '01')
 - `schedule`: Cron schedule (default: None)
 
 ### Google Analytics 4
@@ -207,7 +207,7 @@ events_20240101,bronze,ga4,events_20240101,ga4_bigquery_prod
 **Optional columns:**
 - `project_name`: Project identifier (default: 'ga4_ingestion')
 - `prefix`: Grouping prefix (default: project_name)
-- `priority`: Execution priority (default: '01')
+- `subgroup`: Execution subgroup (default: '01')
 - `schedule`: Cron schedule (default: None)
 
 ## Usage Examples
@@ -267,10 +267,10 @@ run_complete_pipeline_generation(
 ### Example 3: Priority-Based Execution
 
 ```python
-# CSV with priority column
+# CSV with subgroup column
 ```
 ```csv
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,priority
+source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,subgroup
 salesdb,dbo,customers,bronze,sales,customers,sql_prod,01
 salesdb,dbo,orders,bronze,sales,orders,sql_prod,01
 salesdb,dbo,invoices,bronze,sales,invoices,sql_prod,02
@@ -456,7 +456,7 @@ databricks jobs list
 Specify unique settings for each table in the CSV:
 
 ```csv
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix,priority,gateway_worker_type
+source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix,subgroup,gateway_worker_type
 salesdb,dbo,big_table,bronze,sales,big_table,sql_prod,sales,01,m5d.2xlarge
 salesdb,dbo,small_table,bronze,sales,small_table,sql_prod,sales,01,m5d.large
 ```
@@ -515,7 +515,7 @@ generate_yaml_files(
 
 ```
 Stage 1: Load Balancing
-  Input CSV → Normalization → Grouping (prefix+priority) → Splitting (capacity-based) → Pipeline Config
+  Input CSV → Normalization → Grouping (prefix+subgroup) → Splitting (capacity-based) → Pipeline Config
 
 Stage 2: YAML Generation
   Pipeline Config → Gateway YAML + Pipeline YAML + Jobs YAML → DAB Package
@@ -525,12 +525,12 @@ Stage 2: YAML Generation
 
 **SaaS Connectors (Salesforce, GA4):**
 - Direct ingestion (no gateway)
-- Single-level grouping: prefix+priority → pipelines
+- Single-level grouping: prefix+subgroup → pipelines
 - OAuth/service account authentication
 
 **Database Connectors (SQL Server):**
 - Gateway-based ingestion
-- Two-level grouping: prefix+priority → gateways → pipelines
+- Two-level grouping: prefix+subgroup → gateways → pipelines
 - SQL connection via Databricks connection
 
 ### Design Principles
@@ -567,16 +567,16 @@ financedb,dbo,invoices,bronze,finance,invoices,sql_prod,company_data,finance
 ### Pattern 3: Incremental Rollout
 
 ```python
-# Week 1: Start with priority 01 tables
-df_priority_01 = df[df['priority'] == '01']
-run_complete_pipeline_generation(df_priority_01, ...)
+# Week 1: Start with subgroup 01 tables
+df_subgroup_01 = df[df['subgroup'] == '01']
+run_complete_pipeline_generation(df_subgroup_01, ...)
 
-# Week 2: Add priority 02 tables
-df_all = df[df['priority'].isin(['01', '02'])]
+# Week 2: Add subgroup 02 tables
+df_all = df[df['subgroup'].isin(['01', '02'])]
 run_complete_pipeline_generation(df_all, ...)
 ```
 
-**Behavior:** Adds new pipelines without affecting existing priority 01 pipelines.
+**Behavior:** Adds new pipelines without affecting existing subgroup 01 pipelines.
 
 ## Troubleshooting
 

@@ -3,7 +3,7 @@
 Unified pipeline generation script for Google Analytics 4 that combines configuration and YAML generation.
 
 This script demonstrates the complete two-part process:
-1. Pipeline configuration: Groups GA4 properties by prefix + priority
+1. Pipeline configuration: Groups GA4 properties by prefix + subgroup
 2. YAML generation: Creates Databricks Asset Bundle YAML files
 
 Note: Google Analytics 4 is a SaaS connector and does NOT require gateways.
@@ -35,8 +35,8 @@ def run_complete_pipeline_generation(
     """
     Complete pipeline generation process from GA4 property list to YAML files.
 
-    Pipeline grouping is based on prefix + priority combinations from the input DataFrame.
-    Each unique (prefix, priority) pair becomes a separate pipeline, with automatic splitting
+    Pipeline grouping is based on prefix + subgroup combinations from the input DataFrame.
+    Each unique (prefix, subgroup) pair becomes a separate pipeline, with automatic splitting
     if the group exceeds max_tables_per_pipeline.
 
     Args:
@@ -44,10 +44,10 @@ def run_complete_pipeline_generation(
             Must contain: source_catalog, source_schema, tables,
                          target_catalog, target_schema,
                          connection_name (all required)
-            Optional: project_name, prefix, priority
+            Optional: project_name, prefix, subgroup
                 - project_name: can be set via default_values or override_input_config
                 - prefix: defaults to project_name if missing/empty
-                - priority: defaults to "01" if missing/empty
+                - subgroup: defaults to "01" if missing/empty
         output_dir (str): Output directory for DAB project(s)
         targets (dict): Target environments configuration dict (required)
             Format: {'env_name': {'workspace_host': '...'}, ...}
@@ -89,8 +89,8 @@ def run_complete_pipeline_generation(
 
     Note:
         - connection_name is a required column in the DataFrame
-        - Properties are grouped by prefix+priority combinations
-        - Each unique (prefix, priority) pair creates a separate pipeline
+        - Properties are grouped by prefix+subgroup combinations
+        - Each unique (prefix, subgroup) pair creates a separate pipeline
     """
     print("="*80)
     print("STARTING COMPLETE GA4 PIPELINE GENERATION PROCESS")
@@ -119,7 +119,7 @@ def run_complete_pipeline_generation(
         override_input_config=override_input_config
     )
 
-    # Handle prefix and priority defaults
+    # Handle prefix and subgroup defaults
     # If prefix is missing or empty, use project_name
     if 'prefix' not in normalized_df.columns:
         normalized_df['prefix'] = normalized_df['project_name']
@@ -127,15 +127,15 @@ def run_complete_pipeline_generation(
         mask = normalized_df['prefix'].isna() | (normalized_df['prefix'].astype(str).str.strip() == '')
         normalized_df.loc[mask, 'prefix'] = normalized_df.loc[mask, 'project_name']
 
-    # If priority is missing or empty, use "01"
-    if 'priority' not in normalized_df.columns:
-        normalized_df['priority'] = '01'
+    # If subgroup is missing or empty, use "01"
+    if 'subgroup' not in normalized_df.columns:
+        normalized_df['subgroup'] = '01'
     else:
-        mask = normalized_df['priority'].isna() | (normalized_df['priority'].astype(str).str.strip() == '')
-        normalized_df.loc[mask, 'priority'] = '01'
+        mask = normalized_df['subgroup'].isna() | (normalized_df['subgroup'].astype(str).str.strip() == '')
+        normalized_df.loc[mask, 'subgroup'] = '01'
 
-    # Step 2: Generate pipeline configuration (prefix+priority grouping)
-    print(f"\n[Step 2/3] Generating pipeline configuration with prefix+priority grouping")
+    # Step 2: Generate pipeline configuration (prefix+subgroup grouping)
+    print(f"\n[Step 2/3] Generating pipeline configuration with prefix+subgroup grouping")
 
     pipeline_config_df = generate_pipeline_config(
         df=normalized_df,
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Generate Google Analytics 4 ingestion pipelines using prefix + priority grouping",
+        description="Generate Google Analytics 4 ingestion pipelines using prefix + subgroup grouping",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
