@@ -33,8 +33,8 @@ def run_complete_pipeline_generation(
     """
     Complete pipeline generation process from source table list to YAML files.
 
-    Pipeline grouping is based on prefix + priority combinations from the input DataFrame.
-    Each unique (prefix, priority) pair becomes a base group, then:
+    Pipeline grouping is based on prefix + subgroup combinations from the input DataFrame.
+    Each unique (prefix, subgroup) pair becomes a base group, then:
     - Split into gateways if exceeds max_tables_per_gateway
     - Split into pipelines within each gateway if exceeds max_tables_per_pipeline
 
@@ -43,10 +43,10 @@ def run_complete_pipeline_generation(
             Must contain: source_database, source_schema, source_table_name,
                          target_catalog, target_schema, target_table_name,
                          connection_name (all required)
-            Optional: project_name, prefix, priority
+            Optional: project_name, prefix, subgroup
                 - project_name: can be set via default_values or override_input_config
                 - prefix: defaults to project_name if missing/empty
-                - priority: defaults to "01" if missing/empty
+                - subgroup: defaults to "01" if missing/empty
         output_dir (str): Output directory for DAB project(s)
         targets (dict): Target environments configuration dict (required)
             Format: {'env_name': {'workspace_host': '...', 'root_path': '...'}, ...}
@@ -98,11 +98,11 @@ def run_complete_pipeline_generation(
 
     Note:
         - connection_name is a required column in the DataFrame
-        - prefix and priority are optional (prefix defaults to project_name, priority defaults to "01")
+        - prefix and subgroup are optional (prefix defaults to project_name, subgroup defaults to "01")
         - Gateway settings (gateway_catalog, gateway_schema, gateway_worker_type, gateway_driver_type)
           are optional and can vary per row
         - If gateway_catalog/gateway_schema are not provided, they default to target_catalog/target_schema
-        - Tables are grouped by prefix+priority, NOT by source_database
+        - Tables are grouped by prefix+subgroup, NOT by source_database
     """
     print("="*80)
     print("STARTING COMPLETE PIPELINE GENERATION PROCESS")
@@ -132,7 +132,7 @@ def run_complete_pipeline_generation(
         override_input_config=override_input_config
     )
 
-    # Handle prefix and priority defaults
+    # Handle prefix and subgroup defaults
     # If prefix is missing or empty, use project_name
     if 'prefix' not in normalized_df.columns:
         normalized_df['prefix'] = normalized_df['project_name']
@@ -140,12 +140,12 @@ def run_complete_pipeline_generation(
         mask = normalized_df['prefix'].isna() | (normalized_df['prefix'].astype(str).str.strip() == '')
         normalized_df.loc[mask, 'prefix'] = normalized_df.loc[mask, 'project_name']
 
-    # If priority is missing or empty, use "01"
-    if 'priority' not in normalized_df.columns:
-        normalized_df['priority'] = '01'
+    # If subgroup is missing or empty, use "01"
+    if 'subgroup' not in normalized_df.columns:
+        normalized_df['subgroup'] = '01'
     else:
-        mask = normalized_df['priority'].isna() | (normalized_df['priority'].astype(str).str.strip() == '')
-        normalized_df.loc[mask, 'priority'] = '01'
+        mask = normalized_df['subgroup'].isna() | (normalized_df['subgroup'].astype(str).str.strip() == '')
+        normalized_df.loc[mask, 'subgroup'] = '01'
 
     # Handle gateway_catalog and gateway_schema defaults (use target values if None)
     if 'gateway_catalog' in normalized_df.columns:
@@ -156,8 +156,8 @@ def run_complete_pipeline_generation(
         mask = normalized_df['gateway_schema'].isna()
         normalized_df.loc[mask, 'gateway_schema'] = normalized_df.loc[mask, 'target_schema']
 
-    # Step 2: Generate pipeline configuration (prefix + priority grouping with gateway/pipeline splitting)
-    print(f"\n[Step 2/3] Generating pipeline configuration with prefix+priority grouping")
+    # Step 2: Generate pipeline configuration (prefix + subgroup grouping with gateway/pipeline splitting)
+    print(f"\n[Step 2/3] Generating pipeline configuration with prefix+subgroup grouping")
 
     pipeline_config_df = generate_pipeline_config(
         df=normalized_df,

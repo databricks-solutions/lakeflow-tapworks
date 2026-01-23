@@ -1,4 +1,4 @@
-project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix,priority,schedule
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix,subgroup,schedule
 simple_sqlserver,db1,dbo,products,tapworks_catalog,tapworks,products,conn_1,core,01,*/15 * * * *
 simple_sqlserver,db1,dbo,customers,tapworks_catalog,tapworks,customers,conn_1,core,01,*/15 * * * *
 simple_sqlserver,db1,dbo,orders,tapworks_catalog,tapworks,orders,conn_1,core,02,*/15 * * * *
