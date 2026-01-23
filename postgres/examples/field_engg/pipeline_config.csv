@@ -1,0 +1,4 @@
+source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix,subgroup,schedule
+postgres,public,customers,main,postgres_cloudsql_test,customers,postgres_cloudsql_test_fixed,cloudsql,01,0 */6 * * *
+postgres,public,orders,main,postgres_cloudsql_test,orders,postgres_cloudsql_test_fixed,cloudsql,01,0 */6 * * *
+postgres,public,products,main,postgres_cloudsql_test,products,postgres_cloudsql_test_fixed,cloudsql,02,0 */12 * * *
