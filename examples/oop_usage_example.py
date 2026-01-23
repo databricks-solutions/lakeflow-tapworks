@@ -237,4 +237,4 @@ if __name__ == "__main__":
     print("Examples Complete!")
     print("="*80 + "\n")
     print("To run actual pipeline generation, uncomment the examples above")
-    print("or use the connector-specific pipeline_generator_oop.py scripts.")
+    print("or use the connector-specific pipeline_generator.py scripts.")

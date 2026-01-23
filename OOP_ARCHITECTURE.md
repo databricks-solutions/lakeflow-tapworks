@@ -215,11 +215,11 @@ The OOP architecture maintains the same configuration hierarchy as the functiona
 
 ## Command-Line Interface
 
-Each connector has an OOP-based CLI script:
+Each connector has a CLI script:
 
 **SQL Server:**
 ```bash
-python sqlserver/pipeline_generator_oop.py \
+python sqlserver/pipeline_generator.py \
   --input-csv input.csv \
   --project-name my_project \
   --workspace-host https://workspace.databricks.com \
@@ -228,7 +228,7 @@ python sqlserver/pipeline_generator_oop.py \
 
 **Salesforce:**
 ```bash
-python salesforce/pipeline_generator_oop.py \
+python salesforce/pipeline_generator.py \
   --input-csv input.csv \
   --project-name sfdc_ingestion \
   --workspace-host https://workspace.databricks.com
@@ -236,48 +236,27 @@ python salesforce/pipeline_generator_oop.py \
 
 **Google Analytics:**
 ```bash
-python google_analytics/pipeline_generator_oop.py \
+python google_analytics/pipeline_generator.py \
   --input-csv input.csv \
   --project-name ga4_ingestion \
   --workspace-host https://workspace.databricks.com
 ```
 
-## Backward Compatibility
+## Using the OOP Architecture
 
-The OOP architecture is **fully backward compatible**:
+All connectors follow the same pattern:
 
-- Original functional API (`run_complete_pipeline_generation()` function) still works
-- Original CLI scripts (`pipeline_generator.py`) still work
-- New OOP approach is available alongside functional approach
-- Shared utilities remain the same
-
-You can gradually migrate to OOP or use both approaches side-by-side.
-
-## Migration Guide
-
-### From Functional to OOP
-
-**Before (Functional):**
 ```python
-from sqlserver.pipeline_generator import run_complete_pipeline_generation
+from {connector}.connector import {ConnectorClass}
 from utilities import load_input_csv
 
-df = load_input_csv('input.csv')
-result = run_complete_pipeline_generation(
-    df=df,
-    output_dir='output',
-    targets={'dev': {'workspace_host': '...', 'root_path': '...'}},
-    default_values={'project_name': 'my_project'}
-)
-```
+# Create connector instance
+connector = {ConnectorClass}()
 
-**After (OOP):**
-```python
-from sqlserver.connector import SQLServerConnector
-from utilities import load_input_csv
-
-connector = SQLServerConnector()
+# Load input data
 df = load_input_csv('input.csv')
+
+# Generate pipelines
 result = connector.run_complete_pipeline_generation(
     df=df,
     output_dir='output',
@@ -286,11 +265,11 @@ result = connector.run_complete_pipeline_generation(
 )
 ```
 
-**Key Changes:**
-1. Import connector class instead of function
-2. Create connector instance
-3. Call method on connector instead of standalone function
-4. Everything else stays the same!
+**Key Points:**
+1. Import the connector class from `{connector}.connector`
+2. Create an instance of the connector
+3. Call `run_complete_pipeline_generation()` with your configuration
+4. The connector handles all complexity internally
 
 ## Testing with OOP
 
