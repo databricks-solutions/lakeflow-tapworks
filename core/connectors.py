@@ -33,7 +33,7 @@ from pathlib import Path
 import sys
 
 # Import shared utilities
-from utilities import process_input_config, load_input_csv
+from utilities import process_input_config, load_input_csv, convert_cron_to_quartz
 
 
 class BaseConnector(ABC):
@@ -191,6 +191,145 @@ class BaseConnector(ABC):
             df.loc[mask, 'subgroup'] = '01'
 
         return df
+
+    def _generate_resource_names(self, pipeline_group: str) -> Dict[str, str]:
+        """
+        Generate consistent resource names for pipelines and jobs.
+
+        Args:
+            pipeline_group: Pipeline group identifier (e.g., 'sales_01')
+
+        Returns:
+            Dictionary containing all resource names:
+                - pipeline_name: Display name for pipeline
+                - pipeline_resource_name: Resource identifier for pipeline
+                - job_name: Resource identifier for job
+                - job_display_name: Display name for job
+                - task_key: Task key for pipeline task
+        """
+        # Normalize connector type for display
+        connector_display = {
+            'sfdc': 'SFDC',
+            'salesforce': 'Salesforce',
+            'sqlserver': 'SQL Server',
+            'ga4': 'GA4'
+        }.get(self.connector_type, self.connector_type.upper())
+
+        return {
+            'pipeline_name': f"{connector_display} Ingestion - {pipeline_group}",
+            'pipeline_resource_name': f"pipeline_{self.connector_type}_{pipeline_group}",
+            'job_name': f"job_{self.connector_type}_{pipeline_group}",
+            'job_display_name': f"{connector_display} Pipeline Scheduler - {pipeline_group}",
+            'task_key': "run_pipeline"
+        }
+
+    def _create_jobs(self, df: pd.DataFrame, project_name: str) -> Dict:
+        """
+        Create job YAML configuration from dataframe.
+
+        Creates a scheduled job for each pipeline that triggers the pipeline on a cron schedule.
+
+        Args:
+            df: DataFrame containing pipeline_group and schedule columns
+            project_name: Project name prefix for all resources
+
+        Returns:
+            Dictionary with jobs YAML structure
+        """
+        jobs = {}
+
+        for pipeline_group, group_df in df.groupby('pipeline_group'):
+            schedule = group_df.iloc[0]['schedule']
+
+            # Only create job if schedule is defined
+            if pd.notna(schedule) and schedule and str(schedule).strip():
+                names = self._generate_resource_names(pipeline_group)
+
+                # Convert standard cron to Quartz format
+                quartz_schedule = convert_cron_to_quartz(schedule)
+
+                job_config = {
+                    'name': names['job_display_name'],
+                    'schedule': {
+                        'quartz_cron_expression': quartz_schedule,
+                        'timezone_id': 'UTC'
+                    },
+                    'tasks': [{
+                        'task_key': names['task_key'],
+                        'pipeline_task': {
+                            'pipeline_id': f"${{resources.pipelines.{names['pipeline_resource_name']}.id}}"
+                        }
+                    }]
+                }
+
+                # Add pause_status if specified
+                if 'pause_status' in group_df.columns:
+                    pause_status = group_df.iloc[0]['pause_status']
+                    if pd.notna(pause_status) and pause_status and str(pause_status).strip():
+                        job_config['pause_status'] = str(pause_status).upper()
+
+                jobs[names['job_name']] = job_config
+
+        return {'resources': {'jobs': jobs}}
+
+    def _create_databricks_yml(
+        self,
+        project_name: str,
+        targets: Dict[str, Dict],
+        default_target: str = 'dev'
+    ) -> Dict:
+        """
+        Create the main databricks.yml file with flexible target environments.
+
+        Args:
+            project_name: Project name for the bundle
+            targets: Dictionary of target configurations
+                Format: {'env_name': {'workspace_host': '...', 'root_path': '...', 'mode': '...'}}
+            default_target: Which target should be the default
+
+        Returns:
+            Dictionary with databricks.yml structure
+        """
+        if not targets:
+            raise ValueError("At least one target must be provided")
+
+        if default_target not in targets:
+            raise ValueError(f"default_target '{default_target}' must be one of: {list(targets.keys())}")
+
+        config = {
+            'bundle': {'name': project_name},
+            'include': ['resources/*.yml'],
+            'targets': {}
+        }
+
+        for target_name, target_config in targets.items():
+            if 'workspace_host' not in target_config:
+                raise ValueError(f"Target '{target_name}' must have 'workspace_host'")
+
+            # Auto-determine mode if not explicitly provided
+            mode = target_config.get('mode')
+            if not mode:
+                mode = 'production' if target_name == 'prod' else 'development'
+
+            # Build target configuration
+            target_def = {
+                'mode': mode,
+                'workspace': {
+                    'host': target_config['workspace_host']
+                }
+            }
+
+            # Add root_path if provided
+            if 'root_path' in target_config and target_config['root_path']:
+                target_def['workspace']['root_path'] = target_config['root_path']
+
+            # Mark as default if this is the default target
+            if target_name == default_target:
+                target_def['default'] = True
+
+            config['targets'][target_name] = target_def
+
+        return config
 
     @abstractmethod
     def generate_pipeline_config(

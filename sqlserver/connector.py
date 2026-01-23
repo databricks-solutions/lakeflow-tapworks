@@ -15,7 +15,6 @@ from typing import Dict
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from core import DatabaseConnector
-from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml, generate_resource_names
 
 
 class SQLServerConnector(DatabaseConnector):
@@ -153,7 +152,7 @@ class SQLServerConnector(DatabaseConnector):
             gateway_id = group_df.iloc[0]['gateway']
 
             # Generate resource names
-            names = generate_resource_names(pipeline_group, 'sqlserver')
+            names = self._generate_resource_names(pipeline_group)
 
             # Get target catalog and schema
             target_catalog = group_df.iloc[0]['target_catalog']
@@ -215,8 +214,8 @@ class SQLServerConnector(DatabaseConnector):
             # Generate YAML content for this project
             gateways_yaml = self._create_gateways(project_df, str(project))
             pipelines_yaml = self._create_pipelines(project_df, str(project))
-            jobs_yaml = create_jobs(project_df, str(project), connector_type='sqlserver')
-            databricks_yaml = create_databricks_yml(
+            jobs_yaml = self._create_jobs(project_df, str(project))
+            databricks_yaml = self._create_databricks_yml(
                 project_name=str(project),
                 targets=targets,
                 default_target='dev'
