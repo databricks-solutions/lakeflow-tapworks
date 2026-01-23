@@ -6,11 +6,17 @@ SaaSConnector interface for Salesforce data sources.
 """
 
 import sys
+import os
+import yaml
+import pandas as pd
 from pathlib import Path
+from typing import Dict
+from collections import defaultdict
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from utilities.connectors import SaaSConnector
+from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml, generate_resource_names
 
 
 class SalesforceConnector(SaaSConnector):
@@ -80,7 +86,99 @@ class SalesforceConnector(SaaSConnector):
         """Return default project name for Salesforce connector."""
         return 'sfdc_ingestion'
 
-    def generate_yaml_files(self, df, output_dir, targets):
+    def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
+        """
+        Create pipeline YAML configuration from dataframe.
+
+        Args:
+            df: DataFrame with pipeline configuration
+            project_name: Project name for resource naming
+
+        Returns:
+            Dictionary with pipeline YAML configuration
+        """
+        pipelines = {}
+
+        # Group tables by pipeline_group
+        groups = defaultdict(list)
+        for idx, row in df.iterrows():
+            groups[row['pipeline_group']].append(row)
+
+        print("\n" + "-"*80)
+        print("Pipeline Details:")
+        print("-"*80)
+
+        for pipeline_group in sorted(groups.keys()):
+            group_tables = groups[pipeline_group]
+
+            # Generate resource names
+            names = generate_resource_names(pipeline_group, 'sfdc')
+
+            # Get catalog, schema, and connection_name from first table in group
+            target_catalog = group_tables[0]['target_catalog']
+            target_schema = group_tables[0]['target_schema']
+            connection_name = group_tables[0]['connection_name']
+
+            print(f"\nPipeline: {pipeline_group}")
+            print(f"  Name: {names['pipeline_resource_name']}")
+            print(f"  Target: {target_catalog}.{target_schema}")
+            print(f"  Connection: {connection_name}")
+            print(f"  Tables: {len(group_tables)}")
+
+            # Create pipeline definition
+            pipeline_def = {
+                "name": names['pipeline_name'],
+                "catalog": target_catalog,
+                "schema": target_schema,
+                "ingestion_definition": {
+                    "connection_name": connection_name,
+                    "objects": []
+                }
+            }
+
+            # Add tables to this pipeline
+            for item in group_tables:
+                table_entry = {
+                    "table": {
+                        "source_schema": "objects",  # Salesforce uses 'objects' as source schema
+                        "source_table": item["source_table_name"],
+                        "destination_catalog": item["target_catalog"],
+                        "destination_schema": item["target_schema"],
+                        "destination_table": item["target_table_name"]
+                    }
+                }
+
+                # Add table_configuration if include_columns or exclude_columns are specified
+                table_config = {}
+
+                if 'include_columns' in item and pd.notna(item['include_columns']) and item['include_columns'].strip():
+                    include_cols = [col.strip() for col in str(item['include_columns']).split(',')]
+                    table_config['include_columns'] = include_cols
+
+                if 'exclude_columns' in item and pd.notna(item['exclude_columns']) and item['exclude_columns'].strip():
+                    exclude_cols = [col.strip() for col in str(item['exclude_columns']).split(',')]
+                    table_config['exclude_columns'] = exclude_cols
+
+                if table_config:
+                    table_entry["table"]["table_configuration"] = table_config
+
+                pipeline_def["ingestion_definition"]["objects"].append(table_entry)
+
+                # Show table in output
+                table_name = item["source_table_name"]
+                dest = f"{item['target_table_name']}"
+                col_info = ""
+                if 'include_columns' in table_config:
+                    col_info = f" [includes: {len(table_config['include_columns'])} cols]"
+                elif 'exclude_columns' in table_config:
+                    col_info = f" [excludes: {len(table_config['exclude_columns'])} cols]"
+                print(f"    - {table_name} → {dest}{col_info}")
+
+            pipelines[names['pipeline_resource_name']] = pipeline_def
+
+        return {'resources': {'pipelines': pipelines}}
+
+    def generate_yaml_files(self, df: pd.DataFrame, output_dir: str, targets: Dict[str, Dict]):
         """
         Generate YAML files for Salesforce connector without gateways.
 
@@ -94,7 +192,64 @@ class SalesforceConnector(SaaSConnector):
             output_dir: Output directory for DAB files
             targets: Dictionary of target environments
         """
-        # Import Salesforce specific YAML generator
-        from deployment.connector_settings_generator import generate_yaml_files
+        print("\n" + "="*80)
+        print("GENERATING DATABRICKS ASSET BUNDLE YAML")
+        print("="*80)
 
-        generate_yaml_files(df=df, output_dir=output_dir, targets=targets)
+        # Validate required columns
+        required_columns = [
+            'source_table_name', 'target_catalog', 'target_schema',
+            'target_table_name', 'pipeline_group', 'connection_name', 'schedule', 'project_name'
+        ]
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise ValueError(f"Missing required columns: {missing_columns}")
+
+        print(f"\nConfiguration:")
+        print(f"  Total tables: {len(df)}")
+        print(f"  Unique pipelines: {df['pipeline_group'].nunique()}")
+        print(f"  Unique projects: {df['project_name'].nunique()}")
+
+        # Group by project_name and create separate DAB packages
+        for project, project_df in df.groupby('project_name'):
+            project_output_dir = Path(output_dir) / str(project)
+            print(f"\n  Creating DAB for project: {project}")
+            print(f"    - Tables: {len(project_df)}")
+            print(f"    - Pipelines: {project_df['pipeline_group'].nunique()}")
+            print(f"    - Output: {project_output_dir}")
+
+            # Generate YAML content for this project
+            pipelines_yaml = self._create_pipelines(project_df, str(project))
+            jobs_yaml = create_jobs(project_df, str(project), connector_type='sfdc')
+            databricks_yaml = create_databricks_yml(
+                project_name=str(project),
+                targets=targets,
+                default_target='dev'
+            )
+
+            # Create directory structure
+            resources_dir = project_output_dir / 'resources'
+            resources_dir.mkdir(parents=True, exist_ok=True)
+
+            # Define output paths
+            databricks_yml_path = project_output_dir / 'databricks.yml'
+            pipelines_yml_path = resources_dir / 'pipelines.yml'
+            jobs_yml_path = resources_dir / 'jobs.yml'
+
+            # Write YAML files
+            with open(databricks_yml_path, 'w') as f:
+                yaml.dump(databricks_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+
+            with open(pipelines_yml_path, 'w') as f:
+                yaml.dump(pipelines_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+
+            with open(jobs_yml_path, 'w') as f:
+                yaml.dump(jobs_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+
+        print("\n" + "="*80)
+        print("YAML GENERATION COMPLETE")
+        print("="*80)
+        print(f"\nGenerated DAB project structure in: {output_dir}")
+        print(f"  ✓ {databricks_yml_path}")
+        print(f"  ✓ {pipelines_yml_path}")
+        print(f"  ✓ {jobs_yml_path}")

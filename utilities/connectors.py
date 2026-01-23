@@ -34,10 +34,6 @@ import sys
 
 # Import shared utilities
 from utilities import process_input_config, load_input_csv
-from utilities.load_balancing import (
-    generate_saas_pipeline_config,
-    generate_database_pipeline_config
-)
 
 
 class BaseConnector(ABC):
@@ -352,6 +348,49 @@ class DatabaseConnector(BaseConnector):
 
         return df
 
+    def _split_groups_by_size(
+        self,
+        df: pd.DataFrame,
+        group_column: str,
+        max_size: int,
+        output_column: str,
+        suffix: str
+    ) -> pd.DataFrame:
+        """
+        Split groups that exceed max_size into smaller chunks with sequential suffixes.
+
+        Args:
+            df: Input DataFrame with groups to split
+            group_column: Column containing group identifiers to split
+            max_size: Maximum rows per group
+            output_column: Column name for output group names
+            suffix: Suffix pattern for split groups ('g' for pipelines, 'gw' for gateways)
+
+        Returns:
+            DataFrame with output_column populated
+        """
+        df = df.copy()
+        df[output_column] = ''
+
+        for group_name in df[group_column].unique():
+            group_df = df[df[group_column] == group_name]
+
+            if len(group_df) > max_size:
+                # Split into chunks
+                num_chunks = (len(group_df) - 1) // max_size + 1
+
+                for i in range(num_chunks):
+                    start_idx = i * max_size
+                    end_idx = min((i + 1) * max_size, len(group_df))
+                    chunk_indices = group_df.iloc[start_idx:end_idx].index
+                    chunk_name = f"{group_name}_{suffix}{i+1:02d}"
+                    df.loc[chunk_indices, output_column] = chunk_name
+            else:
+                # No split needed
+                df.loc[group_df.index, output_column] = group_name
+
+        return df
+
     def generate_pipeline_config(
         self,
         df: pd.DataFrame,
@@ -373,31 +412,37 @@ class DatabaseConnector(BaseConnector):
         Returns:
             DataFrame with 'gateway' and 'pipeline_group' columns added
         """
-        return generate_database_pipeline_config(
+        df = df.copy()
+
+        # Ensure consistent string formatting
+        df['prefix'] = df['prefix'].astype(str)
+        df['subgroup'] = df['subgroup'].astype(str).str.zfill(2)
+
+        # Generate base group from prefix + subgroup
+        df['base_group'] = df['prefix'] + '_' + df['subgroup']
+
+        # Step 1: Split by gateway capacity
+        df = self._split_groups_by_size(
             df=df,
-            max_tables_per_gateway=max_tables_per_gateway,
-            max_tables_per_pipeline=max_tables_per_pipeline
+            group_column='base_group',
+            max_size=max_tables_per_gateway,
+            output_column='gateway',
+            suffix='gw'
         )
 
-    def generate_yaml_files(
-        self,
-        df: pd.DataFrame,
-        output_dir: str,
-        targets: Dict[str, Dict]
-    ):
-        """
-        Generate YAML files for database connector with gateways.
+        # Step 2: Split each gateway by pipeline capacity
+        df = self._split_groups_by_size(
+            df=df,
+            group_column='gateway',
+            max_size=max_tables_per_pipeline,
+            output_column='pipeline_group',
+            suffix='g'
+        )
 
-        Creates:
-        - databricks.yml (root configuration)
-        - resources/gateways.yml (gateway definitions)
-        - resources/pipelines.yml (pipeline definitions)
-        - resources/jobs.yml (scheduled jobs)
-        """
-        # Import here to avoid circular dependency
-        from deployment.connector_settings_generator import generate_yaml_files as gen_yaml
+        # Drop temporary base_group column
+        df = df.drop(columns=['base_group'])
 
-        gen_yaml(df=df, output_dir=output_dir, targets=targets)
+        return df
 
 
 class SaaSConnector(BaseConnector):
@@ -409,6 +454,49 @@ class SaaSConnector(BaseConnector):
 
     Examples: Salesforce, Google Analytics, ServiceNow, Workday
     """
+
+    def _split_groups_by_size(
+        self,
+        df: pd.DataFrame,
+        group_column: str,
+        max_size: int,
+        output_column: str,
+        suffix: str
+    ) -> pd.DataFrame:
+        """
+        Split groups that exceed max_size into smaller chunks with sequential suffixes.
+
+        Args:
+            df: Input DataFrame with groups to split
+            group_column: Column containing group identifiers to split
+            max_size: Maximum rows per group
+            output_column: Column name for output group names
+            suffix: Suffix pattern for split groups ('g' for pipelines)
+
+        Returns:
+            DataFrame with output_column populated
+        """
+        df = df.copy()
+        df[output_column] = ''
+
+        for group_name in df[group_column].unique():
+            group_df = df[df[group_column] == group_name]
+
+            if len(group_df) > max_size:
+                # Split into chunks
+                num_chunks = (len(group_df) - 1) // max_size + 1
+
+                for i in range(num_chunks):
+                    start_idx = i * max_size
+                    end_idx = min((i + 1) * max_size, len(group_df))
+                    chunk_indices = group_df.iloc[start_idx:end_idx].index
+                    chunk_name = f"{group_name}_{suffix}{i+1:02d}"
+                    df.loc[chunk_indices, output_column] = chunk_name
+            else:
+                # No split needed
+                df.loc[group_df.index, output_column] = group_name
+
+        return df
 
     def generate_pipeline_config(
         self,
@@ -428,29 +516,25 @@ class SaaSConnector(BaseConnector):
         Returns:
             DataFrame with 'pipeline_group' column added
         """
-        return generate_saas_pipeline_config(
+        df = df.copy()
+
+        # Ensure consistent string formatting
+        df['prefix'] = df['prefix'].astype(str)
+        df['subgroup'] = df['subgroup'].astype(str).str.zfill(2)
+
+        # Generate base group from prefix + subgroup
+        df['base_group'] = df['prefix'] + '_' + df['subgroup']
+
+        # Split groups by capacity
+        df = self._split_groups_by_size(
             df=df,
-            max_tables_per_pipeline=max_tables_per_pipeline
+            group_column='base_group',
+            max_size=max_tables_per_pipeline,
+            output_column='pipeline_group',
+            suffix='g'
         )
 
-    def generate_yaml_files(
-        self,
-        df: pd.DataFrame,
-        output_dir: str,
-        targets: Dict[str, Dict]
-    ):
-        """
-        Generate YAML files for SaaS connector without gateways.
+        # Drop temporary base_group column
+        df = df.drop(columns=['base_group'])
 
-        Creates:
-        - databricks.yml (root configuration)
-        - resources/pipelines.yml (pipeline definitions)
-        - resources/jobs.yml (scheduled jobs)
-        """
-        # Import here to avoid circular dependency
-        # Each SaaS connector should have its own generate_yaml_files in deployment/
-        # This will be implemented in the connector-specific module
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must implement generate_yaml_files() "
-            "by importing from its deployment module"
-        )
+        return df
