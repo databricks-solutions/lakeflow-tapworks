@@ -179,7 +179,7 @@ def example_custom_connector():
     print("="*80 + "\n")
 
     example_code = """
-    from utilities.connectors import SaaSConnector
+    from core import SaaSConnector
 
     class MySaaSConnector(SaaSConnector):
         @property
