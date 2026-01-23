@@ -273,19 +273,11 @@ class BaseConnector(ABC):
                 - job_display_name: Display name for job
                 - task_key: Task key for pipeline task
         """
-        # Normalize connector type for display
-        connector_display = {
-            'sfdc': 'SFDC',
-            'salesforce': 'Salesforce',
-            'sqlserver': 'SQL Server',
-            'ga4': 'GA4'
-        }.get(self.connector_type, self.connector_type.upper())
-
         return {
-            'pipeline_name': f"{connector_display} Ingestion - {pipeline_group}",
-            'pipeline_resource_name': f"pipeline_{self.connector_type}_{pipeline_group}",
-            'job_name': f"job_{self.connector_type}_{pipeline_group}",
-            'job_display_name': f"{connector_display} Pipeline Scheduler - {pipeline_group}",
+            'pipeline_name': f"Ingestion - {pipeline_group}",
+            'pipeline_resource_name': f"pipeline_{pipeline_group}",
+            'job_name': f"job_{pipeline_group}",
+            'job_display_name': f"Pipeline Scheduler - {pipeline_group}",
             'task_key': "run_pipeline"
         }
 
