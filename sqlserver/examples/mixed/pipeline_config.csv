@@ -1,10 +1,10 @@
-project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,priority_flag,gateway_catalog,gateway_schema,connection_name,schedule,gateway_worker_type,gateway_driver_type
-mixed_sqlserver,db1,dbo,products,tapworks_catalog,tapworks,products,0,tapworks_catalog_gw,tapworks_gw,sqlserver_conn_1,*/15 * * * *,m5d.large,m5d.large
-mixed_sqlserver,db1,dbo,customers,tapworks_catalog,tapworks,customers,0,tapworks_catalog_gw,tapworks_gw,sqlserver_conn_1,*/15 * * * *,m5d.large,m5d.large
-mixed_sqlserver,db1,dbo,orders,tapworks_catalog,tapworks,orders,1,tapworks_catalog_gw,tapworks_gw,sqlserver_conn_1,*/15 * * * *,m5d.large,m5d.large
-mixed_sqlserver,db2,dbo,sales,bronze_catalog,sales,sales,0,,,sqlserver_conn_2,*/15 * * * *,,
-mixed_sqlserver,db2,dbo,transactions,bronze_catalog,sales,transactions,1,,,sqlserver_conn_2,*/15 * * * *,,
-mixed_sqlserver,db2,dbo,payments,bronze_catalog,sales,payments,0,,,sqlserver_conn_2,*/15 * * * *,,
-mixed_sqlserver,db3,dbo,logs,silver_catalog,logs,logs,0,silver_catalog_gw,logs_gw,sqlserver_conn_3,*/15 * * * *,,
-mixed_sqlserver,db3,dbo,events,silver_catalog,logs,events,0,silver_catalog_gw,logs_gw,sqlserver_conn_3,*/15 * * * *,,
-mixed_sqlserver,db3,dbo,audit,silver_catalog,logs,audit,1,silver_catalog_gw,logs_gw,sqlserver_conn_3,*/15 * * * *,,
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,subgroup,gateway_catalog,gateway_schema,connection_name,schedule,gateway_worker_type,gateway_driver_type
+mixed_sqlserver,db1,dbo,products,tapworks_catalog,tapworks,products,business_unit1,01,tapworks_catalog_gw,tapworks_gw,sqlserver_conn_1,*/15 * * * *,m5d.large,m5d.large
+mixed_sqlserver,db1,dbo,customers,tapworks_catalog,tapworks,customers,business_unit1,01,tapworks_catalog_gw,tapworks_gw,sqlserver_conn_1,*/15 * * * *,m5d.large,m5d.large
+mixed_sqlserver,db1,dbo,orders,tapworks_catalog,tapworks,orders,business_unit1,02,tapworks_catalog_gw,tapworks_gw,sqlserver_conn_1,*/15 * * * *,m5d.large,m5d.large
+mixed_sqlserver,db2,dbo,sales,bronze_catalog,sales,sales,business_unit2,01,,,sqlserver_conn_2,*/15 * * * *,,
+mixed_sqlserver,db2,dbo,transactions,bronze_catalog,sales,transactions,business_unit2,02,,,sqlserver_conn_2,*/15 * * * *,,
+mixed_sqlserver,db2,dbo,payments,bronze_catalog,sales,payments,business_unit2,01,,,sqlserver_conn_2,*/15 * * * *,,
+mixed_sqlserver,db3,dbo,logs,silver_catalog,logs,logs,logging,01,silver_catalog_gw,logs_gw,sqlserver_conn_3,*/15 * * * *,,
+mixed_sqlserver,db3,dbo,events,silver_catalog,logs,events,logging,01,silver_catalog_gw,logs_gw,sqlserver_conn_3,*/15 * * * *,,
+mixed_sqlserver,db3,dbo,audit,silver_catalog,logs,audit,logging,02,silver_catalog_gw,logs_gw,sqlserver_conn_3,*/15 * * * *,,

@@ -1,4 +1,4 @@
-project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,priority,connection_name,schedule,include_columns,exclude_columns
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,subgroup,connection_name,schedule,include_columns,exclude_columns
 tapworks_sfdc,Salesforce,standard,Account,tapworks_catalog,sfdc_test,Account,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,"Id,Name,Type,Industry,AnnualRevenue,SystemModstamp,IsDeleted",
 tapworks_sfdc,Salesforce,standard,Contact,tapworks_catalog,sfdc_test,Contact,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,
 tapworks_sfdc,Salesforce,standard,Campaign,tapworks_catalog,sfdc_test,Campaign,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,

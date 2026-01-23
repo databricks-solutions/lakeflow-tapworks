@@ -1,0 +1,38 @@
+resources:
+  jobs:
+    job_tapworks_business_unit1_01:
+      name: Pipeline Scheduler - tapworks_business_unit1_01
+      schedule:
+        quartz_cron_expression: 0 0 0 ? * 0
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_tapworks_business_unit1_01.id}
+    job_tapworks_business_unit1_02:
+      name: Pipeline Scheduler - tapworks_business_unit1_02
+      schedule:
+        quartz_cron_expression: 0 0 0 ? * 0
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_tapworks_business_unit1_02.id}
+    job_tapworks_business_unit2_01:
+      name: Pipeline Scheduler - tapworks_business_unit2_01
+      schedule:
+        quartz_cron_expression: 0 0 0 ? * 0
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_tapworks_business_unit2_01.id}
+    job_tapworks_business_unit3_01:
+      name: Pipeline Scheduler - tapworks_business_unit3_01
+      schedule:
+        quartz_cron_expression: 0 0 0 ? * 0
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_tapworks_business_unit3_01.id}
