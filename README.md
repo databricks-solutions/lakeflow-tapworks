@@ -11,34 +11,24 @@ Lakehouse Tapworks generates Lakeflow connect ingestion pipelines from user defi
 - **Salesforce** - SaaS connector for Salesforce objects
 - **Google Analytics 4** - SaaS connector via BigQuery integration
 
-**Key principle:** One project = One DAB package = One deployment unit
-
-### Prefix + Subgroup Grouping
-
-Tables are organized using **prefix** and **subgroup** to control pipeline grouping:
-
-```csv
-source_table_name,prefix,subgroup
-customers,sales,01
-orders,sales,01
-invoices,finance,02
+### Config columns
+**Main columns**
+```Project_name 
+Source database
+Source table
+Target catalog
+Target Schema
+Target Table name
 ```
 
-- **prefix**: Logical grouping identifier (e.g., 'sales', 'finance', 'marketing')
-- **subgroup**: subgroups, one groups might break into smaller ones ('01', '02', '03', etc.)
+**Additional major columns**
+```Prefix (if missing replaced with project name)
+Subgroup (specifies spliting of the pipeline group specified by Prefix into smaller groups)
+max tables per pipeline
+max table per gateway (for database connectors)
+```
 
-**Grouping behavior:**
-- Tables with the same `(prefix, subgroup)` combination are grouped together
-- If prefix is missing/empty, defaults to `project_name`
-- If subgroup is missing/empty, defaults to `'01'`
-
-**Example grouping:**
-
-| Prefix | Subgroup | Result Group | Execution Order |
-|--------|----------|--------------|-----------------|
-| sales  | 01       | sales_01     | 1st             |
-| sales  | 02       | sales_02     | 2nd             |
-| finance| 01       | finance_01   | 1st (parallel)  |
+For each project name a separate DAB package is genrated. If a single project_name all pipelines are deplyed using a single databricks.yml
 
 ### Load Balancing
 
@@ -68,30 +58,40 @@ SaaS connector:
           → sales_01_g03 (100 tables)
 ```
 
-## Quick Start
 
-```bash
-# 1. Navigate to connector directory
-cd sqlserver  # or salesforce, google_analytics
+### Prefix + Subgroup Grouping
 
-# 2. Prepare your input CSV with tables to ingest
-# See "Input CSV Format" section below
+Tables are organized using **prefix** and **subgroup** to control pipeline grouping:
 
-# 3. Run the pipeline generator
-python pipeline_generator.py \
-  --input-csv my_tables.csv \
-  --project-name my_project \
-  --workspace-host https://my-workspace.cloud.databricks.com \
-  --root-path '/Users/me/.bundle/${bundle.name}/${bundle.target}'
-
-# 4. Deploy to Databricks
-cd dab_project/my_project
-databricks bundle deploy -t dev
+```csv
+source_table_name,prefix,subgroup
+customers,sales,01
+orders,sales,01
+invoices,finance,02
 ```
 
-## Core Concepts
+- **prefix**: Logical grouping identifier (e.g., 'sales', 'finance', 'marketing')
+- **subgroup**: subgroups, one groups might break into smaller ones ('01', '02', '03', etc.)
 
-### Project Organization
+**Grouping behavior:**
+- Tables with the same `(prefix, subgroup)` combination are grouped together
+- If prefix is missing/empty, defaults to `project_name`
+- If subgroup is missing/empty, defaults to `'01'`
+
+**Example grouping:**
+
+| Prefix | Subgroup | Result Group | Execution Order |
+|--------|----------|--------------|-----------------|
+| sales  | 01       | sales_01     | 1st             |
+| sales  | 02       | sales_02     | 2nd             |
+| finance| 01       | finance_01   | 1st (parallel)  |
+
+
+### max tables per pipeline/gateway
+groups deinfed by project_name, prefix and subgroups will be split further if the number of tables assigned to each subgroups is more than the max table specified. 
+
+
+### DAB Project Organization
 
 Each unique `project_name` creates a separate Databricks Asset Bundle (DAB) package:
 
@@ -110,17 +110,14 @@ output/
 ```
 
 
-## Configuration Hierarchy
+## Configuration 
 
-Configuration values are applied in this order (later values override earlier ones):
+Config values can be specified in the columns read from the config (can be a csv file or a delta table for example)
+These values when passed to the run_complete function as a dataframe can be replaced by vluaes specified in override_vaules. Also if columns are missing from the config or have empty values can be replaces by values passed using default_values.
 
-```
-1. Configuration column values (per row)
-   ↓
-2. default_values parameter (function argument)
-   ↓
-3. override_input_config parameter (function argument)
-```
+Doing this you can only specify what's different between pipelines using the config then use default_values to specify what's shared across pipelines.
+Also can override what's in the config if needed. For example you can pause/unpause the pipelines by passing pause_state:paused/unpaused to run_complete_pipeline then redeployt the resources.
+
 
 **Example:**
 
@@ -355,264 +352,3 @@ run_complete_pipeline_generation(
 ```
 
 **Result:** Every row uses 'prod_sql_server' regardless of CSV values.
-
-## Load Balancing Configuration
-
-Control how tables are split into pipelines and gateways:
-
-```python
-run_complete_pipeline_generation(
-    df=input_df,
-    output_dir='output',
-    targets={'dev': {...}},
-    max_tables_per_gateway=500,    # SQL Server only (default: 250)
-    max_tables_per_pipeline=100,   # All connectors (default: 250)
-)
-```
-
-**Guidelines:**
-- **Databricks limit**: 500 tables per pipeline maximum
-- **Recommended**: 250 tables per pipeline for optimal performance
-- **Gateway limit**: 250 tables recommended for SQL Server gateways
-- **Large datasets**: Lower values (50-100) for better parallelism
-
-**Example:** 1000 tables with `max_tables_per_gateway=300`, `max_tables_per_pipeline=100`:
-```
-1000 tables → 4 gateways (300+300+300+100)
-Each gateway → 3-4 pipelines (100 tables each)
-Total: 4 gateways, 10 pipelines
-```
-
-## Output Structure
-
-After running the generator:
-
-```
-output/
-└── {project_name}/
-    ├── databricks.yml              # Root DAB configuration
-    │                                # - Project metadata
-    │                                # - Target environments (dev, prod, etc.)
-    │                                # - Resource includes
-    └── resources/
-        ├── gateways.yml            # Gateway definitions (SQL Server only)
-        │                           # - Connection settings
-        │                           # - Cluster configuration
-        │                           # - Storage locations
-        ├── pipelines.yml           # Pipeline definitions
-        │                           # - Table mappings
-        │                           # - Ingestion settings
-        │                           # - Target catalogs/schemas
-        └── jobs.yml                # Scheduled jobs
-                                    # - Cron schedules
-                                    # - Pipeline triggers
-```
-
-## Deployment
-
-### Deploy to Databricks
-
-```bash
-cd output/{project_name}
-
-# Validate bundle
-databricks bundle validate -t dev
-
-# Deploy to development
-databricks bundle deploy -t dev
-
-# Deploy to production
-databricks bundle deploy -t prod
-```
-
-### Update Existing Deployment
-
-```bash
-# Regenerate with new CSV
-python pipeline_generator.py --input-csv updated_tables.csv ...
-
-# Deploy updates
-cd output/{project_name}
-databricks bundle deploy -t prod
-```
-
-### Monitor Pipelines
-
-```bash
-# List deployed resources
-databricks bundle resources list -t prod
-
-# View pipeline runs
-databricks pipelines list
-
-# Check job status
-databricks jobs list
-```
-
-## Advanced Configuration
-
-### Per-Table Custom Settings
-
-Specify unique settings for each table in the CSV:
-
-```csv
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix,subgroup,gateway_worker_type
-salesdb,dbo,big_table,bronze,sales,big_table,sql_prod,sales,01,m5d.2xlarge
-salesdb,dbo,small_table,bronze,sales,small_table,sql_prod,sales,01,m5d.large
-```
-
-**Result:** `big_table` gets its own gateway with m5d.2xlarge workers, `small_table` gets m5d.large.
-
-### Mixed Gateway Configurations
-
-Combine specified and default values:
-
-```python
-# CSV has gateway_worker_type for some rows, empty for others
-default_values={'gateway_worker_type': 'm5d.large'}
-
-# Result:
-# - Rows with gateway_worker_type in CSV: use CSV value
-# - Rows with empty gateway_worker_type: use m5d.large
-# - Rows with gateway_worker_type=None in CSV: serverless (no cluster)
-```
-
-### Programmatic Usage
-
-Import functions directly in your scripts:
-
-```python
-from utilities import load_input_csv, process_input_config
-from utilities.load_balancing import generate_database_pipeline_config
-from sqlserver.deployment.connector_settings_generator import generate_yaml_files
-
-# Load and normalize
-df = load_input_csv('input.csv')
-normalized_df = process_input_config(
-    df=df,
-    required_columns=['source_database', 'source_schema', ...],
-    default_values={'project_name': 'my_project'}
-)
-
-# Custom load balancing
-pipeline_df = generate_database_pipeline_config(
-    df=normalized_df,
-    max_tables_per_gateway=300,
-    max_tables_per_pipeline=150
-)
-
-# Generate YAML
-generate_yaml_files(
-    df=pipeline_df,
-    output_dir='custom_output',
-    targets={'prod': {...}}
-)
-```
-
-## Architecture
-
-### Two-Stage Process
-
-```
-Stage 1: Load Balancing
-  Input CSV → Normalization → Grouping (prefix+subgroup) → Splitting (capacity-based) → Pipeline Config
-
-Stage 2: YAML Generation
-  Pipeline Config → Gateway YAML + Pipeline YAML + Jobs YAML → DAB Package
-```
-
-### Connector Patterns
-
-**SaaS Connectors (Salesforce, GA4):**
-- Direct ingestion (no gateway)
-- Single-level grouping: prefix+subgroup → pipelines
-- OAuth/service account authentication
-
-**Database Connectors (SQL Server):**
-- Gateway-based ingestion
-- Two-level grouping: prefix+subgroup → gateways → pipelines
-- SQL connection via Databricks connection
-
-### Design Principles
-
-1. **Configuration over Code**: CSV-driven, minimal code changes
-2. **Idempotent**: Re-running with same input produces same output
-3. **Composable**: Functions can be used independently
-4. **Extensible**: Easy to add new connectors following shared patterns
-5. **Safe**: Validates inputs, provides clear error messages
-
-## Common Patterns
-
-### Pattern 1: Single Large Database
-
-```csv
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,project_name
-salesdb,dbo,table001,bronze,sales,table001,sql_prod,sales
-salesdb,dbo,table002,bronze,sales,table002,sql_prod,sales
-... (1000+ tables)
-```
-
-**Behavior:** Automatically splits into multiple gateways and pipelines, all under `sales` project.
-
-### Pattern 2: Multiple Databases, Same Project
-
-```csv
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,project_name,prefix
-salesdb,dbo,customers,bronze,sales,customers,sql_prod,company_data,sales
-financedb,dbo,invoices,bronze,finance,invoices,sql_prod,company_data,finance
-```
-
-**Behavior:** Single project with two groups (sales, finance), separate pipelines for each prefix.
-
-### Pattern 3: Incremental Rollout
-
-```python
-# Week 1: Start with subgroup 01 tables
-df_subgroup_01 = df[df['subgroup'] == '01']
-run_complete_pipeline_generation(df_subgroup_01, ...)
-
-# Week 2: Add subgroup 02 tables
-df_all = df[df['subgroup'].isin(['01', '02'])]
-run_complete_pipeline_generation(df_all, ...)
-```
-
-**Behavior:** Adds new pipelines without affecting existing subgroup 01 pipelines.
-
-## Troubleshooting
-
-### Error: "project_name is required"
-
-**Cause:** No project_name in CSV, default_values, or override_input_config.
-
-**Fix:**
-```python
-default_values={'project_name': 'my_project'}
-```
-
-### Error: "connection_name is required"
-
-**Cause:** CSV missing connection_name column or has empty values.
-
-**Fix:** Add connection_name to CSV or use default_values/override_input_config.
-
-### Too Many Pipelines Created
-
-**Cause:** max_tables_per_pipeline or max_tables_per_gateway too low.
-
-**Fix:** Increase limits:
-```python
-max_tables_per_gateway=500,
-max_tables_per_pipeline=250
-```
-
-### Gateway Without Cluster Config
-
-**Expected behavior:** If gateway_worker_type and gateway_driver_type are both None/empty, gateway uses serverless compute (no cluster section in YAML).
-
-## Contributing
-
-To add a new connector, see [CONNECTOR_DEVELOPMENT_GUIDE.md](CONNECTOR_DEVELOPMENT_GUIDE.md).
-
-## Support
-
-For issues, questions, or contributions, please open an issue in the repository.
