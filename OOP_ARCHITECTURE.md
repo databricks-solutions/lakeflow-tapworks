@@ -84,7 +84,7 @@ Base class for SaaS connectors without gateway support.
 
 ```python
 # For a new SaaS connector
-from utilities.connectors import SaaSConnector
+from core import SaaSConnector
 
 class MyServiceConnector(SaaSConnector):
     @property

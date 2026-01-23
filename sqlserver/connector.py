@@ -14,7 +14,7 @@ from typing import Dict
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from utilities.connectors import DatabaseConnector
+from core import DatabaseConnector
 from utilities import convert_cron_to_quartz, create_jobs, create_databricks_yml, generate_resource_names
 
 
