@@ -1,7 +1,7 @@
 resources:
   pipelines:
-    pipeline_sfdc_tapworks_business_unit1_1:
-      name: SFDC Ingestion - tapworks_business_unit1_1
+    pipeline_tapworks_business_unit1_01:
+      name: Ingestion - tapworks_business_unit1_01
       catalog: dev_catalog
       schema: sfdc_test
       ingestion_definition:
@@ -34,8 +34,8 @@ resources:
             destination_catalog: dev_catalog
             destination_schema: sfdc_test
             destination_table: Campaign
-    pipeline_sfdc_tapworks_business_unit1_2:
-      name: SFDC Ingestion - tapworks_business_unit1_2
+    pipeline_tapworks_business_unit1_02:
+      name: Ingestion - tapworks_business_unit1_02
       catalog: dev_catalog
       schema: sfdc_test
       ingestion_definition:
@@ -50,8 +50,8 @@ resources:
             table_configuration:
               exclude_columns:
               - Description
-    pipeline_sfdc_tapworks_business_unit2_1:
-      name: SFDC Ingestion - tapworks_business_unit2_1
+    pipeline_tapworks_business_unit2_01:
+      name: Ingestion - tapworks_business_unit2_01
       catalog: dev_catalog
       schema: sfdc_test
       ingestion_definition:
@@ -69,8 +69,8 @@ resources:
             destination_catalog: dev_catalog
             destination_schema: sfdc_test
             destination_table: Case
-    pipeline_sfdc_tapworks_business_unit3_1:
-      name: SFDC Ingestion - tapworks_business_unit3_1
+    pipeline_tapworks_business_unit3_01:
+      name: Ingestion - tapworks_business_unit3_01
       catalog: dev_catalog
       schema: sfdc_test
       ingestion_definition:
