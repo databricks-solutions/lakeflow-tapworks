@@ -33,7 +33,7 @@ from pathlib import Path
 import sys
 
 # Import shared utilities
-from utilities import process_input_config, load_input_csv, convert_cron_to_quartz
+from utilities import load_input_csv, convert_cron_to_quartz
 
 
 class BaseConnector(ABC):
@@ -123,6 +123,72 @@ class BaseConnector(ABC):
                 f"{self.__class__.__name__} must implement all abstract properties"
             )
 
+    def _process_input_config(
+        self,
+        df: pd.DataFrame,
+        required_columns: list,
+        default_values: Dict = None,
+        override_input_config: Dict = None
+    ) -> pd.DataFrame:
+        """
+        Validate and normalize input configuration DataFrame.
+
+        This method ensures all required columns are present, adds optional columns
+        with defaults if missing, and fills empty/NaN values appropriately.
+
+        Args:
+            df: Input DataFrame from any source (CSV, Delta, code)
+            required_columns: List of required column names that must be present
+            default_values: Dictionary of optional columns with their default values
+            override_input_config: Dictionary of column overrides for all rows
+
+        Returns:
+            Normalized DataFrame with all required and optional columns
+
+        Raises:
+            ValueError: If required columns are missing or DataFrame is empty
+        """
+        # Make a copy to avoid modifying the original dataframe
+        df = df.copy()
+
+        # Check if dataframe is empty
+        if df.empty:
+            raise ValueError("Input DataFrame is empty")
+
+        # Validate required columns exist
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise ValueError(
+                f"Missing required columns: {missing_columns}\n"
+                f"Required columns: {', '.join(required_columns)}"
+            )
+
+        # Add optional columns if not present and handle NaN/empty values
+        if default_values:
+            for col_name, default_value in default_values.items():
+                if col_name not in df.columns:
+                    print(f"Info: '{col_name}' column not found. Adding with default: {default_value}")
+                    df[col_name] = default_value
+                else:
+                    # Fill NaN values with default (skip if default is None)
+                    if default_value is not None:
+                        df[col_name] = df[col_name].fillna(default_value)
+
+                    # Replace empty strings with default (for string columns)
+                    if isinstance(default_value, str):
+                        mask = df[col_name].astype(str).str.strip() == ''
+                        df.loc[mask, col_name] = default_value
+
+        # Apply overrides if provided
+        if override_input_config:
+            for col_name, override_value in override_input_config.items():
+                print(f"Info: Overriding '{col_name}' column with value: {override_value}")
+                df[col_name] = override_value
+
+        print(f"\n✓ Configuration validated: {len(df)} rows with all required and optional columns")
+
+        return df
+
     def load_and_normalize_input(
         self,
         df: pd.DataFrame,
@@ -151,8 +217,8 @@ class BaseConnector(ABC):
         connector_defaults = {**built_in_defaults, **self.default_values}
         final_defaults = {**connector_defaults, **(default_values or {})}
 
-        # Process input configuration using shared utility
-        normalized_df = process_input_config(
+        # Process input configuration
+        normalized_df = self._process_input_config(
             df=df,
             required_columns=self.required_columns,
             default_values=final_defaults,
