@@ -1,0 +1,20 @@
+resources:
+  jobs:
+    job_sales_01:
+      name: Pipeline Scheduler - sales_01
+      schedule:
+        quartz_cron_expression: 0 */15 * * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_sales_01.id}
+    job_sales_02:
+      name: Pipeline Scheduler - sales_02
+      schedule:
+        quartz_cron_expression: 0 0 */7 * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_sales_02.id}
