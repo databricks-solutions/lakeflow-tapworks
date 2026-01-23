@@ -4,12 +4,69 @@ Automated pipeline generation toolkit for Databricks Lakeflow Connect ingestion.
 
 ## Overview
 
-Lakehouse Tapworks generates optimized Databricks Delta Live Tables (DLT) ingestion pipelines from simple CSV configurations. It handles load balancing, scheduling, and resource allocation automatically, producing deployment-ready Databricks Asset Bundle (DAB) files.
+Lakehouse Tapworks generates Lakeflow connect ingestion pipelines from user defined configurations. It handles load balancing and produces deployment-ready Databricks Asset Bundle (DAB) files.
 
 **Supported Connectors:**
 - **SQL Server** - Database connector with gateway support
 - **Salesforce** - SaaS connector for Salesforce objects
 - **Google Analytics 4** - SaaS connector via BigQuery integration
+
+**Key principle:** One project = One DAB package = One deployment unit
+
+### Prefix + Priority Grouping
+
+Tables are organized using **prefix** and **priority** to control pipeline grouping:
+
+```csv
+source_table_name,prefix,priority
+customers,sales,01
+orders,sales,01
+invoices,finance,02
+```
+
+- **prefix**: Logical grouping identifier (e.g., 'sales', 'finance', 'marketing')
+- **priority**: subgroups, one groups might break into smaller ones ('01', '02', '03', etc.)
+
+**Grouping behavior:**
+- Tables with the same `(prefix, priority)` combination are grouped together
+- If prefix is missing/empty, defaults to `project_name`
+- If priority is missing/empty, defaults to `'01'`
+
+**Example grouping:**
+
+| Prefix | Priority | Result Group | Execution Order |
+|--------|----------|--------------|-----------------|
+| sales  | 01       | sales_01     | 1st             |
+| sales  | 02       | sales_02     | 2nd             |
+| finance| 01       | finance_01   | 1st (parallel)  |
+
+### Load Balancing
+
+The toolkit automatically splits tables into multiple pipelines based on prefix, priority and max number of tables specified for diferent components:
+
+**SaaS Connectors (Salesforce, GA4):**
+- Single-level splitting: `prefix_priority` → pipelines
+- Splits when group exceeds `max_tables_per_pipeline` (default: 250)
+- Creates: `sales_01_g01`, `sales_01_g02`, etc.
+
+**Database Connectors (SQL Server):**
+- Two-level splitting: `prefix_priority` → gateways → pipelines
+- First splits into gateways at `max_tables_per_gateway` (default: 250)
+- Then splits each gateway into pipelines at `max_tables_per_pipeline` (default: 250)
+- Creates: `sales_01_gw01_g01`, `sales_01_gw01_g02`, `sales_01_gw02_g01`, etc.
+
+**Example:** 600 tables with prefix='sales', priority='01':
+```
+Database connector:
+  sales_01 → sales_01_gw01 (250 tables) → sales_01_gw01_g01 (250 tables)
+          → sales_01_gw02 (250 tables) → sales_01_gw02_g01 (250 tables)
+          → sales_01_gw03 (100 tables) → sales_01_gw03_g01 (100 tables)
+
+SaaS connector:
+  sales_01 → sales_01_g01 (250 tables)
+          → sales_01_g02 (250 tables)
+          → sales_01_g03 (100 tables)
+```
 
 ## Quick Start
 
@@ -52,76 +109,17 @@ output/
         └── ...
 ```
 
-**Key principle:** One project = One DAB package = One deployment unit
-
-### Prefix + Priority Grouping
-
-Tables are organized using **prefix** and **priority** to control pipeline grouping and execution order:
-
-```csv
-source_table_name,prefix,priority
-customers,sales,01
-orders,sales,01
-invoices,finance,02
-```
-
-- **prefix**: Logical grouping identifier (e.g., 'sales', 'finance', 'marketing')
-- **priority**: Execution priority as a 2-digit string ('01', '02', '03', etc.)
-
-**Grouping behavior:**
-- Tables with the same `(prefix, priority)` combination are grouped together
-- Priority '01' pipelines run before '02', which run before '03'
-- If prefix is missing/empty, defaults to `project_name`
-- If priority is missing/empty, defaults to `'01'`
-
-**Example grouping:**
-
-| Prefix | Priority | Result Group | Execution Order |
-|--------|----------|--------------|-----------------|
-| sales  | 01       | sales_01     | 1st             |
-| sales  | 02       | sales_02     | 2nd             |
-| finance| 01       | finance_01   | 1st (parallel)  |
-
-### Load Balancing
-
-The toolkit automatically splits large groups into multiple pipelines to stay within Databricks limits:
-
-**SaaS Connectors (Salesforce, GA4):**
-- Single-level splitting: `prefix_priority` → pipelines
-- Splits when group exceeds `max_tables_per_pipeline` (default: 250)
-- Creates: `sales_01_g01`, `sales_01_g02`, etc.
-
-**Database Connectors (SQL Server):**
-- Two-level splitting: `prefix_priority` → gateways → pipelines
-- First splits into gateways at `max_tables_per_gateway` (default: 250)
-- Then splits each gateway into pipelines at `max_tables_per_pipeline` (default: 250)
-- Creates: `sales_01_gw01_g01`, `sales_01_gw01_g02`, `sales_01_gw02_g01`, etc.
-
-**Example:** 600 tables with prefix='sales', priority='01':
-```
-Database connector:
-  sales_01 → sales_01_gw01 (250 tables) → sales_01_gw01_g01 (250 tables)
-          → sales_01_gw02 (250 tables) → sales_01_gw02_g01 (250 tables)
-          → sales_01_gw03 (100 tables) → sales_01_gw03_g01 (100 tables)
-
-SaaS connector:
-  sales_01 → sales_01_g01 (250 tables)
-          → sales_01_g02 (250 tables)
-          → sales_01_g03 (100 tables)
-```
 
 ## Configuration Hierarchy
 
 Configuration values are applied in this order (later values override earlier ones):
 
 ```
-1. Built-in defaults (hardcoded)
+1. Configuration column values (per row)
    ↓
-2. CSV column values (per row)
+2. default_values parameter (function argument)
    ↓
-3. default_values parameter (function argument)
-   ↓
-4. override_input_config parameter (function argument)
+3. override_input_config parameter (function argument)
 ```
 
 **Example:**
@@ -132,8 +130,8 @@ Configuration values are applied in this order (later values override earlier on
 
 run_complete_pipeline_generation(
     df=input_df,
-    default_values={'project_name': 'default_project'},  # Overrides CSV empty values
-    override_input_config={'prefix': 'marketing'}         # Overrides ALL values
+    default_values={'project_name': 'default_project'},  # replaces config empty/missing values
+    override_input_config={'prefix': 'marketing'}         # Overrides default or config values
 )
 
 # Result: project_name='csv_project' (CSV wins over default_values)
