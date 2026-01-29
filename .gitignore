@@ -82,6 +82,6 @@ terraform.rc
 resources/gateways/
 resources/pipelines/
 
-# Salesforce generated resources and customer configs
-sfdc/dab/resources/*.yml
-sfdc/dab/databricks.yml
+# Generated DAB projects (OOP pipeline generators)
+output/
+dab_project/
