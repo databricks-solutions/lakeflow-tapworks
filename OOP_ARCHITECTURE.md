@@ -21,7 +21,8 @@ The OOP architecture provides a cleaner, more maintainable way to implement conn
 BaseConnector (ABC)
 ├── DatabaseConnector (ABC)
 │   └── SQLServerConnector
-│       └── Future: MySQLConnector, PostgreSQLConnector, OracleConnector
+│   ├── PostgreSQLConnector
+│   └── Future: MySQLConnector, OracleConnector
 └── SaaSConnector (ABC)
     ├── SalesforceConnector
     ├── GoogleAnalyticsConnector
@@ -226,6 +227,15 @@ python sqlserver/pipeline_generator.py \
   --root-path '/Users/me/.bundle/${bundle.name}/${bundle.target}'
 ```
 
+**PostgreSQL:**
+```bash
+python postgres/pipeline_generator.py \
+  --input-csv input.csv \
+  --project-name my_project \
+  --workspace-host https://workspace.databricks.com \
+  --root-path '/Users/me/.bundle/${bundle.name}/${bundle.target}'
+```
+
 **Salesforce:**
 ```bash
 python salesforce/pipeline_generator.py \
@@ -241,6 +251,10 @@ python google_analytics/pipeline_generator.py \
   --project-name ga4_ingestion \
   --workspace-host https://workspace.databricks.com
 ```
+
+## Notebooks (interactive setup)
+
+Some connectors also include a `pipeline_setup.ipynb` notebook (e.g. `sqlserver/pipeline_setup.ipynb`) to run generation interactively from a Databricks notebook.
 
 ## Using the OOP Architecture
 
