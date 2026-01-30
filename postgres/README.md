@@ -2,6 +2,12 @@
 
 This connector generates **gateway + ingestion** Lakeflow Connect pipelines for PostgreSQL using the shared OOP framework.
 
+### 0) (Optional) Run via notebook
+
+If you prefer an interactive setup (similar to `sqlserver/`), use:
+
+- `postgres/pipeline_setup.ipynb`
+
 ### 1) Create a Unity Catalog connection (PostgreSQL)
 
 Store credentials in a secret scope (example keys: `postgres_username`, `postgres_password`), then create a UC connection:
