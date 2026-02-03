@@ -1,0 +1,2 @@
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,subgroup,connection_name,schedule,include_columns,exclude_columns
+sfdc_example,Salesforce,standard,Account,main,sfdc_example,Account,sfdc,01,sfdc_connection,*/15 * * * *,"Id,Name,SystemModstamp,IsDeleted",
