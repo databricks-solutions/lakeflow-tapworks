@@ -30,23 +30,88 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
 
 2. **Run the generator** - From a notebook or CLI (for CI/CD integration):
 
+   **Notebook / Python:**
    ```python
+   from utilities import load_input_csv
    from sqlserver.connector import SQLServerConnector
-   connector = SQLServerConnector(config_df)
-   connector.generate()
+
+   connector = SQLServerConnector()
+   df = load_input_csv('pipeline_config.csv')
+
+   result = connector.run_complete_pipeline_generation(
+       df=df,
+       output_dir='output',
+       targets={'dev': {'workspace_host': 'https://...', 'root_path': '/Users/...'}}
+   )
+   ```
+
+   **CLI:**
+   ```bash
+   python pipeline_generator.py \
+     --input-csv pipeline_config.csv \
+     --project-name my_project \
+     --workspace-host https://my-workspace.cloud.databricks.com \
+     --root-path '/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}'
    ```
 
 3. **Deploy** - Use the generated DAB files with `databricks bundle deploy`
 
 ## Load Balancing
 
-Tapworks automatically distributes tables across pipelines and gateways:
+Tapworks automatically distributes tables across pipelines and gateways.
 
-- **Project** - Each unique project name creates a separate DAB package
-- **Prefix** - Logical groupings (e.g., by business unit) that map to pipelines
-- **Auto-splitting** - Tables are distributed based on configurable limits (default: 250 tables per pipeline)
-- **Gateway sharing** - Multiple pipelines can share gateways when limits allow
-- **Subgroups** - Override automatic balancing for specific tables (e.g., isolate critical or large tables)
+### Hierarchy
+
+```
+Project (DAB Package)
+└── Prefix (logical group, e.g., "sales", "finance")
+    └── Subgroup (optional, for manual control)
+        └── Pipeline(s)
+            └── Gateway (database connectors only)
+```
+
+### Auto-Distribution
+
+Tables are automatically split based on configurable limits (default: 250 tables per pipeline/gateway):
+
+```
+                        Input: 600 tables, prefix="sales"
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    ▼                 ▼                 ▼
+            ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+            │  Pipeline 1  │  │  Pipeline 2  │  │  Pipeline 3  │
+            │  (tables     │  │  (tables     │  │  (tables     │
+            │   1-250)     │  │   251-500)   │  │   501-600)   │
+            └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+                   │                 │                 │
+                   └────────┬────────┘                 │
+                            ▼                          ▼
+                    ┌──────────────┐          ┌──────────────┐
+                    │  Gateway 1   │          │  Gateway 2   │
+                    │  (pipelines  │          │  (pipeline   │
+                    │   1-2)       │          │   3)         │
+                    └──────────────┘          └──────────────┘
+```
+
+### Manual Subgroups
+
+Use subgroups to isolate specific tables (e.g., critical or high-volume tables):
+
+```
+                    prefix="sales"
+                          │
+          ┌───────────────┴───────────────┐
+          ▼                               ▼
+    subgroup="critical"             subgroup="01" (auto)
+          │                               │
+          ▼                               ▼
+  ┌──────────────┐               ┌──────────────┐
+  │  Pipeline    │               │  Pipeline(s) │
+  │  (5 critical │               │  (remaining  │
+  │   tables)    │               │   tables)    │
+  └──────────────┘               └──────────────┘
+```
 
 ## Additional Features
 
