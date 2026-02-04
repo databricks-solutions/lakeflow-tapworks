@@ -26,14 +26,19 @@ Usage:
     )
 """
 
+import logging
 from abc import ABC, abstractmethod
 import pandas as pd
+import yaml
 from typing import Dict, Optional
 from pathlib import Path
 import sys
 
 # Import shared utilities
 from utilities import load_input_csv, convert_cron_to_quartz
+
+# Configure module logger
+logger = logging.getLogger(__name__)
 
 
 class BaseConnector(ABC):
@@ -167,7 +172,7 @@ class BaseConnector(ABC):
         if default_values:
             for col_name, default_value in default_values.items():
                 if col_name not in df.columns:
-                    print(f"Info: '{col_name}' column not found. Adding with default: {default_value}")
+                    logger.debug(f"Column '{col_name}' not found, adding with default: {default_value}")
                     df[col_name] = default_value
                 else:
                     # Fill NaN values with default (skip if default is None)
@@ -182,10 +187,10 @@ class BaseConnector(ABC):
         # Apply overrides if provided
         if override_input_config:
             for col_name, override_value in override_input_config.items():
-                print(f"Info: Overriding '{col_name}' column with value: {override_value}")
+                logger.debug(f"Overriding '{col_name}' with value: {override_value}")
                 df[col_name] = override_value
 
-        print(f"\n✓ Configuration validated: {len(df)} rows with all required and optional columns")
+        logger.info(f"Configuration validated: {len(df)} rows")
 
         return df
 
@@ -465,14 +470,10 @@ class BaseConnector(ABC):
         Returns:
             DataFrame with complete pipeline configuration
         """
-        print("="*80)
-        print(f"STARTING {self.connector_type.upper()} PIPELINE GENERATION PROCESS")
-        print("="*80)
+        logger.info(f"Starting {self.connector_type} pipeline generation")
+        logger.debug(f"Input rows: {len(df)}")
 
         # Step 1: Normalize and validate configuration
-        print(f"\n[Step 1/3] Normalizing configuration")
-        print(f"  - Input rows: {len(df)}")
-
         normalized_df = self.load_and_normalize_input(
             df=df,
             default_values=default_values,
@@ -480,25 +481,20 @@ class BaseConnector(ABC):
         )
 
         # Step 2: Generate pipeline configuration
-        print(f"\n[Step 2/3] Generating pipeline configuration")
-
         pipeline_config_df = self.generate_pipeline_config(
             df=normalized_df,
             **kwargs
         )
 
-        print(f"  ✓ Created {pipeline_config_df['pipeline_group'].nunique()} pipelines")
-        print(f"  ✓ Configured {len(pipeline_config_df)} tables/objects")
+        logger.info(f"Created {pipeline_config_df['pipeline_group'].nunique()} pipelines with {len(pipeline_config_df)} items")
 
         # Save intermediate configuration if requested
         if output_config:
             pipeline_config_df.to_csv(output_config, index=False)
-            print(f"  ✓ Saved configuration to: {output_config}")
+            logger.debug(f"Saved configuration to: {output_config}")
 
         # Step 3: Generate YAML files
-        print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
-        print(f"  - Output directory: {output_dir}")
-        print(f"  - Target environments: {', '.join(targets.keys())}")
+        logger.debug(f"Output directory: {output_dir}, targets: {list(targets.keys())}")
 
         self.generate_yaml_files(
             df=pipeline_config_df,
@@ -506,9 +502,7 @@ class BaseConnector(ABC):
             targets=targets
         )
 
-        print("\n" + "="*80)
-        print(f"{self.connector_type.upper()} PIPELINE GENERATION COMPLETE!")
-        print("="*80)
+        logger.info(f"Pipeline generation complete for {self.connector_type}")
 
         return pipeline_config_df
 
@@ -652,6 +646,23 @@ class SaaSConnector(BaseConnector):
     Examples: Salesforce, Google Analytics, ServiceNow, Workday
     """
 
+    @abstractmethod
+    def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
+        """
+        Create pipeline YAML configuration from dataframe.
+
+        Must be implemented by each SaaS connector to handle connector-specific
+        pipeline structure (table mappings, column filters, etc.).
+
+        Args:
+            df: DataFrame with pipeline configuration for a single project
+            project_name: Project name for resource naming
+
+        Returns:
+            Dictionary with pipeline YAML configuration
+        """
+        pass
+
     def _split_groups_by_size(
         self,
         df: pd.DataFrame,
@@ -735,3 +746,60 @@ class SaaSConnector(BaseConnector):
         df = df.drop(columns=['base_group'])
 
         return df
+
+    def generate_yaml_files(
+        self,
+        df: pd.DataFrame,
+        output_dir: str,
+        targets: Dict[str, Dict]
+    ):
+        """
+        Generate YAML files for SaaS connectors (no gateways).
+
+        Creates a DAB structure for each project:
+        - databricks.yml (root configuration)
+        - resources/pipelines.yml (pipeline definitions)
+        - resources/jobs.yml (scheduled jobs)
+
+        Args:
+            df: DataFrame with pipeline configuration
+            output_dir: Output directory for DAB files
+            targets: Dictionary of target environments
+        """
+        logger.info(f"Generating DAB YAML for {self.connector_type}")
+        logger.debug(f"Total items: {len(df)}, pipelines: {df['pipeline_group'].nunique()}")
+
+        # Group by project_name and create separate DAB packages
+        for project_name, project_df in df.groupby('project_name'):
+            project_output_dir = Path(output_dir) / str(project_name)
+            logger.info(f"Creating DAB for project: {project_name}")
+            logger.debug(f"  Items: {len(project_df)}, pipelines: {project_df['pipeline_group'].nunique()}")
+
+            # Generate YAML content for this project
+            pipelines_yaml = self._create_pipelines(project_df, str(project_name))
+            jobs_yaml = self._create_jobs(project_df, str(project_name))
+            databricks_yaml = self._create_databricks_yml(
+                project_name=str(project_name),
+                targets=targets,
+                default_target='dev'
+            )
+
+            # Create directory structure
+            resources_dir = project_output_dir / 'resources'
+            resources_dir.mkdir(parents=True, exist_ok=True)
+
+            # Write YAML files
+            databricks_yml_path = project_output_dir / 'databricks.yml'
+            pipelines_yml_path = resources_dir / 'pipelines.yml'
+            jobs_yml_path = resources_dir / 'jobs.yml'
+
+            with open(databricks_yml_path, 'w') as f:
+                yaml.dump(databricks_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+
+            with open(pipelines_yml_path, 'w') as f:
+                yaml.dump(pipelines_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+
+            with open(jobs_yml_path, 'w') as f:
+                yaml.dump(jobs_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
+
+            logger.debug(f"  Written: {databricks_yml_path}, {pipelines_yml_path}, {jobs_yml_path}")

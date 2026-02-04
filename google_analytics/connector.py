@@ -5,9 +5,8 @@ This module provides the GoogleAnalyticsConnector class which implements the
 SaaSConnector interface for Google Analytics 4 data sources.
 """
 
+import logging
 import sys
-import os
-import yaml
 import pandas as pd
 from pathlib import Path
 from typing import Dict
@@ -16,6 +15,8 @@ from collections import defaultdict
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from core import SaaSConnector
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleAnalyticsConnector(SaaSConnector):
@@ -97,10 +98,6 @@ class GoogleAnalyticsConnector(SaaSConnector):
         for idx, row in df.iterrows():
             groups[row['pipeline_group']].append(row)
 
-        print("\n" + "-"*80)
-        print("Pipeline Details:")
-        print("-"*80)
-
         for pipeline_group in sorted(groups.keys()):
             group_properties = groups[pipeline_group]
 
@@ -112,11 +109,7 @@ class GoogleAnalyticsConnector(SaaSConnector):
             target_schema = group_properties[0]['target_schema']
             connection_name = group_properties[0]['connection_name']
 
-            print(f"\nPipeline: {pipeline_group}")
-            print(f"  Name: {names['pipeline_resource_name']}")
-            print(f"  Target: {target_catalog}.{target_schema}")
-            print(f"  Connection: {connection_name}")
-            print(f"  Properties: {len(group_properties)}")
+            logger.debug(f"Pipeline {pipeline_group}: {len(group_properties)} properties -> {target_catalog}.{target_schema}")
 
             # Build ingestion objects list
             ingestion_objects = []
@@ -145,8 +138,6 @@ class GoogleAnalyticsConnector(SaaSConnector):
                     }
                     ingestion_objects.append(table_obj)
 
-                print(f"    - {source_schema}: {', '.join(tables)}")
-
             # Add pipeline
             pipelines[names['pipeline_resource_name']] = {
                 "name": names['pipeline_name'],
@@ -159,80 +150,3 @@ class GoogleAnalyticsConnector(SaaSConnector):
             }
 
         return {'resources': {'pipelines': pipelines}}
-
-    def generate_yaml_files(self, df: pd.DataFrame, output_dir: str, targets: Dict[str, Dict]):
-        """
-        Generate YAML files for GA4 connector without gateways.
-
-        Creates a DAB structure:
-        - databricks.yml (root configuration)
-        - resources/pipelines.yml (pipeline definitions)
-        - resources/jobs.yml (scheduled jobs)
-
-        Args:
-            df: DataFrame with pipeline configuration
-            output_dir: Output directory for DAB files
-            targets: Dictionary of target environments
-        """
-        print("\n" + "="*80)
-        print("GENERATING DATABRICKS ASSET BUNDLE YAML FOR GA4")
-        print("="*80)
-
-        # Validate required columns
-        required_columns = [
-            'source_catalog', 'source_schema', 'tables',
-            'target_catalog', 'target_schema', 'connection_name',
-            'pipeline_group', 'schedule', 'project_name'
-        ]
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            raise ValueError(f"Missing required columns: {missing_columns}")
-
-        print(f"\nConfiguration:")
-        print(f"  Total properties: {len(df)}")
-        print(f"  Unique pipelines: {df['pipeline_group'].nunique()}")
-        print(f"  Unique projects: {df['project_name'].nunique()}")
-
-        # Group by project_name and create separate DAB packages
-        for project, project_df in df.groupby('project_name'):
-            project_output_dir = Path(output_dir) / str(project)
-            print(f"\n  Creating DAB for project: {project}")
-            print(f"    - Properties: {len(project_df)}")
-            print(f"    - Pipelines: {project_df['pipeline_group'].nunique()}")
-            print(f"    - Output: {project_output_dir}")
-
-            # Generate YAML content for this project
-            pipelines_yaml = self._create_pipelines(project_df, str(project))
-            jobs_yaml = self._create_jobs(project_df, str(project))
-            databricks_yaml = self._create_databricks_yml(
-                project_name=str(project),
-                targets=targets,
-                default_target='dev'
-            )
-
-            # Create directory structure
-            resources_dir = project_output_dir / 'resources'
-            resources_dir.mkdir(parents=True, exist_ok=True)
-
-            # Define output paths
-            databricks_yml_path = project_output_dir / 'databricks.yml'
-            pipelines_yml_path = resources_dir / 'pipelines.yml'
-            jobs_yml_path = resources_dir / 'jobs.yml'
-
-            # Write YAML files
-            with open(databricks_yml_path, 'w') as f:
-                yaml.dump(databricks_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
-
-            with open(pipelines_yml_path, 'w') as f:
-                yaml.dump(pipelines_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
-
-            with open(jobs_yml_path, 'w') as f:
-                yaml.dump(jobs_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
-
-        print("\n" + "="*80)
-        print("YAML GENERATION COMPLETE")
-        print("="*80)
-        print(f"\nGenerated DAB project structure in: {output_dir}")
-        print(f"  ✓ {databricks_yml_path}")
-        print(f"  ✓ {pipelines_yml_path}")
-        print(f"  ✓ {jobs_yml_path}")
