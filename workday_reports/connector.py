@@ -41,7 +41,7 @@ class WorkdayReportsConnector(SaaSConnector):
     Optional CSV columns:
     - project_name: Project identifier (default: 'workday_reports_ingestion')
     - prefix: Grouping prefix (default: project_name)
-    - priority: Priority/subgroup identifier (default: '01')
+    - subgroup: Subgroup identifier (default: '01')
     - schedule: Cron schedule (e.g., '0 */6 * * *', default: '0 */6 * * *')
     - include_columns: Comma-separated list of columns to include (default: '')
     - exclude_columns: Comma-separated list of columns to exclude (default: '')
@@ -85,23 +85,6 @@ class WorkdayReportsConnector(SaaSConnector):
     def default_project_name(self) -> str:
         """Return default project name for Workday Reports connector."""
         return "workday_reports_ingestion"
-
-    def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Apply Workday Reports-specific normalization including priority mapping.
-
-        Maps 'priority' column to 'subgroup' if present.
-        """
-        # Call parent normalization first
-        df = super()._apply_connector_specific_normalization(df)
-
-        # Map priority to subgroup if priority column exists
-        if "priority" in df.columns:
-            # Use priority as subgroup if subgroup wasn't explicitly set
-            mask = (df["subgroup"] == "01") | df["subgroup"].isna()
-            df.loc[mask, "subgroup"] = df.loc[mask, "priority"].astype(str).str.zfill(2)
-
-        return df
 
     def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
         """

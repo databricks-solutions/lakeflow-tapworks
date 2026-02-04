@@ -58,7 +58,7 @@ Examples:
 
 Note:
   - connection_name must be provided in the input CSV file for each row
-  - The connector automatically handles prefix and priority defaults
+  - The connector automatically handles prefix and subgroup defaults
   - Supports include_columns, exclude_columns, and scd_type configuration
   - Default SCD type is SCD_TYPE_2 (can be overridden to SCD_TYPE_1 per table)
         """,

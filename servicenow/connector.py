@@ -41,7 +41,7 @@ class ServiceNowConnector(SaaSConnector):
     Optional CSV columns:
     - project_name: Project identifier (default: 'servicenow_ingestion')
     - prefix: Grouping prefix (default: project_name)
-    - priority: Priority/subgroup identifier (default: '01')
+    - subgroup: Subgroup identifier (default: '01')
     - schedule: Cron schedule (e.g., '*/15 * * * *', default: '*/15 * * * *')
     - include_columns: Comma-separated list of columns to include (default: '')
     - exclude_columns: Comma-separated list of columns to exclude (default: '')
@@ -83,23 +83,6 @@ class ServiceNowConnector(SaaSConnector):
     def default_project_name(self) -> str:
         """Return default project name for ServiceNow connector."""
         return "servicenow_ingestion"
-
-    def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Apply ServiceNow-specific normalization including priority mapping.
-
-        Maps 'priority' column to 'subgroup' if present.
-        """
-        # Call parent normalization first
-        df = super()._apply_connector_specific_normalization(df)
-
-        # Map priority to subgroup if priority column exists
-        if "priority" in df.columns:
-            # Use priority as subgroup if subgroup wasn't explicitly set
-            mask = (df["subgroup"] == "01") | df["subgroup"].isna()
-            df.loc[mask, "subgroup"] = df.loc[mask, "priority"].astype(str).str.zfill(2)
-
-        return df
 
     def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
