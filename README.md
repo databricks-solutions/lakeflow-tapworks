@@ -4,7 +4,7 @@ Automated pipeline deployment template generation toolkit for Databricks Lakeflo
 
 ## Overview
 
-Lakehouse Tapworks generates deployment-ready Databricks Asset Bundle (DAB) Lakeflow Connect ingestion pipelines from user-defined configurations. It handles load balancing.
+Lakehouse Tapworks generates deployment-ready Databricks Asset Bundle (DAB) Lakeflow Connect ingestion pipelines from user-defined configurations. It automatically handles load balancing to cater for performance based on metrics like number pf tables per pieplien and user inputs.
 
 **Supported connectors:**
 - **SQL Server** 
