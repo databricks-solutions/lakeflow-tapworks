@@ -101,26 +101,6 @@ class ServiceNowConnector(SaaSConnector):
 
         return df
 
-    def _generate_resource_names(self, pipeline_group: str) -> Dict[str, str]:
-        """
-        Generate consistent resource names for ServiceNow pipelines and jobs.
-
-        Overrides base class to add "ServiceNow" prefix to pipeline names.
-
-        Args:
-            pipeline_group: Pipeline group identifier (e.g., 'business_unit1_01')
-
-        Returns:
-            Dictionary containing all resource names with ServiceNow branding
-        """
-        return {
-            "pipeline_name": f"ServiceNow Ingestion - {pipeline_group}",
-            "pipeline_resource_name": f"pipeline_{pipeline_group}",
-            "job_name": f"job_{pipeline_group}",
-            "job_display_name": f"ServiceNow Pipeline Scheduler - {pipeline_group}",
-            "task_key": "run_pipeline",
-        }
-
     def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
         Create pipeline YAML configuration from dataframe.

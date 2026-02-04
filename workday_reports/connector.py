@@ -103,26 +103,6 @@ class WorkdayReportsConnector(SaaSConnector):
 
         return df
 
-    def _generate_resource_names(self, pipeline_group: str) -> Dict[str, str]:
-        """
-        Generate consistent resource names for Workday Reports pipelines and jobs.
-
-        Overrides base class to add "Workday Reports" prefix to pipeline names.
-
-        Args:
-            pipeline_group: Pipeline group identifier (e.g., 'hr_01')
-
-        Returns:
-            Dictionary containing all resource names with Workday Reports branding
-        """
-        return {
-            "pipeline_name": f"Workday Reports Ingestion - {pipeline_group}",
-            "pipeline_resource_name": f"pipeline_{pipeline_group}",
-            "job_name": f"job_{pipeline_group}",
-            "job_display_name": f"Workday Reports Pipeline Scheduler - {pipeline_group}",
-            "task_key": "run_pipeline",
-        }
-
     def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
         Create pipeline YAML configuration from dataframe.
