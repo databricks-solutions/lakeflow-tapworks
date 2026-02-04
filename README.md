@@ -1,10 +1,10 @@
 # Lakehouse Tapworks
 
-Automated pipeline generation toolkit for Databricks Lakeflow Connect ingestion.
+Automated pipeline deployment template generation toolkit for Databricks Lakeflow Connectors.
 
 ## Overview
 
-Lakehouse Tapworks generates Lakeflow Connect ingestion pipelines from user-defined configurations. It handles load balancing and produces deployment-ready Databricks Asset Bundle (DAB) files.
+Lakehouse Tapworks generates deployment-ready Databricks Asset Bundle (DAB) Lakeflow Connect ingestion pipelines from user-defined configurations. It handles load balancing.
 
 **Supported connectors:**
 - **SQL Server** 
