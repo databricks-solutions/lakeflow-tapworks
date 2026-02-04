@@ -7,32 +7,44 @@ Automated pipeline generation toolkit for Databricks Lakeflow Connect ingestion.
 Lakehouse Tapworks generates Lakeflow Connect ingestion pipelines from user-defined configurations. It handles load balancing and produces deployment-ready Databricks Asset Bundle (DAB) files.
 
 **Supported connectors:**
-- **SQL Server** - Database connector with gateway support
-- **PostgreSQL** - Database connector with gateway support
-- **Salesforce** - SaaS connector for Salesforce objects
-- **Google Analytics 4** - SaaS connector via BigQuery integration
+- **SQL Server** 
+- **PostgreSQL** 
+- **Salesforce** 
+- **Google Analytics 4** 
+- **Service Now**
+- **Workday**
 
 ## Load balancing
 
-- **SaaS connectors (Salesforce, GA4)**: split into pipelines only (by `prefix` + `subgroup`)
-- **Database connectors (SQL Server, PostgreSQL)**: split into gateways then pipelines (by `prefix` + `subgroup`)
+The user defines a project name. For each project name in the config a new DAB package is created.
 
-## Configuration hierarchy
+The user can define a prefix (e.g., business unit 1 or sales) for each subset of tables. This defines a logical grouping between the pipelines that will process those tables.
 
-When you run `run_complete_pipeline_generation(df=...)`:
+For each of these logical groups:
+Split the tables according to max number of tables per pipeline between pipelines (default 250)
+By default each pipeline is linked to one gateway if this is a database connector
+If the max number of tables per gateway (default 250) is larger than max tables per pipeline, then multiple pipelines can share the same gateway.
 
-1. Built-in defaults (per connector)
-2. Values in the input dataframe (CSV / Delta / etc.)
-3. `default_values={...}` (fills empty/missing)
-4. `override_input_config={...}` (forces values for all rows)
+If a user wants to manually dedicate a pipeline to process a subset of the tables (e.g., critical tables, or large tables) they can specify a subgroup in the config for the prefix. Load balancer prioritises the subgroup over the default laid balancing if present. 
 
-## Input CSV formats
+
+Extra features
+
+It is possible to specify all or a subset of config columns, specify defaults to replace missing data (for example, send a single value for gateway driver node instead of specifying in the config), or override values to override what’s specified in the config if needed (e.g., this can be used to pause/unpause the jobs using 
+
+Config can be stored in different forms as long as the data can be passed to the tapwork main function as a dataframe. We’re currently using CSV for ease of demonstration, but this can be a delta or lakebase table that can be maintained using a Databricks App.
+It is possible to pass configurations for different environments to the main function to generate databricks.xml accordingly and deploy the pipelines to different environments (e.g., dev, prod, …)
+
+
+
+
+## Input config formats
 
 ### SQL Server / PostgreSQL (database connectors)
 
 **Required columns:**
 
-```csv
+```
 source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name
 mydb,public,customers,bronze,sales,customers,my_db_connection
 ```
