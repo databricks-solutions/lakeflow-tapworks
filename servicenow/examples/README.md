@@ -7,7 +7,7 @@ This directory contains example configurations for the ServiceNow connector.
 ### basic/
 Basic ServiceNow ingestion configuration demonstrating:
 - Multiple business unit groupings (business_unit1, business_unit2, business_unit3)
-- Different priority levels (01, 02)
+- Different subgroup levels (01, 02)
 - Various schedules (*/15, */30, hourly)
 - Column filtering (include_columns and exclude_columns)
 - SCD type configuration (SCD_TYPE_1 and SCD_TYPE_2)
@@ -37,7 +37,7 @@ python pipeline_generator.py \
    - Update `connection_name` to match your ServiceNow connection
    - Update `target_catalog` and `target_schema` as needed
    - Modify `source_table_name` to match your required tables
-   - Adjust `schedule`, `prefix`, and `priority` as needed
+   - Adjust `schedule`, `prefix`, and `subgroup` as needed
    - Configure column filtering and SCD types
 
 3. Generate your pipelines:
@@ -52,10 +52,10 @@ python pipeline_generator.py \
 
 ### Business Unit Grouping
 ```csv
-prefix,priority
-business_unit1,01  # High priority tables for BU1
-business_unit1,02  # Lower priority tables for BU1
-business_unit2,01  # High priority tables for BU2
+prefix,subgroup
+business_unit1,01  # High subgroup tables for BU1
+business_unit1,02  # Lower subgroup tables for BU1
+business_unit2,01  # High subgroup tables for BU2
 ```
 
 ### Schedule Variation
