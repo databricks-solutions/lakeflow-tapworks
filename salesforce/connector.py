@@ -84,6 +84,11 @@ class SalesforceConnector(SaaSConnector):
         """Return default project name for Salesforce connector."""
         return 'sfdc_ingestion'
 
+    @property
+    def supported_scd_types(self) -> list:
+        """Return supported SCD types for Salesforce connector."""
+        return ["SCD_TYPE_1", "SCD_TYPE_2"]
+
     def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
         Create pipeline YAML configuration from dataframe.

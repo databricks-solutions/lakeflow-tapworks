@@ -83,6 +83,11 @@ class SQLServerConnector(DatabaseConnector):
             'gateway_driver_type': None
         }
 
+    @property
+    def supported_scd_types(self) -> list:
+        """Return supported SCD types for SQL Server connector."""
+        return ["SCD_TYPE_1", "SCD_TYPE_2"]
+
     def _create_gateways(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
         Create gateway YAML configuration from dataframe.
