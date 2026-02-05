@@ -111,6 +111,48 @@ class BaseConnector(ABC):
         """
         return f"{self.connector_type}_ingestion"
 
+    @property
+    def supported_scd_types(self) -> list:
+        """
+        Return list of SCD types supported by this connector.
+
+        Override in subclass to specify supported SCD types.
+        Empty list means SCD type configuration is not supported.
+
+        Example: ['SCD_TYPE_1', 'SCD_TYPE_2'] or ['SCD_TYPE_1']
+        """
+        return []
+
+    def _validate_scd_type(self, scd_type: str, item_name: str) -> str:
+        """
+        Validate and return SCD type if valid, None otherwise.
+
+        Args:
+            scd_type: The SCD type value from config (may be None or empty)
+            item_name: Name of the item (table/report) for logging
+
+        Returns:
+            Validated SCD type string or None if not specified/invalid
+        """
+        if not scd_type or (isinstance(scd_type, str) and not scd_type.strip()):
+            return None
+
+        import pandas as pd
+        if pd.isna(scd_type):
+            return None
+
+        scd_type = str(scd_type).strip().upper()
+
+        if not self.supported_scd_types:
+            logger.warning(f"SCD type '{scd_type}' specified for {item_name} but connector doesn't support SCD types, ignoring")
+            return None
+
+        if scd_type not in self.supported_scd_types:
+            logger.warning(f"Invalid scd_type '{scd_type}' for {item_name}, supported: {self.supported_scd_types}, ignoring")
+            return None
+
+        return scd_type
+
     def _validate_configuration(self):
         """
         Validate that the connector is properly configured.

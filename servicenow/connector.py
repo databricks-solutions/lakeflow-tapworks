@@ -45,7 +45,7 @@ class ServiceNowConnector(SaaSConnector):
     - schedule: Cron schedule (e.g., '*/15 * * * *', default: '*/15 * * * *')
     - include_columns: Comma-separated list of columns to include (default: '')
     - exclude_columns: Comma-separated list of columns to exclude (default: '')
-    - scd_type: SCD type (SCD_TYPE_1 or SCD_TYPE_2, default: 'SCD_TYPE_1')
+    - scd_type: SCD type (SCD_TYPE_1 or SCD_TYPE_2, optional)
     """
 
     @property
@@ -77,12 +77,17 @@ class ServiceNowConnector(SaaSConnector):
 
         These values are used when columns are missing or empty.
         """
-        return {"schedule": "*/15 * * * *", "scd_type": "SCD_TYPE_1"}
+        return {"schedule": "*/15 * * * *"}
 
     @property
     def default_project_name(self) -> str:
         """Return default project name for ServiceNow connector."""
         return "servicenow_ingestion"
+
+    @property
+    def supported_scd_types(self) -> list:
+        """Return supported SCD types for ServiceNow connector."""
+        return ["SCD_TYPE_1", "SCD_TYPE_2"]
 
     def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
@@ -161,18 +166,12 @@ class ServiceNowConnector(SaaSConnector):
                     ]
                     table_config["exclude_columns"] = exclude_cols
 
-                # Add SCD type if specified
-                if (
-                    "scd_type" in item
-                    and pd.notna(item["scd_type"])
-                    and item["scd_type"].strip()
-                ):
-                    scd_type = str(item["scd_type"]).strip().upper()
-                    # Validate SCD type
-                    if scd_type in ["SCD_TYPE_1", "SCD_TYPE_2"]:
-                        table_config["scd_type"] = scd_type
-                    else:
-                        logger.warning(f"Invalid scd_type '{scd_type}' for table {item['source_table_name']}, skipping")
+                # Add SCD type if specified and valid
+                scd_type = self._validate_scd_type(
+                    item.get("scd_type"), item["source_table_name"]
+                )
+                if scd_type:
+                    table_config["scd_type"] = scd_type
 
                 if table_config:
                     table_entry["table"]["table_configuration"] = table_config
