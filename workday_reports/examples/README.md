@@ -7,7 +7,7 @@ This directory contains example configurations for the Workday Reports connector
 ### basic/
 Basic Workday Reports ingestion configuration demonstrating:
 - Multiple department groupings (hr, recruiting, finance)
-- Different priority levels (01, 02)
+- Different subgroup levels (01, 02)
 - Various schedules (*/6, */12, hourly, daily, weekly)
 - Column filtering (include_columns and exclude_columns)
 - SCD type configuration (SCD_TYPE_1 and SCD_TYPE_2)
@@ -39,7 +39,7 @@ python pipeline_generator.py \
    - Update `connection_name` to match your Workday connection
    - Update `target_catalog` and `target_schema` as needed
    - **REQUIRED**: Set `primary_keys` for each report (e.g., "Employee_ID")
-   - Adjust `schedule`, `prefix`, and `priority` as needed
+   - Adjust `schedule`, `prefix`, and `subgroup` as needed
    - Configure column filtering and SCD types
 
 3. Generate your pipelines:
@@ -54,9 +54,9 @@ python pipeline_generator.py \
 
 ### Department Grouping
 ```csv
-prefix,priority
-hr,01           # High priority HR reports
-hr,02           # Lower priority HR reports
+prefix,subgroup
+hr,01           # High subgroup HR reports
+hr,02           # Lower subgroup HR reports
 recruiting,01   # Recruiting reports
 ```
 
