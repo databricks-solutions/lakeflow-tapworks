@@ -45,7 +45,7 @@ class WorkdayReportsConnector(SaaSConnector):
     - schedule: Cron schedule (e.g., '0 */6 * * *', default: '0 */6 * * *')
     - include_columns: Comma-separated list of columns to include (default: '')
     - exclude_columns: Comma-separated list of columns to exclude (default: '')
-    - scd_type: SCD type (SCD_TYPE_1 or SCD_TYPE_2, default: 'SCD_TYPE_1')
+    - scd_type: SCD type (SCD_TYPE_1 or SCD_TYPE_2, optional)
     """
 
     @property
@@ -78,13 +78,17 @@ class WorkdayReportsConnector(SaaSConnector):
         """
         return {
             "schedule": "0 */6 * * *",  # Every 6 hours by default
-            "scd_type": "SCD_TYPE_1",
         }
 
     @property
     def default_project_name(self) -> str:
         """Return default project name for Workday Reports connector."""
         return "workday_reports_ingestion"
+
+    @property
+    def supported_scd_types(self) -> list:
+        """Return supported SCD types for Workday Reports connector."""
+        return ["SCD_TYPE_1", "SCD_TYPE_2"]
 
     def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
@@ -181,18 +185,12 @@ class WorkdayReportsConnector(SaaSConnector):
                     ]
                     table_config["exclude_columns"] = exclude_cols
 
-                # Add SCD type if specified
-                if (
-                    "scd_type" in item
-                    and pd.notna(item["scd_type"])
-                    and item["scd_type"].strip()
-                ):
-                    scd_type = str(item["scd_type"]).strip().upper()
-                    # Validate SCD type
-                    if scd_type in ["SCD_TYPE_1", "SCD_TYPE_2"]:
-                        table_config["scd_type"] = scd_type
-                    else:
-                        logger.warning(f"Invalid scd_type '{scd_type}' for report {item['target_table_name']}, skipping")
+                # Add SCD type if specified and valid
+                scd_type = self._validate_scd_type(
+                    item.get("scd_type"), item["target_table_name"]
+                )
+                if scd_type:
+                    table_config["scd_type"] = scd_type
 
                 if table_config:
                     report_entry["report"]["table_configuration"] = table_config
