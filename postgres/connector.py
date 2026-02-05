@@ -76,6 +76,11 @@ class PostgreSQLConnector(DatabaseConnector):
     def default_project_name(self) -> str:
         return "postgres_ingestion"
 
+    @property
+    def supported_scd_types(self) -> list:
+        """Return supported SCD types for PostgreSQL connector."""
+        return ["SCD_TYPE_1", "SCD_TYPE_2"]
+
     def _create_gateways(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
         Create gateway YAML configuration from dataframe.

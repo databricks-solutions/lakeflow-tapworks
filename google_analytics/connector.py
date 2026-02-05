@@ -80,6 +80,11 @@ class GoogleAnalyticsConnector(SaaSConnector):
         """Return default project name for GA4 connector."""
         return 'ga4_ingestion'
 
+    @property
+    def supported_scd_types(self) -> list:
+        """Return supported SCD types for GA4 connector."""
+        return ["SCD_TYPE_1", "SCD_TYPE_2"]
+
     def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
         Create pipeline YAML configuration from dataframe.
