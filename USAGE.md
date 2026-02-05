@@ -9,8 +9,8 @@ Both CLI and programmatic interfaces support the same configuration options:
 | Parameter | Description |
 |-----------|-------------|
 | `targets` | Target environments (dev, prod) with workspace settings |
-| `default_values` | Default values for optional CSV columns |
-| `override_input_config` | Force override values (ignores CSV) |
+| `default_values` | Default values for optional input config columns |
+| `override_input_config` | Force override values (ignores input config) |
 | `max_tables_per_pipeline` | Maximum tables per pipeline (default: 250) |
 | `max_tables_per_gateway` | Maximum tables per gateway - database connectors only (default: 250) |
 
@@ -33,16 +33,6 @@ python salesforce/pipeline_generator.py \
   --input-csv salesforce/examples/basic/pipeline_config.csv \
   --targets '{"dev": {"workspace_host": "https://my-workspace.cloud.databricks.com"}}' \
   --default-values '{"project_name": "sfdc_ingestion", "schedule": "*/30 * * * *"}'
-```
-
-**CLI - Legacy arguments:**
-```bash
-python salesforce/pipeline_generator.py \
-  --input-csv salesforce/examples/basic/pipeline_config.csv \
-  --project-name sfdc_ingestion \
-  --workspace-host https://my-workspace.cloud.databricks.com \
-  --schedule "*/30 * * * *" \
-  --output-dir dab_deployment
 ```
 
 **Notebook/Programmatic:**
@@ -88,16 +78,6 @@ python google_analytics/pipeline_generator.py \
   --default-values '{"project_name": "ga4_ingestion", "schedule": "0 */6 * * *"}'
 ```
 
-**CLI - Legacy arguments:**
-```bash
-python google_analytics/pipeline_generator.py \
-  --input-csv google_analytics/examples/basic/pipeline_config.csv \
-  --project-name ga4_ingestion \
-  --workspace-host https://my-workspace.cloud.databricks.com \
-  --schedule "0 */6 * * *" \
-  --output-dir dab_project
-```
-
 **Notebook/Programmatic:**
 ```python
 from google_analytics.connector import GoogleAnalyticsConnector
@@ -137,15 +117,6 @@ python servicenow/pipeline_generator.py \
   --input-csv servicenow/examples/basic/pipeline_config.csv \
   --targets '{"dev": {"workspace_host": "https://my-workspace.cloud.databricks.com"}}' \
   --default-values '{"project_name": "snow_ingestion", "schedule": "*/15 * * * *"}'
-```
-
-**CLI - Legacy arguments:**
-```bash
-python servicenow/pipeline_generator.py \
-  --input-csv servicenow/examples/basic/pipeline_config.csv \
-  --project-name snow_ingestion \
-  --workspace-host https://my-workspace.cloud.databricks.com \
-  --output-dir dab_deployment
 ```
 
 **Notebook/Programmatic:**
@@ -188,15 +159,6 @@ python workday_reports/pipeline_generator.py \
   --input-csv workday_reports/examples/basic/pipeline_config.csv \
   --targets '{"dev": {"workspace_host": "https://my-workspace.cloud.databricks.com"}}' \
   --default-values '{"project_name": "workday_ingestion", "schedule": "0 */6 * * *"}'
-```
-
-**CLI - Legacy arguments:**
-```bash
-python workday_reports/pipeline_generator.py \
-  --input-csv workday_reports/examples/basic/pipeline_config.csv \
-  --project-name workday_ingestion \
-  --workspace-host https://my-workspace.cloud.databricks.com \
-  --output-dir dab_deployment
 ```
 
 **Notebook/Programmatic:**
@@ -242,20 +204,6 @@ python sqlserver/pipeline_generator.py \
   --input-csv sqlserver/examples/basic/pipeline_config.csv \
   --targets '{"dev": {"workspace_host": "https://my-workspace.cloud.databricks.com", "root_path": "/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}"}}' \
   --default-values '{"project_name": "sqlserver_ingestion", "gateway_worker_type": "m5d.large"}'
-```
-
-**CLI - Legacy arguments:**
-```bash
-python sqlserver/pipeline_generator.py \
-  --input-csv sqlserver/examples/basic/pipeline_config.csv \
-  --project-name sqlserver_ingestion \
-  --workspace-host https://my-workspace.cloud.databricks.com \
-  --root-path '/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}' \
-  --worker-type m5d.large \
-  --driver-type c5a.8xlarge \
-  --max-tables-gateway 500 \
-  --max-tables-pipeline 250 \
-  --output-dir dab_project
 ```
 
 **Notebook/Programmatic:**
@@ -307,20 +255,6 @@ python postgres/pipeline_generator.py \
   --input-csv postgres/examples/basic/pipeline_config.csv \
   --targets '{"dev": {"workspace_host": "https://my-workspace.cloud.databricks.com", "root_path": "/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}"}}' \
   --default-values '{"project_name": "postgres_ingestion", "gateway_worker_type": "m6d.xlarge"}'
-```
-
-**CLI - Legacy arguments:**
-```bash
-python postgres/pipeline_generator.py \
-  --input-csv postgres/examples/basic/pipeline_config.csv \
-  --project-name postgres_ingestion \
-  --workspace-host https://my-workspace.cloud.databricks.com \
-  --root-path '/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}' \
-  --worker-type m6d.xlarge \
-  --driver-type m6d.xlarge \
-  --max-tables-gateway 500 \
-  --max-tables-pipeline 250 \
-  --output-dir dab_project
 ```
 
 **Notebook/Programmatic:**
@@ -415,7 +349,6 @@ When using CLI, configuration is merged with the following precedence (highest t
 
 1. **Inline JSON arguments** (`--targets`, `--default-values`, `--override`)
 2. **Config file** (`--config`)
-3. **Legacy CLI arguments** (`--project-name`, `--workspace-host`, etc.)
 
 This allows you to use a base config file and override specific values:
 
@@ -428,14 +361,14 @@ python salesforce/pipeline_generator.py \
 
 ---
 
-## Advanced: Override vs Default Values
+## Override vs Default Values
 
-- **`default_values`**: Used when CSV column is missing or empty
-- **`override_input_config`**: Always applied, ignoring CSV values
+- **`default_values`**: Used when input config column is missing or empty
+- **`override_input_config`**: Always applied, ignoring input config values
 
 **Example:**
 ```python
-# CSV has schedule="*/15 * * * *" for some rows
+# Input config has schedule="*/15 * * * *" for some rows
 
 result = connector.run_complete_pipeline_generation(
     df=df,
@@ -445,7 +378,7 @@ result = connector.run_complete_pipeline_generation(
     # This sets schedule for rows where it's missing
     default_values={'schedule': '0 */6 * * *'},
 
-    # This forces ALL rows to use this schedule (ignores CSV)
+    # This forces ALL rows to use this schedule (ignores input config)
     override_input_config={'schedule': '0 0 * * *'}
 )
 ```
