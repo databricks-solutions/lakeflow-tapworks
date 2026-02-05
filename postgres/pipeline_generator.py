@@ -6,8 +6,16 @@ pipeline generation. It provides a simplified interface with all
 connector-specific logic encapsulated in the connector class.
 
 Usage:
-    # Command line
-    python pipeline_generator.py --input-csv input.csv --output-dir output --workspace-host https://... --root-path /Users/.../.bundle/${bundle.name}/${bundle.target}
+    # Using config file
+    python pipeline_generator.py --input-csv input.csv --config config.json
+
+    # Using inline JSON
+    python pipeline_generator.py --input-csv input.csv \
+        --targets '{"dev": {"workspace_host": "https://...", "root_path": "/Users/..."}}' \
+        --default-values '{"project_name": "my_project"}'
+
+    # Legacy CLI (backward compatible)
+    python pipeline_generator.py --input-csv input.csv --project-name my_project --workspace-host https://... --root-path /Users/...
 
     # Programmatic
     from postgres.connector import PostgreSQLConnector
@@ -24,6 +32,7 @@ Usage:
 """
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
@@ -35,104 +44,174 @@ from utilities import load_input_csv
 from connector import PostgreSQLConnector
 
 
+def load_config_file(config_path: str) -> dict:
+    """Load configuration from JSON or YAML file."""
+    path = Path(config_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+
+    with open(path) as f:
+        if path.suffix in ['.yaml', '.yml']:
+            import yaml
+            return yaml.safe_load(f)
+        else:
+            return json.load(f)
+
+
+def parse_json_arg(value: str) -> dict:
+    """Parse a JSON string argument."""
+    if not value:
+        return {}
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError as e:
+        raise argparse.ArgumentTypeError(f"Invalid JSON: {e}")
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Generate PostgreSQL ingestion pipelines using OOP architecture",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
+Configuration Methods (in order of precedence):
+  1. Inline JSON arguments (--targets, --default-values, --override)
+  2. Config file (--config)
+  3. Legacy CLI arguments (--project-name, --workspace-host, etc.)
+
 Examples:
-  # Basic usage
+  # Using config file
   python pipeline_generator.py \\
-    --input-csv postgres/examples/basic/pipeline_config.csv \\
+    --input-csv my_config.csv \\
+    --config config.json
+
+  # Using inline JSON
+  python pipeline_generator.py \\
+    --input-csv my_config.csv \\
+    --targets '{"dev": {"workspace_host": "https://workspace.cloud.databricks.com", "root_path": "/Users/user/.bundle/${bundle.name}/${bundle.target}"}}' \\
+    --default-values '{"project_name": "postgres_ingestion", "gateway_worker_type": "m6d.xlarge"}'
+
+  # Legacy CLI (backward compatible)
+  python pipeline_generator.py \\
+    --input-csv my_config.csv \\
     --project-name postgres_ingestion \\
     --workspace-host https://my-workspace.cloud.databricks.com \\
-    --root-path '/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}'
+    --root-path '/Users/user/.bundle/${bundle.name}/${bundle.target}'
 
-  # With custom node types and table limits
+  # Mixed: config file with inline override
   python pipeline_generator.py \\
-    --input-csv postgres/examples/basic/pipeline_config.csv \\
-    --project-name postgres_ingestion \\
-    --workspace-host https://workspace.cloud.databricks.com \\
-    --root-path '/Users/user/.bundle/${bundle.name}/${bundle.target}' \\
-    --worker-type m6d.xlarge \\
-    --driver-type m6d.xlarge \\
-    --max-tables-gateway 500 \\
-    --max-tables-pipeline 250
+    --input-csv my_config.csv \\
+    --config config.json \\
+    --override '{"schedule": null}'
+
+Config file format (JSON or YAML):
+  {
+    "targets": {
+      "dev": {"workspace_host": "https://...", "root_path": "..."},
+      "prod": {"workspace_host": "https://...", "root_path": "..."}
+    },
+    "default_values": {
+      "project_name": "...",
+      "schedule": "...",
+      "gateway_worker_type": "m6d.xlarge",
+      "gateway_driver_type": "m6d.xlarge"
+    },
+    "override_input_config": {"schedule": null},
+    "max_tables_per_gateway": 250,
+    "max_tables_per_pipeline": 250
+  }
 
 Note:
   - connection_name must be provided in the input CSV file for each row
   - UC POSTGRESQL connections do not accept a 'database' option; set the database per-row via source_database
-        """,
+        """
     )
 
     # Required arguments
     parser.add_argument(
-        "--input-csv",
+        '--input-csv',
         type=str,
         required=True,
-        help="Path to input CSV with source table list (required)",
-    )
-    parser.add_argument(
-        "--project-name",
-        type=str,
-        required=True,
-        help="Project name prefix for all resources (required)",
-    )
-    parser.add_argument(
-        "--workspace-host",
-        type=str,
-        required=True,
-        help="Workspace host URL (required, e.g., https://workspace.cloud.databricks.com)",
-    )
-    parser.add_argument(
-        "--root-path",
-        type=str,
-        required=True,
-        help="Root path for bundle deployment (required, e.g., /Users/user/.bundle/${bundle.name}/${bundle.target})",
+        help='Path to input CSV with source table list (required)'
     )
 
-    # Optional arguments
+    # Config file option
     parser.add_argument(
-        "--max-tables-gateway",
+        '--config', '-c',
+        type=str,
+        help='Path to JSON or YAML config file'
+    )
+
+    # Inline JSON options
+    parser.add_argument(
+        '--targets',
+        type=str,
+        help='Targets configuration as JSON string'
+    )
+    parser.add_argument(
+        '--default-values',
+        type=str,
+        help='Default values as JSON string'
+    )
+    parser.add_argument(
+        '--override',
+        type=str,
+        help='Override input config as JSON string'
+    )
+
+    # Legacy CLI arguments (for backward compatibility)
+    parser.add_argument(
+        '--project-name',
+        type=str,
+        help='Project name prefix for all resources'
+    )
+    parser.add_argument(
+        '--workspace-host',
+        type=str,
+        help='Workspace host URL (e.g., https://workspace.cloud.databricks.com)'
+    )
+    parser.add_argument(
+        '--root-path',
+        type=str,
+        help='Root path for bundle deployment (e.g., /Users/user/.bundle/${bundle.name}/${bundle.target})'
+    )
+    parser.add_argument(
+        '--max-tables-gateway',
         type=int,
         default=250,
-        help="Maximum tables per gateway (default: 250)",
+        help='Maximum tables per gateway (default: 250)'
     )
     parser.add_argument(
-        "--max-tables-pipeline",
+        '--max-tables-pipeline',
         type=int,
         default=250,
-        help="Maximum tables per pipeline within gateway (default: 250)",
+        help='Maximum tables per pipeline within gateway (default: 250)'
     )
     parser.add_argument(
-        "--schedule",
+        '--schedule',
         type=str,
-        default="*/15 * * * *",
-        help="Default cron schedule (default: */15 * * * *)",
+        help='Default cron schedule'
     )
     parser.add_argument(
-        "--worker-type",
+        '--worker-type',
         type=str,
-        default=None,
-        help="Default gateway worker node type if not in CSV (default: None)",
+        help='Default gateway worker node type if not in CSV'
     )
     parser.add_argument(
-        "--driver-type",
+        '--driver-type',
         type=str,
-        default=None,
-        help="Default gateway driver node type if not in CSV (default: None)",
+        help='Default gateway driver node type if not in CSV'
     )
     parser.add_argument(
-        "--output-dir",
+        '--output-dir',
         type=str,
-        default="dab_project",
-        help="Output directory for DAB project (default: dab_project)",
+        default='dab_project',
+        help='Output directory for DAB project (default: dab_project)'
     )
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Enable verbose logging output",
+        '--verbose', '-v',
+        action='store_true',
+        help='Enable verbose logging output'
     )
 
     args = parser.parse_args()
@@ -141,7 +220,7 @@ Note:
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(
         level=log_level,
-        format="%(levelname)s: %(message)s"
+        format='%(levelname)s: %(message)s'
     )
 
     try:
@@ -149,21 +228,59 @@ Note:
         print(f"Loading input CSV: {args.input_csv}")
         input_df = load_input_csv(args.input_csv)
 
-        # Build targets dict from CLI arguments
-        targets = {
-            "dev": {
-                "workspace_host": args.workspace_host,
-                "root_path": args.root_path,
-            }
-        }
+        # Build configuration from multiple sources
+        # Priority: inline JSON > config file > legacy CLI args
 
-        # Build default values dict
-        default_values = {
-            "project_name": args.project_name,
-            "schedule": args.schedule,
-            "gateway_worker_type": args.worker_type,
-            "gateway_driver_type": args.driver_type,
-        }
+        # Start with legacy CLI args
+        targets = {}
+        default_values = {}
+        override_input_config = {}
+        max_tables_per_gateway = args.max_tables_gateway
+        max_tables_per_pipeline = args.max_tables_pipeline
+
+        if args.workspace_host or args.root_path:
+            targets = {'dev': {}}
+            if args.workspace_host:
+                targets['dev']['workspace_host'] = args.workspace_host
+            if args.root_path:
+                targets['dev']['root_path'] = args.root_path
+
+        if args.project_name:
+            default_values['project_name'] = args.project_name
+        if args.schedule:
+            default_values['schedule'] = args.schedule
+        if args.worker_type:
+            default_values['gateway_worker_type'] = args.worker_type
+        if args.driver_type:
+            default_values['gateway_driver_type'] = args.driver_type
+
+        # Overlay config file
+        if args.config:
+            print(f"Loading config file: {args.config}")
+            config = load_config_file(args.config)
+            if 'targets' in config:
+                targets = config['targets']
+            if 'default_values' in config:
+                default_values = {**default_values, **config['default_values']}
+            if 'override_input_config' in config:
+                override_input_config = config['override_input_config']
+            if 'max_tables_per_gateway' in config:
+                max_tables_per_gateway = config['max_tables_per_gateway']
+            if 'max_tables_per_pipeline' in config:
+                max_tables_per_pipeline = config['max_tables_per_pipeline']
+
+        # Overlay inline JSON args (highest priority)
+        if args.targets:
+            targets = parse_json_arg(args.targets)
+        if args.default_values:
+            inline_defaults = parse_json_arg(args.default_values)
+            default_values = {**default_values, **inline_defaults}
+        if args.override:
+            override_input_config = parse_json_arg(args.override)
+
+        # Validate required configuration
+        if not targets:
+            parser.error("No targets configured. Use --targets, --config, or --workspace-host/--root-path")
 
         # Create connector instance
         connector = PostgreSQLConnector()
@@ -173,36 +290,35 @@ Note:
             df=input_df,
             output_dir=args.output_dir,
             targets=targets,
-            default_values=default_values,
-            max_tables_per_gateway=args.max_tables_gateway,
-            max_tables_per_pipeline=args.max_tables_pipeline,
+            default_values=default_values if default_values else None,
+            override_input_config=override_input_config if override_input_config else None,
+            max_tables_per_gateway=max_tables_per_gateway,
+            max_tables_per_pipeline=max_tables_per_pipeline
         )
 
         # Print next steps
-        print("\nNext steps:")
-        print("  1. Review the generated DAB project:")
+        print(f"\nNext steps:")
+        print(f"  1. Review the generated DAB project:")
         print(f"     - {args.output_dir}/databricks.yml")
         print(f"     - {args.output_dir}/resources/gateways.yml")
         print(f"     - {args.output_dir}/resources/pipelines.yml")
         print(f"     - {args.output_dir}/resources/jobs.yml")
-        print("  2. Deploy using Databricks Asset Bundles:")
+        print(f"  2. Deploy using Databricks Asset Bundles:")
         print(f"     cd {args.output_dir}")
-        print("     databricks bundle deploy -t dev")
-        print("=" * 80)
+        print(f"     databricks bundle deploy -t dev")
+        print("="*80)
 
         # Save the intermediate pipeline configuration for reference
         output_csv = f"{args.output_dir}/generated_config.csv"
         result_df.to_csv(output_csv, index=False)
-        print(f"\n✓ Intermediate configuration saved to: {output_csv}")
+        print(f"\nIntermediate configuration saved to: {output_csv}")
 
     except Exception as e:
-        print(f"\n✗ Error: {e}", file=sys.stderr)
+        print(f"\nError: {e}", file=sys.stderr)
         import traceback
-
         traceback.print_exc()
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
-
