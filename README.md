@@ -142,14 +142,13 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables).
                           │
           ┌───────────────┴───────────────┐
           ▼                               ▼
-    subgroup="critical"              subgroup="default"
-    (5 high-priority tables)         (remaining tables)
+      subgroup="01"                  subgroup="02"
+    (5 critical tables)            (remaining tables)
           │                               │
           ▼                               ▼
   ┌──────────────┐               ┌──────────────┐
   │  Pipeline    │               │  Pipeline(s) │
-  │  sales_      │               │  sales_      │
-  │  critical_g1 │               │  default_g1  │
+  │  sales_01_g1 │               │  sales_02_g1 │
   └──────────────┘               └──────────────┘
 ```
 
