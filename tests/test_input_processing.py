@@ -409,13 +409,13 @@ class TestSubgroupValidation:
             'target_table_name': ['account', 'contact'],
             'connection_name': ['sfdc_conn', 'sfdc_conn'],
             'prefix': ['sales', 'sales'],
-            'subgroup': ['critical', 'default'],
+            'subgroup': ['01', '02'],
         })
 
         result = salesforce_connector.load_and_normalize_input(df=df)
 
-        assert result.loc[0, 'subgroup'] == 'critical'
-        assert result.loc[1, 'subgroup'] == 'default'
+        assert result.loc[0, 'subgroup'] == '01'
+        assert result.loc[1, 'subgroup'] == '02'
 
     def test_mixed_subgroups_in_same_prefix_raises_error(self, salesforce_connector):
         """Mixed subgroups (some empty, some defined) in same prefix should raise error."""
@@ -430,7 +430,7 @@ class TestSubgroupValidation:
             'target_table_name': ['account', 'contact', 'opportunity'],
             'connection_name': ['sfdc_conn', 'sfdc_conn', 'sfdc_conn'],
             'prefix': ['sales', 'sales', 'sales'],
-            'subgroup': ['critical', '', ''],  # Mixed: one explicit, two empty
+            'subgroup': ['01', '', ''],  # Mixed: one explicit, two empty
         })
 
         with pytest.raises(ValidationError, match="Mixed subgroup usage"):
@@ -447,14 +447,14 @@ class TestSubgroupValidation:
             'target_table_name': ['account', 'contact', 'opportunity'],
             'connection_name': ['sfdc_conn', 'sfdc_conn', 'sfdc_conn'],
             'prefix': ['sales', 'sales', 'marketing'],  # Different prefixes
-            'subgroup': ['critical', 'default', ''],  # sales: all explicit, marketing: empty
+            'subgroup': ['01', '02', ''],  # sales: all explicit, marketing: empty
         })
 
         result = salesforce_connector.load_and_normalize_input(df=df)
 
         # sales prefix: explicit subgroups preserved
-        assert result.loc[0, 'subgroup'] == 'critical'
-        assert result.loc[1, 'subgroup'] == 'default'
+        assert result.loc[0, 'subgroup'] == '01'
+        assert result.loc[1, 'subgroup'] == '02'
         # marketing prefix: empty defaults to '01'
         assert result.loc[2, 'subgroup'] == '01'
 
@@ -471,7 +471,7 @@ class TestSubgroupValidation:
             'target_table_name': ['account', 'contact'],
             'connection_name': ['sfdc_conn', 'sfdc_conn'],
             'prefix': ['sales', 'sales'],
-            'subgroup': ['critical', ''],
+            'subgroup': ['01', ''],
         })
 
         with pytest.raises(ValidationError) as exc_info:
@@ -479,7 +479,7 @@ class TestSubgroupValidation:
 
         error_message = str(exc_info.value)
         assert 'sales' in error_message
-        assert 'critical' in error_message
+        assert '01' in error_message
 
     def test_whitespace_subgroup_treated_as_empty(self, salesforce_connector):
         """Whitespace-only subgroups should be treated as empty."""
@@ -494,7 +494,7 @@ class TestSubgroupValidation:
             'target_table_name': ['account', 'contact'],
             'connection_name': ['sfdc_conn', 'sfdc_conn'],
             'prefix': ['sales', 'sales'],
-            'subgroup': ['critical', '   '],  # Whitespace treated as empty
+            'subgroup': ['01', '   '],  # Whitespace treated as empty
         })
 
         with pytest.raises(ValidationError, match="Mixed subgroup usage"):
