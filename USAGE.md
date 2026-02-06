@@ -13,11 +13,11 @@ python cli.py --list
 # Show connector info (required columns, defaults)
 python cli.py salesforce --info
 
-# Generate pipelines using config file
-python cli.py salesforce --input config.csv --config config.yaml
+# Generate pipelines using settings file
+python cli.py salesforce --input-config tables.csv --settings settings.yaml
 
 # Generate pipelines using inline JSON
-python cli.py sqlserver --input config.csv \
+python cli.py sqlserver --input-config tables.csv \
   --targets '{"dev": {"workspace_host": "https://..."}}' \
   --default-values '{"project_name": "my_project"}'
 ```

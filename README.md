@@ -39,7 +39,7 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
    python cli.py sqlserver --info
 
    # Generate DAB files
-   python cli.py sqlserver --input config.csv --config config.yaml
+   python cli.py sqlserver --input-config tables.csv --settings settings.yaml
    ```
 
    **Notebook / Python:**
@@ -48,7 +48,7 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
 
    result = run_pipeline_generation(
        connector_name='sqlserver',
-       input_source='config.csv',  # or Delta table or DataFrame
+       input_source='tables.csv',  # or Delta table or DataFrame
        output_dir='output',
        targets={'dev': {'workspace_host': 'https://...'}},
        default_values={'project_name': 'my_project'},
@@ -71,8 +71,8 @@ Use short aliases for convenience:
 | `wd`, `workday` | workday_reports |
 
 ```bash
-python cli.py sf --input config.csv --config config.yaml
-python cli.py pg --input config.csv --config config.yaml
+python cli.py sf --input-config tables.csv --settings settings.yaml
+python cli.py pg --input-config tables.csv --settings settings.yaml
 ```
 
 ## Load Balancing
@@ -163,13 +163,13 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables):
 
 **Inline JSON:**
 ```bash
-python cli.py salesforce --input config.csv \
+python cli.py salesforce --input-config tables.csv \
   --targets '{"dev": {"workspace_host": "https://dev.cloud.databricks.com"}}' \
   --default-values '{"project_name": "sfdc_prod", "schedule": "0 */6 * * *"}' \
   --override '{"pause_status": "PAUSED"}'
 ```
 
-**Config file (config.yaml):**
+**Settings file (settings.yaml):**
 ```yaml
 targets:
   dev:
@@ -188,7 +188,7 @@ override_input_config:
 ```
 
 ```bash
-python cli.py salesforce --input config.csv --config config.yaml
+python cli.py salesforce --input-config tables.csv --settings settings.yaml
 ```
 
 ### Notebook Example

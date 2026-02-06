@@ -119,17 +119,17 @@ Examples:
   # Show Salesforce connector info
   python cli.py salesforce --info
 
-  # Generate Salesforce pipelines using config file
-  python cli.py salesforce --input config.csv --config config.yaml
+  # Generate pipelines using settings file
+  python cli.py salesforce --input-config tables.csv --settings settings.yaml
 
-  # Generate SQL Server pipelines with inline JSON
-  python cli.py sqlserver --input config.csv \\
+  # Generate pipelines with inline JSON
+  python cli.py sqlserver --input-config tables.csv \\
     --targets '{"dev": {"workspace_host": "https://..."}}' \\
     --default-values '{"project_name": "my_project"}'
 
   # Use connector aliases
-  python cli.py sf --input config.csv --config config.yaml   # Salesforce
-  python cli.py pg --input config.csv --config config.yaml   # PostgreSQL
+  python cli.py sf --input-config tables.csv --settings settings.yaml
+  python cli.py pg --input-config tables.csv --settings settings.yaml
 
 Connector aliases:
   sf, salesforce     -> salesforce
@@ -139,7 +139,7 @@ Connector aliases:
   snow               -> servicenow
   wd, workday        -> workday_reports
 
-Config file format (JSON or YAML):
+Settings file format (JSON or YAML):
   targets:
     dev:
       workspace_host: https://dev.cloud.databricks.com
@@ -177,9 +177,9 @@ Config file format (JSON or YAML):
 
     # Input/output
     parser.add_argument(
-        '--input',
+        '--input-config',
         type=str,
-        help='Path to input CSV file or Delta table name'
+        help='Path to table mappings (CSV file or Delta table name)'
     )
     parser.add_argument(
         '--output-dir', '-o',
@@ -193,11 +193,11 @@ Config file format (JSON or YAML):
         help='Save processed configuration to CSV file'
     )
 
-    # Config file
+    # Settings file
     parser.add_argument(
-        '--config', '-c',
+        '--settings', '-s',
         type=str,
-        help='Path to JSON or YAML config file'
+        help='Path to settings file (JSON or YAML) with targets, defaults, overrides'
     )
 
     # Inline JSON options
@@ -277,31 +277,31 @@ Config file format (JSON or YAML):
         sys.exit(0)
 
     # Input is required for generation
-    if not args.input:
-        print(f"Error: --input is required for pipeline generation", file=sys.stderr)
+    if not args.input_config:
+        print(f"Error: --input-config is required for pipeline generation", file=sys.stderr)
         print(f"Use 'python cli.py {args.connector} --info' for connector details", file=sys.stderr)
         sys.exit(1)
 
     try:
         # Build configuration from multiple sources
-        # Priority: inline JSON > config file
+        # Priority: inline JSON > settings file
         targets = {}
         default_values = {}
         override_config = {}
 
-        # Load from config file
-        if args.config:
-            logger.info(f"Loading config file: {args.config}")
-            config = load_config_file(args.config)
-            targets = config.get('targets', {})
-            default_values = config.get('default_values', {})
-            override_config = config.get('override_input_config', {})
+        # Load from settings file
+        if args.settings:
+            logger.info(f"Loading settings file: {args.settings}")
+            settings = load_config_file(args.settings)
+            targets = settings.get('targets', {})
+            default_values = settings.get('default_values', {})
+            override_config = settings.get('override_input_config', {})
 
-            # Allow config file to override max tables
-            if 'max_tables_per_pipeline' in config:
-                args.max_tables_per_pipeline = config['max_tables_per_pipeline']
-            if 'max_tables_per_gateway' in config:
-                args.max_tables_per_gateway = config['max_tables_per_gateway']
+            # Allow settings file to override max tables
+            if 'max_tables_per_pipeline' in settings:
+                args.max_tables_per_pipeline = settings['max_tables_per_pipeline']
+            if 'max_tables_per_gateway' in settings:
+                args.max_tables_per_gateway = settings['max_tables_per_gateway']
 
         # Overlay inline JSON (higher priority)
         if args.targets:
@@ -315,19 +315,19 @@ Config file format (JSON or YAML):
         # Validate targets
         if not targets:
             print("Error: No targets specified", file=sys.stderr)
-            print("Use --config or --targets to specify workspace targets", file=sys.stderr)
+            print("Use --settings or --targets to specify workspace targets", file=sys.stderr)
             sys.exit(1)
 
         # Resolve connector name
         canonical_name = resolve_connector_name(args.connector)
         logger.info(f"Using connector: {canonical_name}")
-        logger.info(f"Input: {args.input}")
+        logger.info(f"Input: {args.input_config}")
         logger.info(f"Output: {args.output_dir}")
 
         # Run pipeline generation
         result_df = run_pipeline_generation(
             connector_name=canonical_name,
-            input_source=args.input,
+            input_source=args.input_config,
             output_dir=args.output_dir,
             targets=targets,
             default_values=default_values if default_values else None,
