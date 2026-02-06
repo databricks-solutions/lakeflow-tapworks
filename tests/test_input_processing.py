@@ -375,3 +375,127 @@ class TestScdTypeValidation:
 
         result = salesforce_connector._validate_scd_type('INVALID', 'test_table')
         assert result is None
+
+
+class TestSubgroupValidation:
+    """Tests for subgroup validation - mixed usage within a prefix."""
+
+    def test_all_empty_subgroups_default_to_01(self, salesforce_connector):
+        """All empty subgroups should default to '01'."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['sfdc_conn', 'sfdc_conn'],
+            'prefix': ['sales', 'sales'],
+            'subgroup': ['', ''],
+        })
+
+        result = salesforce_connector.load_and_normalize_input(df=df)
+
+        assert all(result['subgroup'] == '01')
+
+    def test_all_explicit_subgroups_preserved(self, salesforce_connector):
+        """All explicit subgroups should be preserved."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['sfdc_conn', 'sfdc_conn'],
+            'prefix': ['sales', 'sales'],
+            'subgroup': ['01', '02'],
+        })
+
+        result = salesforce_connector.load_and_normalize_input(df=df)
+
+        assert result.loc[0, 'subgroup'] == '01'
+        assert result.loc[1, 'subgroup'] == '02'
+
+    def test_mixed_subgroups_in_same_prefix_raises_error(self, salesforce_connector):
+        """Mixed subgroups (some empty, some defined) in same prefix should raise error."""
+        from core import ValidationError
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard', 'standard'],
+            'source_table_name': ['Account', 'Contact', 'Opportunity'],
+            'target_catalog': ['main', 'main', 'main'],
+            'target_schema': ['salesforce', 'salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact', 'opportunity'],
+            'connection_name': ['sfdc_conn', 'sfdc_conn', 'sfdc_conn'],
+            'prefix': ['sales', 'sales', 'sales'],
+            'subgroup': ['01', '', ''],  # Mixed: one explicit, two empty
+        })
+
+        with pytest.raises(ValidationError, match="Mixed subgroup usage"):
+            salesforce_connector.load_and_normalize_input(df=df)
+
+    def test_mixed_subgroups_different_prefixes_allowed(self, salesforce_connector):
+        """Different prefixes can have different subgroup strategies."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard', 'standard'],
+            'source_table_name': ['Account', 'Contact', 'Opportunity'],
+            'target_catalog': ['main', 'main', 'main'],
+            'target_schema': ['salesforce', 'salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact', 'opportunity'],
+            'connection_name': ['sfdc_conn', 'sfdc_conn', 'sfdc_conn'],
+            'prefix': ['sales', 'sales', 'marketing'],  # Different prefixes
+            'subgroup': ['01', '02', ''],  # sales: all explicit, marketing: empty
+        })
+
+        result = salesforce_connector.load_and_normalize_input(df=df)
+
+        # sales prefix: explicit subgroups preserved
+        assert result.loc[0, 'subgroup'] == '01'
+        assert result.loc[1, 'subgroup'] == '02'
+        # marketing prefix: empty defaults to '01'
+        assert result.loc[2, 'subgroup'] == '01'
+
+    def test_error_message_includes_prefix_and_subgroups(self, salesforce_connector):
+        """Error message should include the prefix and defined subgroups."""
+        from core import ValidationError
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['sfdc_conn', 'sfdc_conn'],
+            'prefix': ['sales', 'sales'],
+            'subgroup': ['01', ''],
+        })
+
+        with pytest.raises(ValidationError) as exc_info:
+            salesforce_connector.load_and_normalize_input(df=df)
+
+        error_message = str(exc_info.value)
+        assert 'sales' in error_message
+        assert '01' in error_message
+
+    def test_whitespace_subgroup_treated_as_empty(self, salesforce_connector):
+        """Whitespace-only subgroups should be treated as empty."""
+        from core import ValidationError
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['sfdc_conn', 'sfdc_conn'],
+            'prefix': ['sales', 'sales'],
+            'subgroup': ['01', '   '],  # Whitespace treated as empty
+        })
+
+        with pytest.raises(ValidationError, match="Mixed subgroup usage"):
+            salesforce_connector.load_and_normalize_input(df=df)

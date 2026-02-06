@@ -37,7 +37,7 @@ from pathlib import Path
 import sys
 
 # Import shared utilities
-from utilities import load_input_csv, convert_cron_to_quartz
+from .utilities import load_input_csv, convert_cron_to_quartz
 
 # Import custom exceptions
 from .exceptions import ConfigurationError, ValidationError, YAMLGenerationError
@@ -432,18 +432,39 @@ class BaseConnector(ABC):
         Returns:
             DataFrame with connector-specific normalization applied
         """
-        # Handle prefix and subgroup defaults (common to all connectors)
+        # Handle prefix defaults (common to all connectors)
         if 'prefix' not in df.columns:
             df['prefix'] = df['project_name']
         else:
             mask = df['prefix'].isna() | (df['prefix'].astype(str).str.strip() == '')
             df.loc[mask, 'prefix'] = df.loc[mask, 'project_name']
 
+        # Handle subgroup - validate no mixed usage within a prefix
         if 'subgroup' not in df.columns:
             df['subgroup'] = '01'
         else:
-            mask = df['subgroup'].isna() | (df['subgroup'].astype(str).str.strip() == '')
-            df.loc[mask, 'subgroup'] = '01'
+            df['_subgroup_empty'] = df['subgroup'].isna() | (df['subgroup'].astype(str).str.strip() == '')
+
+            # Check for mixed subgroup usage within each prefix
+            for prefix in df['prefix'].unique():
+                prefix_mask = df['prefix'] == prefix
+                prefix_df = df[prefix_mask]
+
+                has_empty = prefix_df['_subgroup_empty'].any()
+                has_defined = (~prefix_df['_subgroup_empty']).any()
+
+                if has_empty and has_defined:
+                    defined_subgroups = prefix_df.loc[~prefix_df['_subgroup_empty'], 'subgroup'].unique()[:3]
+                    empty_count = prefix_df['_subgroup_empty'].sum()
+                    raise ValidationError(
+                        f"Mixed subgroup usage in prefix '{prefix}': {empty_count} table(s) have empty "
+                        f"subgroups while others use {list(defined_subgroups)}. "
+                        f"When using subgroups, all tables in a prefix must have explicit subgroups."
+                    )
+
+            # All subgroups empty for this prefix - default to '01'
+            df.loc[df['_subgroup_empty'], 'subgroup'] = '01'
+            df.drop(columns=['_subgroup_empty'], inplace=True)
 
         return df
 

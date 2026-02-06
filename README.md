@@ -6,18 +6,15 @@ Automated DAB (Databricks Asset Bundle) generation toolkit for Lakeflow Connect 
 
 Manually creating and maintaining DABs for Lakeflow connectors doesn't scale. Common challenges include:
 
-- **Migration complexity** - Customers have existing metadata from tools like ADF that they want to leverage automatically
 - **Manual table management** - Adding hundreds or thousands of tables to DABs by hand is error-prone and time-consuming
 - **Load balancing** - Distributing tables across pipelines based on size, SLAs, or performance metrics is impossible to do manually at scale
 - **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards requires automation
-- **Config validation** - Catching issues like missing catalogs, schemas, or connections before deployment prevents pipeline failures
 - **DAB syntax errors** - Minor syntax mistakes (e.g., missing spaces) cause cryptic errors that generate support tickets
 
 ## Solution
 
 Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame source) and automatically generates complete DAB packages with load balancing, validation, and proper syntax.
 
-**Supported connectors:** SQL Server, PostgreSQL, Salesforce, Google Analytics 4, ServiceNow, Workday
 
 ## How It Works
 
@@ -28,33 +25,52 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
    dbo,customers,bronze,sales,customers,sqlserver_conn
    ```
 
-2. **Run the generator** - From a notebook or CLI (for CI/CD integration):
+2. **Run the generator** - From CLI or notebook:
+
+   **CLI (recommended):**
+   ```bash
+   # List available connectors
+   python cli.py --list
+
+   # Show connector requirements
+   python cli.py sqlserver --info
+
+   # Generate DAB files
+   python cli.py sqlserver --input-config tables.csv 
+   ```
 
    **Notebook / Python:**
    ```python
-   from utilities import load_input_csv
-   from sqlserver.connector import SQLServerConnector
+   from core import run_pipeline_generation
 
-   connector = SQLServerConnector()
-   df = load_input_csv('pipeline_config.csv')
-
-   result = connector.run_complete_pipeline_generation(
-       df=df,
+   result = run_pipeline_generation(
+       connector_name='sqlserver',
+       input_source='tables.csv',  # or Delta table or DataFrame
        output_dir='output',
-       targets={'dev': {'workspace_host': 'https://...', 'root_path': '/Users/...'}}
+       targets={'dev': {'workspace_host': 'https://...'}},
+       default_values={'project_name': 'my_project'},
    )
    ```
 
-   **CLI:**
-   ```bash
-   python pipeline_generator.py \
-     --input-csv pipeline_config.csv \
-     --project-name my_project \
-     --workspace-host https://my-workspace.cloud.databricks.com \
-     --root-path '/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}'
-   ```
-
 3. **Deploy** - Use the generated DAB files with `databricks bundle deploy`
+
+## Connector Aliases
+
+Use short aliases for convenience:
+
+| Alias | Connector |
+|-------|-----------|
+| `sf` | salesforce |
+| `sql`, `mssql` | sqlserver |
+| `pg`, `postgresql` | postgres |
+| `ga`, `ga4` | google_analytics |
+| `snow` | servicenow |
+| `wd`, `workday` | workday_reports |
+
+```bash
+python cli.py sf --input-config tables.csv 
+python cli.py pg --input-config tables.csv 
+```
 
 ## Load Balancing
 
@@ -62,62 +78,151 @@ Tapworks automatically distributes tables across pipelines and gateways.
 
 ### Hierarchy
 
+**SaaS connectors** (Salesforce, GA4, ServiceNow, Workday):
 ```
 Project (DAB Package)
-└── Prefix (logical group, e.g., "sales", "finance")
-    └── Subgroup (optional, for manual control)
-        └── Pipeline(s)
-            └── Gateway (database connectors only)
+└── Prefix + Subgroup (logical grouping)
+    └── Pipeline(s) - auto-split if > 250 tables
+```
+
+**Database connectors** (SQL Server, PostgreSQL):
+```
+Project (DAB Package)
+└── Prefix + Subgroup (logical grouping)
+    └── Gateway(s) - auto-split if > 250 tables
+        └── Pipeline(s) - auto-split if > 250 tables per gateway
 ```
 
 ### Auto-Distribution
 
 Tables are automatically split based on configurable limits (default: 250 tables per pipeline/gateway):
 
+**SaaS connector example** (600 tables):
 ```
-                        Input: 600 tables, prefix="sales"
+              Input: 600 tables, prefix="sales", subgroup="01"
                                       │
                     ┌─────────────────┼─────────────────┐
                     ▼                 ▼                 ▼
-            ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-            │  Pipeline 1  │  │  Pipeline 2  │  │  Pipeline 3  │
-            │  (tables     │  │  (tables     │  │  (tables     │
-            │   1-250)     │  │   251-500)   │  │   501-600)   │
-            └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
-                   │                 │                 │
-                   └────────┬────────┘                 │
-                            ▼                          ▼
-                    ┌──────────────┐          ┌──────────────┐
-                    │  Gateway 1   │          │  Gateway 2   │
-                    │  (pipelines  │          │  (pipeline   │
-                    │   1-2)       │          │   3)         │
-                    └──────────────┘          └──────────────┘
+            ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+            │   Pipeline    │ │   Pipeline    │ │   Pipeline    │
+            │ sales_01_g01  │ │ sales_01_g02  │ │ sales_01_g03  │
+            │ (250 tables)  │ │ (250 tables)  │ │ (100 tables)  │
+            └───────────────┘ └───────────────┘ └───────────────┘
+```
+
+**Database connector example** (600 tables):
+```
+              Input: 600 tables, prefix="sales", subgroup="01"
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    ▼                                   ▼
+            ┌───────────────┐                   ┌───────────────┐
+            │    Gateway    │                   │    Gateway    │
+            │ sales_01_gw01 │                   │ sales_01_gw02 │
+            │ (500 tables)  │                   │ (100 tables)  │
+            └───────┬───────┘                   └───────┬───────┘
+                    │                                   │
+          ┌─────────┴─────────┐                         │
+          ▼                   ▼                         ▼
+   ┌───────────────┐   ┌───────────────┐        ┌───────────────┐
+   │   Pipeline    │   │   Pipeline    │        │   Pipeline    │
+   │  sales_01_    │   │  sales_01_    │        │  sales_01_    │
+   │  gw01_g01     │   │  gw01_g02     │        │  gw02_g01     │
+   │ (250 tables)  │   │ (250 tables)  │        │ (100 tables)  │
+   └───────────────┘   └───────────────┘        └───────────────┘
 ```
 
 ### Manual Subgroups
 
-Use subgroups to isolate specific tables (e.g., critical or high-volume tables):
+Use subgroups to isolate specific tables (e.g., critical or high-volume tables).
+**Note:** When using subgroups, all tables in a prefix must have explicit subgroups.
 
 ```
                     prefix="sales"
                           │
           ┌───────────────┴───────────────┐
           ▼                               ▼
-    subgroup="critical"             subgroup="01" (auto)
+      subgroup="01"                  subgroup="02"
+    (5 critical tables)          (595 remaining tables)
           │                               │
           ▼                               ▼
-  ┌──────────────┐               ┌──────────────┐
-  │  Pipeline    │               │  Pipeline(s) │
-  │  (5 critical │               │  (remaining  │
-  │   tables)    │               │   tables)    │
-  └──────────────┘               └──────────────┘
+  ┌───────────────┐       ┌───────────────┬───────────────┬───────────────┐
+  │   Pipeline    │       │   Pipeline    │   Pipeline    │   Pipeline    │
+  │ sales_01_g01  │       │ sales_02_g01  │ sales_02_g02  │ sales_02_g03  │
+  │  (5 tables)   │       │ (250 tables)  │ (250 tables)  │  (95 tables)  │
+  └───────────────┘       └───────────────┴───────────────┴───────────────┘
 ```
 
-## Additional Features
+## Defaults and Overrides
 
-- **Defaults and overrides** - Set default values for missing config columns or override existing values globally (e.g., pause all jobs)
-- **Multi-environment** - Generate DABs for dev, staging, prod from the same config
-- **Flexible storage** - Config can live in CSV, Delta tables, or any DataFrame-compatible source
+- **default_values** - Fill missing/empty columns with defaults (e.g., set schedule for rows that don't have one)
+- **override** - Force values for ALL rows, ignoring what's in the input (e.g., pause all jobs)
+
+### CLI Examples
+
+**Inline JSON:**
+```bash
+python cli.py salesforce --input-config tables.csv \
+  --targets '{"dev": {"workspace_host": "https://dev.cloud.databricks.com"}}' \
+  --default-values '{"project_name": "sfdc_prod", "schedule": "0 */6 * * *"}' \
+  --override '{"pause_status": "PAUSED"}'
+```
+
+**Settings file (settings.json):**
+```json
+{
+  "targets": {
+    "dev": {
+      "workspace_host": "https://dev.cloud.databricks.com",
+      "root_path": "/Shared/pipelines/dev"
+    },
+    "prod": {
+      "workspace_host": "https://prod.cloud.databricks.com",
+      "root_path": "/Shared/pipelines/prod"
+    }
+  },
+  "default_values": {
+    "project_name": "sfdc_prod",
+    "schedule": "0 */6 * * *"
+  },
+  "override_input_config": {
+    "pause_status": "PAUSED"
+  }
+}
+```
+
+```bash
+python cli.py salesforce --input-config tables.csv --settings settings.json
+```
+
+### Notebook Example
+
+```python
+from core import run_pipeline_generation
+
+result = run_pipeline_generation(
+    connector_name='salesforce',
+    input_source='config.csv',
+    output_dir='output',
+    targets={
+        'dev': {'workspace_host': 'https://dev.cloud.databricks.com'},
+        'prod': {'workspace_host': 'https://prod.cloud.databricks.com'},
+    },
+    # Fill missing values
+    default_values={
+        'project_name': 'sfdc_prod',
+        'schedule': '0 */6 * * *',
+    },
+    # Override ALL rows (e.g., pause all jobs during maintenance)
+    override_config={
+        'pause_status': 'PAUSED',
+    },
+)
+```
+
+## Target Environement
+
+- Using target it is possible to specify different workspaces for deployment (e.g., dev, staging, prod)
 
 ## Output Structure
 
@@ -132,10 +237,15 @@ output/<project_name>/
 
 ## Documentation
 
-See connector-specific READMEs for detailed configuration options:
-- [SQL Server](sqlserver/README.md)
-- [PostgreSQL](postgres/README.md)
-- [Salesforce](salesforce/README.md)
-- [Google Analytics 4](google_analytics/README.md)
-- [ServiceNow](servicenow/README.md)
-- [Workday](workday_reports/README.md)
+- [USAGE.md](USAGE.md) - CLI and notebook usage examples for all connectors
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and class hierarchy
+
+**Quick reference:**
+```bash
+# Show connector requirements (columns, defaults, SCD types)
+python cli.py <connector> --info
+
+# Examples
+python cli.py salesforce --info
+python cli.py sqlserver --info
+```
