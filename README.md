@@ -39,7 +39,7 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
    python cli.py sqlserver --info
 
    # Generate DAB files
-   python cli.py sqlserver --input-config tables.csv --settings settings.yaml
+   python cli.py sqlserver --input-config tables.csv --settings settings.json
    ```
 
    **Notebook / Python:**
@@ -71,8 +71,8 @@ Use short aliases for convenience:
 | `wd`, `workday` | workday_reports |
 
 ```bash
-python cli.py sf --input-config tables.csv --settings settings.yaml
-python cli.py pg --input-config tables.csv --settings settings.yaml
+python cli.py sf --input-config tables.csv --settings settings.json
+python cli.py pg --input-config tables.csv --settings settings.json
 ```
 
 ## Load Balancing
@@ -169,26 +169,31 @@ python cli.py salesforce --input-config tables.csv \
   --override '{"pause_status": "PAUSED"}'
 ```
 
-**Settings file (settings.yaml):**
-```yaml
-targets:
-  dev:
-    workspace_host: https://dev.cloud.databricks.com
-    root_path: /Shared/pipelines/dev
-  prod:
-    workspace_host: https://prod.cloud.databricks.com
-    root_path: /Shared/pipelines/prod
-
-default_values:
-  project_name: sfdc_prod
-  schedule: "0 */6 * * *"
-
-override_input_config:
-  pause_status: PAUSED
+**Settings file (settings.json):**
+```json
+{
+  "targets": {
+    "dev": {
+      "workspace_host": "https://dev.cloud.databricks.com",
+      "root_path": "/Shared/pipelines/dev"
+    },
+    "prod": {
+      "workspace_host": "https://prod.cloud.databricks.com",
+      "root_path": "/Shared/pipelines/prod"
+    }
+  },
+  "default_values": {
+    "project_name": "sfdc_prod",
+    "schedule": "0 */6 * * *"
+  },
+  "override_input_config": {
+    "pause_status": "PAUSED"
+  }
+}
 ```
 
 ```bash
-python cli.py salesforce --input-config tables.csv --settings settings.yaml
+python cli.py salesforce --input-config tables.csv --settings settings.json
 ```
 
 ### Notebook Example

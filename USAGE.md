@@ -14,7 +14,7 @@ python cli.py --list
 python cli.py salesforce --info
 
 # Generate pipelines using settings file
-python cli.py salesforce --input-config tables.csv --settings settings.yaml
+python cli.py salesforce --input-config tables.csv --settings settings.json
 
 # Generate pipelines using inline JSON
 python cli.py sqlserver --input-config tables.csv \

@@ -120,7 +120,7 @@ Examples:
   python cli.py salesforce --info
 
   # Generate pipelines using settings file
-  python cli.py salesforce --input-config tables.csv --settings settings.yaml
+  python cli.py salesforce --input-config tables.csv --settings settings.json
 
   # Generate pipelines with inline JSON
   python cli.py sqlserver --input-config tables.csv \\
@@ -128,8 +128,8 @@ Examples:
     --default-values '{"project_name": "my_project"}'
 
   # Use connector aliases
-  python cli.py sf --input-config tables.csv --settings settings.yaml
-  python cli.py pg --input-config tables.csv --settings settings.yaml
+  python cli.py sf --input-config tables.csv --settings settings.json
+  python cli.py pg --input-config tables.csv --settings settings.json
 
 Connector aliases:
   sf, salesforce     -> salesforce
@@ -139,18 +139,15 @@ Connector aliases:
   snow               -> servicenow
   wd, workday        -> workday_reports
 
-Settings file format (JSON or YAML):
-  targets:
-    dev:
-      workspace_host: https://dev.cloud.databricks.com
-      root_path: /Shared/pipelines/dev
-    prod:
-      workspace_host: https://prod.cloud.databricks.com
-      root_path: /Shared/pipelines/prod
-  default_values:
-    project_name: my_project
-    schedule: "*/15 * * * *"
-  max_tables_per_pipeline: 250
+Settings file format (settings.json):
+  {
+    "targets": {
+      "dev": {"workspace_host": "https://...", "root_path": "/Shared/..."},
+      "prod": {"workspace_host": "https://...", "root_path": "/Shared/..."}
+    },
+    "default_values": {"project_name": "my_project", "schedule": "*/15 * * * *"},
+    "max_tables_per_pipeline": 250
+  }
         """
     )
 
