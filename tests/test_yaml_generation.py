@@ -554,31 +554,31 @@ class TestCronToQuartzConversion:
 
     def test_every_15_minutes(self, salesforce_connector):
         """*/15 * * * * should convert correctly."""
-        from utilities import convert_cron_to_quartz
+        from core import convert_cron_to_quartz
         result = convert_cron_to_quartz('*/15 * * * *')
         assert result == '0 */15 * * * ?'
 
     def test_every_6_hours(self, salesforce_connector):
         """0 */6 * * * should convert correctly."""
-        from utilities import convert_cron_to_quartz
+        from core import convert_cron_to_quartz
         result = convert_cron_to_quartz('0 */6 * * *')
         assert result == '0 0 */6 * * ?'
 
     def test_daily_at_midnight(self, salesforce_connector):
         """0 0 * * * should convert correctly."""
-        from utilities import convert_cron_to_quartz
+        from core import convert_cron_to_quartz
         result = convert_cron_to_quartz('0 0 * * *')
         assert result == '0 0 0 * * ?'
 
     def test_specific_day_of_week(self, salesforce_connector):
         """0 9 * * 1 should convert correctly (Monday at 9am)."""
-        from utilities import convert_cron_to_quartz
+        from core import convert_cron_to_quartz
         result = convert_cron_to_quartz('0 9 * * 1')
         # When DOW is specified, day-of-month should be ?
         assert result == '0 0 9 ? * 1'
 
     def test_already_quartz_format_unchanged(self, salesforce_connector):
         """Already 6-field format should be returned unchanged."""
-        from utilities import convert_cron_to_quartz
+        from core import convert_cron_to_quartz
         result = convert_cron_to_quartz('0 0 9 * * ?')
         assert result == '0 0 9 * * ?'
