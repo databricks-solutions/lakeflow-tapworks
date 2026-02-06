@@ -2,7 +2,7 @@ resources:
   pipelines:
     pipeline_tapworks_business_unit1_01:
       name: Ingestion - tapworks_business_unit1_01
-      catalog: dev_catalog
+      catalog: tapworks_catalog
       schema: sfdc_test
       ingestion_definition:
         connection_name: sfdc-pravin-dabs
@@ -10,7 +10,7 @@ resources:
         - table:
             source_schema: objects
             source_table: Account
-            destination_catalog: dev_catalog
+            destination_catalog: tapworks_catalog
             destination_schema: sfdc_test
             destination_table: Account
             table_configuration:
@@ -25,18 +25,18 @@ resources:
         - table:
             source_schema: objects
             source_table: Contact
-            destination_catalog: dev_catalog
+            destination_catalog: tapworks_catalog
             destination_schema: sfdc_test
             destination_table: Contact
         - table:
             source_schema: objects
             source_table: Campaign
-            destination_catalog: dev_catalog
+            destination_catalog: tapworks_catalog
             destination_schema: sfdc_test
             destination_table: Campaign
     pipeline_tapworks_business_unit1_02:
       name: Ingestion - tapworks_business_unit1_02
-      catalog: dev_catalog
+      catalog: tapworks_catalog
       schema: sfdc_test
       ingestion_definition:
         connection_name: sfdc-pravin-dabs
@@ -44,7 +44,7 @@ resources:
         - table:
             source_schema: objects
             source_table: Opportunity
-            destination_catalog: dev_catalog
+            destination_catalog: tapworks_catalog
             destination_schema: sfdc_test
             destination_table: Opportunity
             table_configuration:
@@ -52,7 +52,7 @@ resources:
               - Description
     pipeline_tapworks_business_unit2_01:
       name: Ingestion - tapworks_business_unit2_01
-      catalog: dev_catalog
+      catalog: tapworks_catalog
       schema: sfdc_test
       ingestion_definition:
         connection_name: sfdc-pravin-dabs
@@ -60,18 +60,18 @@ resources:
         - table:
             source_schema: objects
             source_table: Lead
-            destination_catalog: dev_catalog
+            destination_catalog: tapworks_catalog
             destination_schema: sfdc_test
             destination_table: Lead
         - table:
             source_schema: objects
             source_table: Case
-            destination_catalog: dev_catalog
+            destination_catalog: tapworks_catalog
             destination_schema: sfdc_test
             destination_table: Case
     pipeline_tapworks_business_unit3_01:
       name: Ingestion - tapworks_business_unit3_01
-      catalog: dev_catalog
+      catalog: tapworks_catalog
       schema: sfdc_test
       ingestion_definition:
         connection_name: sfdc-pravin-dabs
@@ -79,12 +79,12 @@ resources:
         - table:
             source_schema: objects
             source_table: Task
-            destination_catalog: dev_catalog
+            destination_catalog: tapworks_catalog
             destination_schema: sfdc_test
             destination_table: Task
         - table:
             source_schema: objects
             source_table: Event
-            destination_catalog: dev_catalog
+            destination_catalog: tapworks_catalog
             destination_schema: sfdc_test
             destination_table: Event
