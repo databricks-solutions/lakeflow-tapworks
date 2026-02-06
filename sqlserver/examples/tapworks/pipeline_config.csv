@@ -1,4 +1,0 @@
-project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,subgroup,gateway_catalog,gateway_schema,connection_name,schedule,gateway_worker_type,gateway_driver_type
-tapworks_sqlserver,db1,dbo,products,tapworks_catalog,tapworks,products,sales,01,tapworks_catalog,tapworks,tapworks_sql_connection,*/15 * * * *
-tapworks_sqlserver,db1,dbo,customers,tapworks_catalog,tapworks,customers,sales,01,tapworks_catalog,tapworks,tapworks_sql_connection,0 */6 * * *
-tapworks_sqlserver,db1,dbo,orders,tapworks_catalog,tapworks,orders,sales,02,tapworks_catalog,tapworks,tapworks_sql_connection,0 */7 * * *
