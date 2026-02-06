@@ -42,6 +42,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utilities import load_input_csv
 from connector import ServiceNowConnector
+from core import BaseConnector
 
 
 def load_config_file(config_path: str) -> dict:
@@ -162,8 +163,8 @@ Config file format (JSON or YAML):
     parser.add_argument(
         '--max-tables',
         type=int,
-        default=250,
-        help='Maximum tables per pipeline (default: 250)'
+        default=BaseConnector.DEFAULT_MAX_TABLES_PER_PIPELINE,
+        help=f'Maximum tables per pipeline (default: {BaseConnector.DEFAULT_MAX_TABLES_PER_PIPELINE})'
     )
     parser.add_argument(
         '--schedule',

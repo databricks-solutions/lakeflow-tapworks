@@ -50,6 +50,11 @@ class BaseConnector(ABC):
     defaults, etc.) and inherits shared logic for CSV processing and pipeline generation.
     """
 
+    # Default configuration constants
+    DEFAULT_MAX_TABLES_PER_PIPELINE = 250
+    DEFAULT_MAX_TABLES_PER_GATEWAY = 250
+    DEFAULT_TIMEOUT_SECONDS = 600
+
     def __init__(self):
         """Initialize the connector with its configuration."""
         self._validate_configuration()
@@ -652,8 +657,8 @@ class DatabaseConnector(BaseConnector):
     def generate_pipeline_config(
         self,
         df: pd.DataFrame,
-        max_tables_per_gateway: int = 250,
-        max_tables_per_pipeline: int = 250
+        max_tables_per_gateway: int = None,
+        max_tables_per_pipeline: int = None
     ) -> pd.DataFrame:
         """
         Generate database pipeline configuration with two-level load balancing.
@@ -664,12 +669,18 @@ class DatabaseConnector(BaseConnector):
 
         Args:
             df: Normalized input DataFrame
-            max_tables_per_gateway: Maximum tables per gateway (default: 250)
-            max_tables_per_pipeline: Maximum tables per pipeline (default: 250)
+            max_tables_per_gateway: Maximum tables per gateway (default: DEFAULT_MAX_TABLES_PER_GATEWAY)
+            max_tables_per_pipeline: Maximum tables per pipeline (default: DEFAULT_MAX_TABLES_PER_PIPELINE)
 
         Returns:
             DataFrame with 'gateway' and 'pipeline_group' columns added
         """
+        # Apply default constants if not specified
+        if max_tables_per_gateway is None:
+            max_tables_per_gateway = self.DEFAULT_MAX_TABLES_PER_GATEWAY
+        if max_tables_per_pipeline is None:
+            max_tables_per_pipeline = self.DEFAULT_MAX_TABLES_PER_PIPELINE
+
         df = df.copy()
 
         # Ensure consistent string formatting
@@ -733,7 +744,7 @@ class SaaSConnector(BaseConnector):
     def generate_pipeline_config(
         self,
         df: pd.DataFrame,
-        max_tables_per_pipeline: int = 250
+        max_tables_per_pipeline: int = None
     ) -> pd.DataFrame:
         """
         Generate SaaS pipeline configuration with single-level load balancing.
@@ -743,11 +754,15 @@ class SaaSConnector(BaseConnector):
 
         Args:
             df: Normalized input DataFrame
-            max_tables_per_pipeline: Maximum items per pipeline (default: 250)
+            max_tables_per_pipeline: Maximum items per pipeline (default: DEFAULT_MAX_TABLES_PER_PIPELINE)
 
         Returns:
             DataFrame with 'pipeline_group' column added
         """
+        # Apply default constant if not specified
+        if max_tables_per_pipeline is None:
+            max_tables_per_pipeline = self.DEFAULT_MAX_TABLES_PER_PIPELINE
+
         df = df.copy()
 
         # Ensure consistent string formatting

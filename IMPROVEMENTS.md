@@ -184,6 +184,7 @@ These improvements have been implemented:
 - [x] Replace `print()` with `logger` in SQLServer/PostgreSQL connectors
 - [x] Add `__init__.py` to all connector directories
 - [x] Create `_is_value_set()` utility method in BaseConnector
+- [x] Extract magic numbers to constants (`DEFAULT_MAX_TABLES_PER_PIPELINE`, `DEFAULT_MAX_TABLES_PER_GATEWAY`, `DEFAULT_TIMEOUT_SECONDS`)
 
 ---
 
