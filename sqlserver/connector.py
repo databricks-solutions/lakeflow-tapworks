@@ -15,7 +15,7 @@ from typing import Dict
 
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from core import DatabaseConnector
+from core import DatabaseConnector, YAMLGenerationError
 
 # Configure module logger
 logger = logging.getLogger(__name__)
@@ -207,18 +207,24 @@ class SQLServerConnector(DatabaseConnector):
             df: DataFrame with pipeline configuration including 'gateway' column
             output_dir: Output directory for DAB files
             targets: Dictionary of target environments
+
+        Raises:
+            YAMLGenerationError: If file writing fails
         """
         # Group by project_name and create separate DAB packages
         for project, project_df in df.groupby('project_name'):
-            project_output_dir = os.path.join(output_dir, str(project))
+            project_output_dir = Path(output_dir) / str(project)
             logger.info(f"Creating DAB for project: {project}")
             logger.debug(f"  Tables: {len(project_df)}")
             logger.debug(f"  Pipelines: {project_df['pipeline_group'].nunique()}")
             logger.debug(f"  Output: {project_output_dir}")
 
             # Create directory structure
-            resources_dir = os.path.join(project_output_dir, 'resources')
-            os.makedirs(resources_dir, exist_ok=True)
+            resources_dir = project_output_dir / 'resources'
+            try:
+                resources_dir.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                raise YAMLGenerationError(f"Failed to create directory {resources_dir}: {e}")
 
             # Generate YAML content for this project
             gateways_yaml = self._create_gateways(project_df, str(project))
@@ -230,23 +236,13 @@ class SQLServerConnector(DatabaseConnector):
                 default_target='dev'
             )
 
-            # Define output paths
-            databricks_yml_path = os.path.join(project_output_dir, 'databricks.yml')
-            gateway_yml_path = os.path.join(resources_dir, 'gateways.yml')
-            pipeline_yml_path = os.path.join(resources_dir, 'pipelines.yml')
-            jobs_yml_path = os.path.join(resources_dir, 'jobs.yml')
+            # Write YAML files with retry logic
+            databricks_yml_path = project_output_dir / 'databricks.yml'
+            gateway_yml_path = resources_dir / 'gateways.yml'
+            pipeline_yml_path = resources_dir / 'pipelines.yml'
+            jobs_yml_path = resources_dir / 'jobs.yml'
 
-            # Write YAML files
-            with open(databricks_yml_path, 'w') as f:
-                yaml.dump(databricks_yaml, f, default_flow_style=False, sort_keys=False)
-
-            with open(gateway_yml_path, 'w') as f:
-                yaml.dump(gateways_yaml, f, default_flow_style=False, sort_keys=False)
-
-            with open(pipeline_yml_path, 'w') as f:
-                yaml.dump(pipelines_yaml, f, default_flow_style=False, sort_keys=False)
-
-            with open(jobs_yml_path, 'w') as f:
-                yaml.dump(jobs_yaml, f, default_flow_style=False, sort_keys=False)
-
-            logger.debug(f"  Written: {databricks_yml_path}, {gateway_yml_path}, {pipeline_yml_path}, {jobs_yml_path}")
+            self._write_yaml_file(databricks_yml_path, databricks_yaml)
+            self._write_yaml_file(gateway_yml_path, gateways_yaml)
+            self._write_yaml_file(pipeline_yml_path, pipelines_yaml)
+            self._write_yaml_file(jobs_yml_path, jobs_yaml)

@@ -8,6 +8,7 @@ _create_gateways methods that generate DAB YAML structures.
 import pytest
 import pandas as pd
 import numpy as np
+from core import ConfigurationError
 
 
 class TestCreateDatabricksYml:
@@ -118,7 +119,7 @@ class TestCreateDatabricksYml:
 
     def test_raises_error_empty_targets(self, salesforce_connector):
         """Should raise error when targets is empty."""
-        with pytest.raises(ValueError, match="At least one target"):
+        with pytest.raises(ConfigurationError, match="At least one target"):
             salesforce_connector._create_databricks_yml(
                 project_name='test',
                 targets={},
@@ -127,7 +128,7 @@ class TestCreateDatabricksYml:
 
     def test_raises_error_invalid_default_target(self, salesforce_connector, sample_targets):
         """Should raise error when default_target not in targets."""
-        with pytest.raises(ValueError, match="default_target"):
+        with pytest.raises(ConfigurationError, match="default_target"):
             salesforce_connector._create_databricks_yml(
                 project_name='test',
                 targets=sample_targets,
@@ -138,7 +139,7 @@ class TestCreateDatabricksYml:
         """Should raise error when workspace_host is missing."""
         targets = {'dev': {'root_path': '/some/path'}}
 
-        with pytest.raises(ValueError, match="workspace_host"):
+        with pytest.raises(ConfigurationError, match="workspace_host"):
             salesforce_connector._create_databricks_yml(
                 project_name='test',
                 targets=targets,

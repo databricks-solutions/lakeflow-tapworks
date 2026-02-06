@@ -8,6 +8,7 @@ which handle default values, overrides, and validation.
 import pytest
 import pandas as pd
 import numpy as np
+from core import ConfigurationError
 
 
 class TestProcessInputConfig:
@@ -26,24 +27,24 @@ class TestProcessInputConfig:
         pd.testing.assert_frame_equal(sample_salesforce_df, original_df)
 
     def test_raises_error_for_empty_dataframe(self, salesforce_connector):
-        """Should raise ValueError for empty DataFrame."""
+        """Should raise ConfigurationError for empty DataFrame."""
         empty_df = pd.DataFrame()
 
-        with pytest.raises(ValueError, match="Input DataFrame is empty"):
+        with pytest.raises(ConfigurationError, match="Input DataFrame is empty"):
             salesforce_connector._process_input_config(
                 df=empty_df,
                 required_columns=salesforce_connector.required_columns
             )
 
     def test_raises_error_for_missing_required_columns(self, salesforce_connector):
-        """Should raise ValueError when required columns are missing."""
+        """Should raise ConfigurationError when required columns are missing."""
         incomplete_df = pd.DataFrame({
             'source_database': ['Salesforce'],
             'source_schema': ['standard'],
             # Missing: source_table_name, target_catalog, etc.
         })
 
-        with pytest.raises(ValueError, match="Missing required columns"):
+        with pytest.raises(ConfigurationError, match="Missing required columns"):
             salesforce_connector._process_input_config(
                 df=incomplete_df,
                 required_columns=salesforce_connector.required_columns
@@ -55,7 +56,7 @@ class TestProcessInputConfig:
             'source_database': ['Salesforce'],
         })
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ConfigurationError) as exc_info:
             salesforce_connector._process_input_config(
                 df=incomplete_df,
                 required_columns=salesforce_connector.required_columns
