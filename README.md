@@ -103,11 +103,11 @@ Tables are automatically split based on configurable limits (default: 250 tables
                                       │
                     ┌─────────────────┼─────────────────┐
                     ▼                 ▼                 ▼
-            ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-            │  Pipeline    │  │  Pipeline    │  │  Pipeline    │
-            │  sales_01_g1 │  │  sales_01_g2 │  │  sales_01_g3 │
-            │  (250 tables)│  │  (250 tables)│  │  (100 tables)│
-            └──────────────┘  └──────────────┘  └──────────────┘
+            ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+            │   Pipeline    │ │   Pipeline    │ │   Pipeline    │
+            │ sales_01_g01  │ │ sales_01_g02  │ │ sales_01_g03  │
+            │ (250 tables)  │ │ (250 tables)  │ │ (100 tables)  │
+            └───────────────┘ └───────────────┘ └───────────────┘
 ```
 
 **Database connector example** (600 tables):
@@ -116,20 +116,20 @@ Tables are automatically split based on configurable limits (default: 250 tables
                                       │
                     ┌─────────────────┴─────────────────┐
                     ▼                                   ▼
-            ┌──────────────┐                    ┌──────────────┐
-            │  Gateway     │                    │  Gateway     │
-            │  sales_01_gw1│                    │  sales_01_gw2│
-            │  (500 tables)│                    │  (100 tables)│
-            └──────┬───────┘                    └──────┬───────┘
-                   │                                   │
-          ┌────────┴────────┐                          │
-          ▼                 ▼                          ▼
-   ┌──────────────┐  ┌──────────────┐          ┌──────────────┐
-   │  Pipeline    │  │  Pipeline    │          │  Pipeline    │
-   │  sales_01    │  │  sales_01    │          │  sales_01    │
-   │  _gw1_g1     │  │  _gw1_g2     │          │  _gw2_g1     │
-   │  (250 tables)│  │  (250 tables)│          │  (100 tables)│
-   └──────────────┘  └──────────────┘          └──────────────┘
+            ┌───────────────┐                   ┌───────────────┐
+            │    Gateway    │                   │    Gateway    │
+            │ sales_01_gw01 │                   │ sales_01_gw02 │
+            │ (500 tables)  │                   │ (100 tables)  │
+            └───────┬───────┘                   └───────┬───────┘
+                    │                                   │
+          ┌─────────┴─────────┐                         │
+          ▼                   ▼                         ▼
+   ┌───────────────┐   ┌───────────────┐        ┌───────────────┐
+   │   Pipeline    │   │   Pipeline    │        │   Pipeline    │
+   │  sales_01_    │   │  sales_01_    │        │  sales_01_    │
+   │  gw01_g01     │   │  gw01_g02     │        │  gw02_g01     │
+   │ (250 tables)  │   │ (250 tables)  │        │ (100 tables)  │
+   └───────────────┘   └───────────────┘        └───────────────┘
 ```
 
 ### Manual Subgroups
@@ -146,10 +146,10 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables).
     (5 critical tables)            (remaining tables)
           │                               │
           ▼                               ▼
-  ┌──────────────┐               ┌──────────────┐
-  │  Pipeline    │               │  Pipeline(s) │
-  │  sales_01_g1 │               │  sales_02_g1 │
-  └──────────────┘               └──────────────┘
+  ┌───────────────┐              ┌───────────────┐
+  │   Pipeline    │              │  Pipeline(s)  │
+  │ sales_01_g01  │              │ sales_02_g01  │
+  └───────────────┘              └───────────────┘
 ```
 
 ## Defaults and Overrides
