@@ -1,4 +1,4 @@
-source_url,target_catalog,target_schema,target_table_name,prefix,priority,connection_name,schedule,primary_keys,include_columns,exclude_columns,scd_type
+source_url,target_catalog,target_schema,target_table_name,prefix,subgroup,connection_name,schedule,primary_keys,include_columns,exclude_columns,scd_type
 https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/All_Active_Employees_Data?format=json,main,workday,all_active_employees,hr,01,workday_connection,0 */6 * * *,Employee_ID,"Employee_ID,Worker_ID,Legal_Name,Hire_Date,Termination_Date,Status",,SCD_TYPE_2
 https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/Worker_Profile_Data?format=json,main,workday,worker_profile,hr,01,workday_connection,0 */6 * * *,Worker_ID,,,SCD_TYPE_1
 https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/Employee_Compensation_Data?format=json,main,workday,employee_compensation,hr,01,workday_connection,0 */12 * * *,"Employee_ID,Effective_Date",,"Salary_Amount,Bonus_Amount,Stock_Options",SCD_TYPE_1
