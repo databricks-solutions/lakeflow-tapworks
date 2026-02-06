@@ -81,36 +81,58 @@ Tapworks automatically distributes tables across pipelines and gateways.
 
 ### Hierarchy
 
+**SaaS connectors** (Salesforce, GA4, ServiceNow, Workday):
 ```
 Project (DAB Package)
-└── Prefix (logical group, e.g., "sales", "finance")
-    └── Subgroup (optional, for manual control)
-        └── Pipeline(s)
-            └── Gateway (database connectors only)
+└── Prefix + Subgroup (logical grouping)
+    └── Pipeline(s) - auto-split if > 250 tables
+```
+
+**Database connectors** (SQL Server, PostgreSQL):
+```
+Project (DAB Package)
+└── Prefix + Subgroup (logical grouping)
+    └── Gateway(s) - auto-split if > 250 tables
+        └── Pipeline(s) - auto-split if > 250 tables per gateway
 ```
 
 ### Auto-Distribution
 
 Tables are automatically split based on configurable limits (default: 250 tables per pipeline/gateway):
 
+**SaaS connector example** (600 tables):
 ```
-                        Input: 600 tables, prefix="sales"
+              Input: 600 tables, prefix="sales", subgroup="01"
                                       │
                     ┌─────────────────┼─────────────────┐
                     ▼                 ▼                 ▼
             ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-            │  Pipeline 1  │  │  Pipeline 2  │  │  Pipeline 3  │
-            │  (tables     │  │  (tables     │  │  (tables     │
-            │   1-250)     │  │   251-500)   │  │   501-600)   │
-            └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
-                   │                 │                 │
-                   └────────┬────────┘                 │
-                            ▼                          ▼
-                    ┌──────────────┐          ┌──────────────┐
-                    │  Gateway 1   │          │  Gateway 2   │
-                    │  (pipelines  │          │  (pipeline   │
-                    │   1-2)       │          │   3)         │
-                    └──────────────┘          └──────────────┘
+            │  Pipeline    │  │  Pipeline    │  │  Pipeline    │
+            │  sales_01_g1 │  │  sales_01_g2 │  │  sales_01_g3 │
+            │  (250 tables)│  │  (250 tables)│  │  (100 tables)│
+            └──────────────┘  └──────────────┘  └──────────────┘
+```
+
+**Database connector example** (600 tables):
+```
+              Input: 600 tables, prefix="sales", subgroup="01"
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    ▼                                   ▼
+            ┌──────────────┐                    ┌──────────────┐
+            │  Gateway     │                    │  Gateway     │
+            │  sales_01_gw1│                    │  sales_01_gw2│
+            │  (500 tables)│                    │  (100 tables)│
+            └──────┬───────┘                    └──────┬───────┘
+                   │                                   │
+          ┌────────┴────────┐                          │
+          ▼                 ▼                          ▼
+   ┌──────────────┐  ┌──────────────┐          ┌──────────────┐
+   │  Pipeline    │  │  Pipeline    │          │  Pipeline    │
+   │  sales_01    │  │  sales_01    │          │  sales_01    │
+   │  _gw1_g1     │  │  _gw1_g2     │          │  _gw2_g1     │
+   │  (250 tables)│  │  (250 tables)│          │  (100 tables)│
+   └──────────────┘  └──────────────┘          └──────────────┘
 ```
 
 ### Manual Subgroups
