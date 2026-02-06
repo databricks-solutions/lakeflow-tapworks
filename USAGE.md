@@ -2,6 +2,71 @@
 
 This guide shows how to use Lakehouse Tapworks through both command line (CLI) and notebook/programmatic interfaces.
 
+## Quick Start - Unified CLI
+
+The unified CLI (`cli.py`) is the recommended entry point for all connectors:
+
+```bash
+# List available connectors
+python cli.py --list
+
+# Show connector info (required columns, defaults)
+python cli.py salesforce --info
+
+# Generate pipelines using config file
+python cli.py salesforce --input config.csv --config config.yaml
+
+# Generate pipelines using inline JSON
+python cli.py sqlserver --input config.csv \
+  --targets '{"dev": {"workspace_host": "https://..."}}' \
+  --default-values '{"project_name": "my_project"}'
+```
+
+**Connector aliases** for convenience:
+| Alias | Connector |
+|-------|-----------|
+| `sf` | salesforce |
+| `sql`, `mssql` | sqlserver |
+| `pg`, `postgresql` | postgres |
+| `ga`, `ga4` | google_analytics |
+| `snow` | servicenow |
+| `wd`, `workday` | workday_reports |
+
+---
+
+## Quick Start - Unified Notebook
+
+Use `notebook_runner.py` in Databricks for a single notebook entry point:
+
+```python
+# Configuration - edit these values
+connector_name = "salesforce"
+input_source = "main.config.pipeline_tables"  # Delta table or CSV path
+output_dir = "/Workspace/Users/you@company.com/dab_output"
+
+targets = {
+    "dev": {"workspace_host": "https://dev.cloud.databricks.com"},
+    "prod": {"workspace_host": "https://prod.cloud.databricks.com"},
+}
+
+default_values = {"project_name": "my_project", "schedule": "0 */6 * * *"}
+
+# Run pipeline generation
+from core.runner import run_pipeline_generation
+
+result_df = run_pipeline_generation(
+    connector_name=connector_name,
+    input_source=input_source,
+    output_dir=output_dir,
+    targets=targets,
+    default_values=default_values,
+    spark_session=spark,
+)
+display(result_df)
+```
+
+---
+
 ## Configuration Methods
 
 Both CLI and programmatic interfaces support the same configuration options:
@@ -13,6 +78,12 @@ Both CLI and programmatic interfaces support the same configuration options:
 | `override_input_config` | Force override values (ignores input config) |
 | `max_tables_per_pipeline` | Maximum tables per pipeline (default: 250) |
 | `max_tables_per_gateway` | Maximum tables per gateway - database connectors only (default: 250) |
+
+---
+
+## Connector-Specific Usage
+
+The following sections document the original connector-specific CLI and programmatic interfaces. These still work but the unified CLI above is recommended.
 
 ---
 

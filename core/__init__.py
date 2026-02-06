@@ -14,6 +14,11 @@ Exceptions:
 - ConfigurationError: Invalid or missing configuration
 - ValidationError: Data validation failures
 - YAMLGenerationError: YAML file generation failures
+
+Registry & Runner:
+- get_connector: Get a connector instance by name
+- list_connectors: List all available connectors
+- run_pipeline_generation: Unified pipeline generation function
 """
 
 from .connectors import BaseConnector, DatabaseConnector, SaaSConnector
@@ -23,13 +28,37 @@ from .exceptions import (
     ValidationError,
     YAMLGenerationError
 )
+from .registry import (
+    get_connector,
+    get_connector_class,
+    list_connectors,
+    list_aliases,
+    get_connector_info,
+    resolve_connector_name,
+    CONNECTORS,
+    CONNECTOR_ALIASES,
+)
+from .runner import run_pipeline_generation
 
 __all__ = [
+    # Base classes
     'BaseConnector',
     'DatabaseConnector',
     'SaaSConnector',
+    # Exceptions
     'LakehouseTapworksError',
     'ConfigurationError',
     'ValidationError',
-    'YAMLGenerationError'
+    'YAMLGenerationError',
+    # Registry
+    'get_connector',
+    'get_connector_class',
+    'list_connectors',
+    'list_aliases',
+    'get_connector_info',
+    'resolve_connector_name',
+    'CONNECTORS',
+    'CONNECTOR_ALIASES',
+    # Runner
+    'run_pipeline_generation',
 ]
