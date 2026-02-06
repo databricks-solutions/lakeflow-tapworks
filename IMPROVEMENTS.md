@@ -196,26 +196,22 @@ These improvements have been implemented:
 
 ### Unified Pipeline Generator (Future)
 
-Instead of 6 nearly-identical pipeline generator scripts, create a single entry point:
+Instead of 6 nearly-identical pipeline generator scripts, create a unified architecture with shared entry points for CLI and notebooks.
 
-```python
-# pipeline_generator.py (shared)
-from connector_registry import get_connector
+#### File Structure
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--connector', choices=['salesforce', 'sqlserver', ...])
-    # ... common arguments
-
-    args = parser.parse_args()
-    connector = get_connector(args.connector)
-    connector.run_complete_pipeline_generation(...)
+```
+├── core/
+│   ├── connectors.py          # Existing connector classes
+│   ├── registry.py            # NEW: Connector registry
+│   └── runner.py              # NEW: Shared execution logic
+├── cli.py                     # CLI entry point
+├── notebook_runner.py         # Notebook entry point
 ```
 
-### Connector Registry Pattern
+#### Connector Registry (`core/registry.py`)
 
 ```python
-# connector_registry.py
 CONNECTORS = {
     'salesforce': 'salesforce.connector.SalesforceConnector',
     'sqlserver': 'sqlserver.connector.SQLServerConnector',
@@ -226,11 +222,138 @@ CONNECTORS = {
 }
 
 def get_connector(name: str):
-    """Get connector class by name."""
+    """Get connector instance by name."""
+    import importlib
     module_path, class_name = CONNECTORS[name].rsplit('.', 1)
     module = importlib.import_module(module_path)
     return getattr(module, class_name)()
+
+def list_connectors() -> list:
+    return list(CONNECTORS.keys())
 ```
+
+#### Shared Runner (`core/runner.py`)
+
+```python
+def run_pipeline_generation(
+    connector_name: str,
+    input_source: str,          # CSV path or Delta table
+    output_dir: str,
+    targets: dict,
+    default_values: dict = None,
+    override_config: dict = None,
+    max_tables_per_pipeline: int = 250,
+    output_config: str = None,
+):
+    """
+    Core logic shared by CLI and notebook.
+    Returns the result DataFrame.
+    """
+    from core.registry import get_connector
+
+    connector = get_connector(connector_name)
+
+    # Load input (CSV or Delta)
+    if input_source.endswith('.csv'):
+        df = pd.read_csv(input_source)
+    else:
+        # Assume Delta table path
+        df = spark.read.table(input_source).toPandas()
+
+    return connector.run_complete_pipeline_generation(
+        df=df,
+        output_dir=output_dir,
+        targets=targets,
+        default_values=default_values,
+        override_input_config=override_config,
+        max_tables_per_pipeline=max_tables_per_pipeline,
+        output_config=output_config,
+    )
+```
+
+#### CLI Entry Point (`cli.py`)
+
+```python
+import argparse
+from core.runner import run_pipeline_generation
+from core.registry import list_connectors
+
+def main():
+    parser = argparse.ArgumentParser(description='Generate Databricks Asset Bundles')
+    parser.add_argument('--connector', choices=list_connectors(), required=True)
+    parser.add_argument('--input', required=True, help='CSV file or Delta table')
+    parser.add_argument('--output-dir', required=True)
+    parser.add_argument('--targets-file', required=True, help='YAML file with targets')
+    parser.add_argument('--max-tables', type=int, default=250)
+
+    args = parser.parse_args()
+    targets = yaml.safe_load(open(args.targets_file))
+
+    run_pipeline_generation(
+        connector_name=args.connector,
+        input_source=args.input,
+        output_dir=args.output_dir,
+        targets=targets,
+        max_tables_per_pipeline=args.max_tables,
+    )
+
+if __name__ == '__main__':
+    main()
+```
+
+#### Notebook Entry Point (`notebook_runner.py`)
+
+```python
+# Databricks notebook source
+
+# COMMAND ----------
+# Configuration - edit these values
+connector_name = "salesforce"  # salesforce, sqlserver, postgres, workday_reports, etc.
+input_table = "catalog.schema.pipeline_config"  # Delta table or CSV path
+output_path = "/Workspace/Users/you/dab_output"
+max_tables_per_pipeline = 250
+
+targets = {
+    "dev": {
+        "workspace_host": "https://dev.cloud.databricks.com",
+        "root_path": "/Shared/pipelines/dev",
+    },
+    "prod": {
+        "workspace_host": "https://prod.cloud.databricks.com",
+        "root_path": "/Shared/pipelines/prod",
+    }
+}
+
+# Optional overrides
+default_values = {
+    "schedule": "0 */6 * * *",
+}
+override_config = None  # Set to dict to override all rows
+
+# COMMAND ----------
+from core.runner import run_pipeline_generation
+
+result_df = run_pipeline_generation(
+    connector_name=connector_name,
+    input_source=input_table,
+    output_dir=output_path,
+    targets=targets,
+    default_values=default_values,
+    override_config=override_config,
+    max_tables_per_pipeline=max_tables_per_pipeline,
+)
+
+display(result_df)
+
+# COMMAND ----------
+# Show generated files
+import os
+for root, dirs, files in os.walk(output_path):
+    for f in files:
+        print(os.path.join(root, f))
+```
+
+**Key insight:** Both CLI and notebook call the same `run_pipeline_generation()` function - they just get parameters differently (argparse vs direct assignment).
 
 ---
 
