@@ -1,10 +1,9 @@
 project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,subgroup,connection_name,schedule,include_columns,exclude_columns
-sfdc_ingestion,Salesforce,standard,Account,main,sfdc_test,Account,business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,"Id,Name,Type,Industry,AnnualRevenue",
-sfdc_ingestion,Salesforce,standard,Contact,main,sfdc_test,Contact,business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,
-sfdc_ingestion,Salesforce,standard,Campaign,main,sfdc_test,Campaign,business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,
-sfdc_ingestion,Salesforce,standard,Opportunity,main,sfdc_test,Opportunity,business_unit1,02,sfdc-pravin-dabs,*/15 * * * *,,"Description,SystemModstamp"
-sfdc_ingestion,Salesforce,standard,Lead,main,sfdc_test,Lead,business_unit2,01,sfdc-pravin-dabs,*/30 * * * *,,
-sfdc_ingestion,Salesforce,standard,Case,main,sfdc_test,Case,business_unit2,01,sfdc-pravin-dabs,*/30 * * * *,,
-sfdc_ingestion,Salesforce,custom,CustomObject__c,main,sfdc_test,CustomObject,business_unit2,02,sfdc-pravin-dabs,*/30 * * * *,,
-sfdc_ingestion,Salesforce,standard,Task,main,sfdc_test,Task,business_unit3,01,sfdc-pravin-dabs,0 * * * *,,
-sfdc_ingestion,Salesforce,standard,Event,main,sfdc_test,Event,business_unit3,01,sfdc-pravin-dabs,0 * * * *,,
+tapworks_sfdc,Salesforce,standard,Account,tapworks_catalog,sfdc_test,Account,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,"Id,Name,Type,Industry,AnnualRevenue,SystemModstamp,IsDeleted",
+tapworks_sfdc,Salesforce,standard,Contact,tapworks_catalog,sfdc_test,Contact,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,
+tapworks_sfdc,Salesforce,standard,Campaign,tapworks_catalog,sfdc_test,Campaign,tapworks_business_unit1,01,sfdc-pravin-dabs,*/15 * * * *,,
+tapworks_sfdc,Salesforce,standard,Opportunity,tapworks_catalog,sfdc_test,Opportunity,tapworks_business_unit1,02,sfdc-pravin-dabs,*/15 * * * *,,"Description"
+tapworks_sfdc,Salesforce,standard,Lead,tapworks_catalog,sfdc_test,Lead,tapworks_business_unit2,01,sfdc-pravin-dabs,*/30 * * * *,,
+tapworks_sfdc,Salesforce,standard,Case,tapworks_catalog,sfdc_test,Case,tapworks_business_unit2,01,sfdc-pravin-dabs,*/30 * * * *,,
+tapworks_sfdc,Salesforce,standard,Task,tapworks_catalog,sfdc_test,Task,tapworks_business_unit3,01,sfdc-pravin-dabs,0 * * * *,,
+tapworks_sfdc,Salesforce,standard,Event,tapworks_catalog,sfdc_test,Event,tapworks_business_unit3,01,sfdc-pravin-dabs,0 * * * *,,
