@@ -32,7 +32,8 @@ result = run_pipeline_generation(
 
 **CLI:**
 ```bash
-python -m core.cli salesforce --input-config tables.csv --output-dir output
+python -m core.cli salesforce --input-config tables.csv --output-dir output \
+  --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
 ```
 
 ## Core Workflow

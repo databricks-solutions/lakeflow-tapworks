@@ -32,7 +32,7 @@ If you're familiar with the codebase, here's the minimal path:
 
 3. **Add example** CSV in `myconnector/examples/basic/pipeline_config.csv`
 
-4. **Test**: `python -m core.cli myconnector --input-config myconnector/examples/basic/pipeline_config.csv --output-dir output`
+4. **Test**: `python -m core.cli myconnector --input-config myconnector/examples/basic/pipeline_config.csv --output-dir output --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'`
 
 ## Examples
 
