@@ -28,33 +28,52 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
    dbo,customers,bronze,sales,customers,sqlserver_conn
    ```
 
-2. **Run the generator** - From a notebook or CLI (for CI/CD integration):
+2. **Run the generator** - From CLI or notebook:
+
+   **CLI (recommended):**
+   ```bash
+   # List available connectors
+   python cli.py --list
+
+   # Show connector requirements
+   python cli.py sqlserver --info
+
+   # Generate DAB files
+   python cli.py sqlserver --input config.csv --config config.yaml
+   ```
 
    **Notebook / Python:**
    ```python
-   from utilities import load_input_csv
-   from sqlserver.connector import SQLServerConnector
+   from core import run_pipeline_generation
 
-   connector = SQLServerConnector()
-   df = load_input_csv('pipeline_config.csv')
-
-   result = connector.run_complete_pipeline_generation(
-       df=df,
+   result = run_pipeline_generation(
+       connector_name='sqlserver',
+       input_source='config.csv',  # or Delta table or DataFrame
        output_dir='output',
-       targets={'dev': {'workspace_host': 'https://...', 'root_path': '/Users/...'}}
+       targets={'dev': {'workspace_host': 'https://...'}},
+       default_values={'project_name': 'my_project'},
    )
    ```
 
-   **CLI:**
-   ```bash
-   python pipeline_generator.py \
-     --input-csv pipeline_config.csv \
-     --project-name my_project \
-     --workspace-host https://my-workspace.cloud.databricks.com \
-     --root-path '/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}'
-   ```
-
 3. **Deploy** - Use the generated DAB files with `databricks bundle deploy`
+
+## Connector Aliases
+
+Use short aliases for convenience:
+
+| Alias | Connector |
+|-------|-----------|
+| `sf` | salesforce |
+| `sql`, `mssql` | sqlserver |
+| `pg`, `postgresql` | postgres |
+| `ga`, `ga4` | google_analytics |
+| `snow` | servicenow |
+| `wd`, `workday` | workday_reports |
+
+```bash
+python cli.py sf --input config.csv --config config.yaml
+python cli.py pg --input config.csv --config config.yaml
+```
 
 ## Load Balancing
 
@@ -132,10 +151,16 @@ output/<project_name>/
 
 ## Documentation
 
-See connector-specific READMEs for detailed configuration options:
-- [SQL Server](sqlserver/README.md)
-- [PostgreSQL](postgres/README.md)
-- [Salesforce](salesforce/README.md)
-- [Google Analytics 4](google_analytics/README.md)
-- [ServiceNow](servicenow/README.md)
-- [Workday](workday_reports/README.md)
+- [USAGE.md](USAGE.md) - CLI and notebook usage examples for all connectors
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and class hierarchy
+- [IMPROVEMENTS.md](IMPROVEMENTS.md) - Roadmap and future improvements
+
+**Quick reference:**
+```bash
+# Show connector requirements (columns, defaults, SCD types)
+python cli.py <connector> --info
+
+# Examples
+python cli.py salesforce --info
+python cli.py sqlserver --info
+```
