@@ -85,7 +85,9 @@ Applies configuration in this order (later overrides earlier):
 
 Also sets:
 - `prefix = project_name` if empty
-- `subgroup = '01'` if empty
+- `subgroup = '01'` if all empty within a prefix
+
+**Subgroup validation:** If any table in a prefix has an explicit subgroup, all tables in that prefix must have explicit subgroups. This prevents accidental grouping of tables that should be isolated.
 
 ### 2. Load Balancing
 

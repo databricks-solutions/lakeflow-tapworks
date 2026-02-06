@@ -134,21 +134,22 @@ Tables are automatically split based on configurable limits (default: 250 tables
 
 ### Manual Subgroups
 
-Use subgroups to isolate specific tables (e.g., critical or high-volume tables):
+Use subgroups to isolate specific tables (e.g., critical or high-volume tables).
+**Note:** When using subgroups, all tables in a prefix must have explicit subgroups.
 
 ```
                     prefix="sales"
                           │
           ┌───────────────┴───────────────┐
           ▼                               ▼
-    subgroup="01"              subgroup="" or subgroup="02"
-    (for 5 critical tables)          (for the rest)             
+    subgroup="critical"              subgroup="default"
+    (5 high-priority tables)         (remaining tables)
           │                               │
           ▼                               ▼
   ┌──────────────┐               ┌──────────────┐
   │  Pipeline    │               │  Pipeline(s) │
-  │  (5 critical │               │  (remaining  │
-  │   tables)    │               │   tables)    │
+  │  sales_      │               │  sales_      │
+  │  critical_g1 │               │  default_g1  │
   └──────────────┘               └──────────────┘
 ```
 
