@@ -186,10 +186,10 @@ result = connector.run_complete_pipeline_generation(
 
 ## Example Notebooks
 
-Each connector folder contains an `example.ipynb` notebook:
-- `salesforce/example.ipynb`
-- `sqlserver/example.ipynb`
-- `postgres/example.ipynb`
-- `google_analytics/example.ipynb`
-- `servicenow/example.ipynb`
-- `workday_reports/example.ipynb`
+Each connector folder contains an `example_notebook.ipynb`:
+- `salesforce/example_notebook.ipynb`
+- `sqlserver/example_notebook.ipynb`
+- `postgres/example_notebook.ipynb`
+- `google_analytics/example_notebook.ipynb`
+- `servicenow/example_notebook.ipynb`
+- `workday_reports/example_notebook.ipynb`
