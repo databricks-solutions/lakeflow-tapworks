@@ -1,2 +1,2 @@
-project_name,source_catalog,source_schema,tables,target_catalog,target_schema,connection_name,prefix,priority,schedule
+project_name,source_catalog,source_schema,tables,target_catalog,target_schema,connection_name,prefix,subgroup,schedule
 ga4_example,my-gcp-project,analytics_123456789,"events,events_intraday",ga4_catalog,ga4,ga4_connection,marketing,01,0 */6 * * *

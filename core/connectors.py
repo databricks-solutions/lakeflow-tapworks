@@ -26,14 +26,24 @@ Usage:
     )
 """
 
+import logging
+import re
+import time
 from abc import ABC, abstractmethod
 import pandas as pd
+import yaml
 from typing import Dict, Optional
 from pathlib import Path
 import sys
 
 # Import shared utilities
 from utilities import load_input_csv, convert_cron_to_quartz
+
+# Import custom exceptions
+from .exceptions import ConfigurationError, ValidationError, YAMLGenerationError
+
+# Configure module logger
+logger = logging.getLogger(__name__)
 
 
 class BaseConnector(ABC):
@@ -44,6 +54,11 @@ class BaseConnector(ABC):
     Each connector provides connector-specific configuration (required columns,
     defaults, etc.) and inherits shared logic for CSV processing and pipeline generation.
     """
+
+    # Default configuration constants
+    DEFAULT_MAX_TABLES_PER_PIPELINE = 250
+    DEFAULT_MAX_TABLES_PER_GATEWAY = 250
+    ***REMOVED***
 
     def __init__(self):
         """Initialize the connector with its configuration."""
@@ -84,14 +99,12 @@ class BaseConnector(ABC):
         """
         Return default values for optional columns.
 
-        These values are used when columns are missing or contain empty/NaN values.
-        Should include defaults for all optional connector-specific columns.
+        These values if specified are used when columns are missing or contain empty/NaN values.
 
         Example:
             {
                 'schedule': '*/15 * * * *',
-                'gateway_worker_type': None,
-                'gateway_driver_type': None
+                'gateway_driver_type': 'node type'
             }
         """
         pass
@@ -105,6 +118,182 @@ class BaseConnector(ABC):
         Override in subclass if different default is needed.
         """
         return f"{self.connector_type}_ingestion"
+
+    @property
+    def supported_scd_types(self) -> list:
+        """
+        Return list of SCD types supported by this connector.
+
+        Override in subclass to specify supported SCD types.
+        Empty list means SCD type configuration is not supported.
+
+        Example: ['SCD_TYPE_1', 'SCD_TYPE_2'] or ['SCD_TYPE_1']
+        """
+        return []
+
+    def _is_value_set(self, value) -> bool:
+        """
+        Check if a value is meaningfully set (not None, NaN, or empty string).
+
+        Use this method for consistent null-checking across the codebase.
+
+        Args:
+            value: Any value to check
+
+        Returns:
+            True if value is set and non-empty, False otherwise
+        """
+        if value is None:
+            return False
+        if pd.isna(value):
+            return False
+        if isinstance(value, str) and not value.strip():
+            return False
+        return True
+
+    def _validate_cron_expression(self, cron: str, context: str = "schedule") -> str:
+        """
+        Validate cron expression format.
+
+        Accepts both standard 5-field cron and 6-field Quartz format.
+
+        Args:
+            cron: Cron expression string to validate
+            context: Context for error message (e.g., "schedule", "job")
+
+        Returns:
+            The validated cron expression (stripped)
+
+        Raises:
+            ValidationError: If cron expression is invalid
+        """
+        if not self._is_value_set(cron):
+            raise ValidationError(f"Empty {context} cron expression")
+
+        cron = str(cron).strip()
+        parts = cron.split()
+
+        # Standard cron: 5 fields (minute hour day month weekday)
+        # Quartz cron: 6 fields (second minute hour day month weekday) or 7 fields (+ year)
+        if len(parts) not in [5, 6, 7]:
+            raise ValidationError(
+                f"Invalid {context} cron expression '{cron}': "
+                f"expected 5-7 fields, got {len(parts)}"
+            )
+
+        return cron
+
+    def _validate_resource_name(self, name: str, resource_type: str = "resource") -> str:
+        """
+        Validate Databricks resource naming rules.
+
+        Databricks resource names must:
+        - Start with a letter
+        - Contain only letters, numbers, underscores, and hyphens
+        - Be no longer than 128 characters
+
+        Args:
+            name: Resource name to validate
+            resource_type: Type of resource for error message (e.g., "pipeline", "job")
+
+        Returns:
+            The validated resource name (stripped)
+
+        Raises:
+            ValidationError: If resource name is invalid
+        """
+        if not self._is_value_set(name):
+            raise ValidationError(f"Empty {resource_type} name")
+
+        name = str(name).strip()
+
+        if not name[0].isalpha():
+            raise ValidationError(
+                f"Invalid {resource_type} name '{name}': must start with a letter"
+            )
+
+        if not re.match(r'^[a-zA-Z][a-zA-Z0-9_-]*$', name):
+            raise ValidationError(
+                f"Invalid {resource_type} name '{name}': "
+                f"can only contain letters, numbers, underscores, and hyphens"
+            )
+
+        if len(name) > 128:
+            raise ValidationError(
+                f"Invalid {resource_type} name '{name}': "
+                f"exceeds maximum length of 128 characters ({len(name)} chars)"
+            )
+
+        return name
+
+    def _write_yaml_file(
+        self,
+        path: Path,
+        content: dict,
+        retries: int = 3,
+        retry_delay: float = 0.5
+    ) -> None:
+        """
+        Write YAML file with retry logic and error handling.
+
+        Args:
+            path: Path to write the YAML file
+            content: Dictionary content to serialize as YAML
+            retries: Number of retry attempts (default: 3)
+            retry_delay: Delay between retries in seconds (default: 0.5)
+
+        Raises:
+            YAMLGenerationError: If file write fails after all retries
+        """
+        last_error = None
+
+        for attempt in range(retries):
+            try:
+                with open(path, 'w') as f:
+                    yaml.dump(content, f, sort_keys=False, default_flow_style=False, indent=2)
+                logger.debug(f"Written: {path}")
+                return
+            except (IOError, OSError, yaml.YAMLError) as e:
+                last_error = e
+                if attempt < retries - 1:
+                    logger.warning(
+                        f"Retry {attempt + 1}/{retries} writing {path}: {e}"
+                    )
+                    time.sleep(retry_delay)
+
+        raise YAMLGenerationError(
+            f"Failed to write {path} after {retries} attempts: {last_error}"
+        )
+
+    def _validate_scd_type(self, scd_type: str, item_name: str) -> str:
+        """
+        Validate and return SCD type if valid, None otherwise.
+
+        Args:
+            scd_type: The SCD type value from config (may be None or empty)
+            item_name: Name of the item (table/report) for logging
+
+        Returns:
+            Validated SCD type string or None if not specified/invalid
+        """
+        if not scd_type or (isinstance(scd_type, str) and not scd_type.strip()):
+            return None
+
+        import pandas as pd
+        if pd.isna(scd_type):
+            return None
+
+        scd_type = str(scd_type).strip().upper()
+
+        if not self.supported_scd_types:
+            logger.warning(f"SCD type '{scd_type}' specified for {item_name} but connector doesn't support SCD types, ignoring")
+            return None
+
+        if scd_type not in self.supported_scd_types:
+            logger.warning(f"Invalid scd_type '{scd_type}' for {item_name}, supported: {self.supported_scd_types}, ignoring")
+            return None
+
+        return scd_type
 
     def _validate_configuration(self):
         """
@@ -146,19 +335,19 @@ class BaseConnector(ABC):
             Normalized DataFrame with all required and optional columns
 
         Raises:
-            ValueError: If required columns are missing or DataFrame is empty
+            ConfigurationError: If required columns are missing or DataFrame is empty
         """
         # Make a copy to avoid modifying the original dataframe
         df = df.copy()
 
         # Check if dataframe is empty
         if df.empty:
-            raise ValueError("Input DataFrame is empty")
+            raise ConfigurationError("Input DataFrame is empty")
 
         # Validate required columns exist
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            raise ValueError(
+            raise ConfigurationError(
                 f"Missing required columns: {missing_columns}\n"
                 f"Required columns: {', '.join(required_columns)}"
             )
@@ -167,7 +356,7 @@ class BaseConnector(ABC):
         if default_values:
             for col_name, default_value in default_values.items():
                 if col_name not in df.columns:
-                    print(f"Info: '{col_name}' column not found. Adding with default: {default_value}")
+                    logger.debug(f"Column '{col_name}' not found, adding with default: {default_value}")
                     df[col_name] = default_value
                 else:
                     # Fill NaN values with default (skip if default is None)
@@ -182,10 +371,10 @@ class BaseConnector(ABC):
         # Apply overrides if provided
         if override_input_config:
             for col_name, override_value in override_input_config.items():
-                print(f"Info: Overriding '{col_name}' column with value: {override_value}")
+                logger.debug(f"Overriding '{col_name}' with value: {override_value}")
                 df[col_name] = override_value
 
-        print(f"\n✓ Configuration validated: {len(df)} rows with all required and optional columns")
+        logger.info(f"Configuration validated: {len(df)} rows")
 
         return df
 
@@ -199,7 +388,7 @@ class BaseConnector(ABC):
         Load and normalize input CSV data.
 
         Applies the configuration hierarchy:
-        1. CSV values (base)
+        1. User config values (base)
         2. Connector default_values (for missing/empty)
         3. User-provided default_values parameter (overrides connector defaults)
         4. override_input_config (overrides everything)
@@ -272,14 +461,70 @@ class BaseConnector(ABC):
                 - job_name: Resource identifier for job
                 - job_display_name: Display name for job
                 - task_key: Task key for pipeline task
+
+        Raises:
+            ValidationError: If generated resource names are invalid
         """
+        pipeline_resource_name = f"pipeline_{pipeline_group}"
+        job_name = f"job_{pipeline_group}"
+
+        # Validate generated resource names
+        self._validate_resource_name(pipeline_resource_name, "pipeline")
+        self._validate_resource_name(job_name, "job")
+
         return {
             'pipeline_name': f"Ingestion - {pipeline_group}",
-            'pipeline_resource_name': f"pipeline_{pipeline_group}",
-            'job_name': f"job_{pipeline_group}",
+            'pipeline_resource_name': pipeline_resource_name,
+            'job_name': job_name,
             'job_display_name': f"Pipeline Scheduler - {pipeline_group}",
             'task_key': "run_pipeline"
         }
+
+    def _split_groups_by_size(
+        self,
+        df: pd.DataFrame,
+        group_column: str,
+        max_size: int,
+        output_column: str,
+        suffix: str
+    ) -> pd.DataFrame:
+        """
+        Split groups that exceed max_size into smaller chunks with sequential suffixes.
+
+        This method is used for load balancing - splitting large groups of tables
+        into smaller chunks that fit within pipeline or gateway capacity limits.
+
+        Args:
+            df: Input DataFrame with groups to split
+            group_column: Column containing group identifiers to split
+            max_size: Maximum rows per group
+            output_column: Column name for output group names
+            suffix: Suffix pattern for split groups ('g' for pipelines, 'gw' for gateways)
+
+        Returns:
+            DataFrame with output_column populated with split group names
+        """
+        df = df.copy()
+        df[output_column] = ''
+
+        for group_name in df[group_column].unique():
+            group_df = df[df[group_column] == group_name]
+
+            if len(group_df) > max_size:
+                # Split into chunks
+                num_chunks = (len(group_df) - 1) // max_size + 1
+
+                for i in range(num_chunks):
+                    start_idx = i * max_size
+                    end_idx = min((i + 1) * max_size, len(group_df))
+                    chunk_indices = group_df.iloc[start_idx:end_idx].index
+                    chunk_name = f"{group_name}_{suffix}{i+1:02d}"
+                    df.loc[chunk_indices, output_column] = chunk_name
+            else:
+                # No split needed
+                df.loc[group_df.index, output_column] = group_name
+
+        return df
 
     def _create_jobs(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
@@ -300,7 +545,14 @@ class BaseConnector(ABC):
             schedule = group_df.iloc[0]['schedule']
 
             # Only create job if schedule is defined
-            if pd.notna(schedule) and schedule and str(schedule).strip():
+            if self._is_value_set(schedule):
+                # Validate cron expression format
+                try:
+                    self._validate_cron_expression(schedule, f"schedule for {pipeline_group}")
+                except ValidationError as e:
+                    logger.warning(f"Skipping job for {pipeline_group}: {e}")
+                    continue
+
                 names = self._generate_resource_names(pipeline_group)
 
                 # Convert standard cron to Quartz format
@@ -347,12 +599,15 @@ class BaseConnector(ABC):
 
         Returns:
             Dictionary with databricks.yml structure
+
+        Raises:
+            ConfigurationError: If targets configuration is invalid
         """
         if not targets:
-            raise ValueError("At least one target must be provided")
+            raise ConfigurationError("At least one target must be provided")
 
         if default_target not in targets:
-            raise ValueError(f"default_target '{default_target}' must be one of: {list(targets.keys())}")
+            raise ConfigurationError(f"default_target '{default_target}' must be one of: {list(targets.keys())}")
 
         config = {
             'bundle': {'name': project_name},
@@ -362,7 +617,7 @@ class BaseConnector(ABC):
 
         for target_name, target_config in targets.items():
             if 'workspace_host' not in target_config:
-                raise ValueError(f"Target '{target_name}' must have 'workspace_host'")
+                raise ConfigurationError(f"Target '{target_name}' must have 'workspace_host'")
 
             # Auto-determine mode if not explicitly provided
             mode = target_config.get('mode')
@@ -465,14 +720,10 @@ class BaseConnector(ABC):
         Returns:
             DataFrame with complete pipeline configuration
         """
-        print("="*80)
-        print(f"STARTING {self.connector_type.upper()} PIPELINE GENERATION PROCESS")
-        print("="*80)
+        logger.info(f"Starting {self.connector_type} pipeline generation")
+        logger.debug(f"Input rows: {len(df)}")
 
         # Step 1: Normalize and validate configuration
-        print(f"\n[Step 1/3] Normalizing configuration")
-        print(f"  - Input rows: {len(df)}")
-
         normalized_df = self.load_and_normalize_input(
             df=df,
             default_values=default_values,
@@ -480,25 +731,20 @@ class BaseConnector(ABC):
         )
 
         # Step 2: Generate pipeline configuration
-        print(f"\n[Step 2/3] Generating pipeline configuration")
-
         pipeline_config_df = self.generate_pipeline_config(
             df=normalized_df,
             **kwargs
         )
 
-        print(f"  ✓ Created {pipeline_config_df['pipeline_group'].nunique()} pipelines")
-        print(f"  ✓ Configured {len(pipeline_config_df)} tables/objects")
+        logger.info(f"Created {pipeline_config_df['pipeline_group'].nunique()} pipelines with {len(pipeline_config_df)} items")
 
         # Save intermediate configuration if requested
         if output_config:
             pipeline_config_df.to_csv(output_config, index=False)
-            print(f"  ✓ Saved configuration to: {output_config}")
+            logger.debug(f"Saved configuration to: {output_config}")
 
         # Step 3: Generate YAML files
-        print(f"\n[Step 3/3] Generating Databricks Asset Bundle YAML files")
-        print(f"  - Output directory: {output_dir}")
-        print(f"  - Target environments: {', '.join(targets.keys())}")
+        logger.debug(f"Output directory: {output_dir}, targets: {list(targets.keys())}")
 
         self.generate_yaml_files(
             df=pipeline_config_df,
@@ -506,9 +752,7 @@ class BaseConnector(ABC):
             targets=targets
         )
 
-        print("\n" + "="*80)
-        print(f"{self.connector_type.upper()} PIPELINE GENERATION COMPLETE!")
-        print("="*80)
+        logger.info(f"Pipeline generation complete for {self.connector_type}")
 
         return pipeline_config_df
 
@@ -536,63 +780,22 @@ class DatabaseConnector(BaseConnector):
         # Handle gateway_catalog and gateway_schema defaults
         # Use target values if gateway values are not provided
         if 'gateway_catalog' in df.columns:
+            df['gateway_catalog'] = df['gateway_catalog'].astype(object)
             mask = df['gateway_catalog'].isna()
             df.loc[mask, 'gateway_catalog'] = df.loc[mask, 'target_catalog']
 
         if 'gateway_schema' in df.columns:
+            df['gateway_schema'] = df['gateway_schema'].astype(object)
             mask = df['gateway_schema'].isna()
             df.loc[mask, 'gateway_schema'] = df.loc[mask, 'target_schema']
-
-        return df
-
-    def _split_groups_by_size(
-        self,
-        df: pd.DataFrame,
-        group_column: str,
-        max_size: int,
-        output_column: str,
-        suffix: str
-    ) -> pd.DataFrame:
-        """
-        Split groups that exceed max_size into smaller chunks with sequential suffixes.
-
-        Args:
-            df: Input DataFrame with groups to split
-            group_column: Column containing group identifiers to split
-            max_size: Maximum rows per group
-            output_column: Column name for output group names
-            suffix: Suffix pattern for split groups ('g' for pipelines, 'gw' for gateways)
-
-        Returns:
-            DataFrame with output_column populated
-        """
-        df = df.copy()
-        df[output_column] = ''
-
-        for group_name in df[group_column].unique():
-            group_df = df[df[group_column] == group_name]
-
-            if len(group_df) > max_size:
-                # Split into chunks
-                num_chunks = (len(group_df) - 1) // max_size + 1
-
-                for i in range(num_chunks):
-                    start_idx = i * max_size
-                    end_idx = min((i + 1) * max_size, len(group_df))
-                    chunk_indices = group_df.iloc[start_idx:end_idx].index
-                    chunk_name = f"{group_name}_{suffix}{i+1:02d}"
-                    df.loc[chunk_indices, output_column] = chunk_name
-            else:
-                # No split needed
-                df.loc[group_df.index, output_column] = group_name
 
         return df
 
     def generate_pipeline_config(
         self,
         df: pd.DataFrame,
-        max_tables_per_gateway: int = 250,
-        max_tables_per_pipeline: int = 250
+        max_tables_per_gateway: int = None,
+        max_tables_per_pipeline: int = None
     ) -> pd.DataFrame:
         """
         Generate database pipeline configuration with two-level load balancing.
@@ -603,12 +806,18 @@ class DatabaseConnector(BaseConnector):
 
         Args:
             df: Normalized input DataFrame
-            max_tables_per_gateway: Maximum tables per gateway (default: 250)
-            max_tables_per_pipeline: Maximum tables per pipeline (default: 250)
+            max_tables_per_gateway: Maximum tables per gateway (default: DEFAULT_MAX_TABLES_PER_GATEWAY)
+            max_tables_per_pipeline: Maximum tables per pipeline (default: DEFAULT_MAX_TABLES_PER_PIPELINE)
 
         Returns:
             DataFrame with 'gateway' and 'pipeline_group' columns added
         """
+        # Apply default constants if not specified
+        if max_tables_per_gateway is None:
+            max_tables_per_gateway = self.DEFAULT_MAX_TABLES_PER_GATEWAY
+        if max_tables_per_pipeline is None:
+            max_tables_per_pipeline = self.DEFAULT_MAX_TABLES_PER_PIPELINE
+
         df = df.copy()
 
         # Ensure consistent string formatting
@@ -652,53 +861,27 @@ class SaaSConnector(BaseConnector):
     Examples: Salesforce, Google Analytics, ServiceNow, Workday
     """
 
-    def _split_groups_by_size(
-        self,
-        df: pd.DataFrame,
-        group_column: str,
-        max_size: int,
-        output_column: str,
-        suffix: str
-    ) -> pd.DataFrame:
+    @abstractmethod
+    def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
-        Split groups that exceed max_size into smaller chunks with sequential suffixes.
+        Create pipeline YAML configuration from dataframe.
+
+        Must be implemented by each SaaS connector to handle connector-specific
+        pipeline structure (table mappings, column filters, etc.).
 
         Args:
-            df: Input DataFrame with groups to split
-            group_column: Column containing group identifiers to split
-            max_size: Maximum rows per group
-            output_column: Column name for output group names
-            suffix: Suffix pattern for split groups ('g' for pipelines)
+            df: DataFrame with pipeline configuration for a single project
+            project_name: Project name for resource naming
 
         Returns:
-            DataFrame with output_column populated
+            Dictionary with pipeline YAML configuration
         """
-        df = df.copy()
-        df[output_column] = ''
-
-        for group_name in df[group_column].unique():
-            group_df = df[df[group_column] == group_name]
-
-            if len(group_df) > max_size:
-                # Split into chunks
-                num_chunks = (len(group_df) - 1) // max_size + 1
-
-                for i in range(num_chunks):
-                    start_idx = i * max_size
-                    end_idx = min((i + 1) * max_size, len(group_df))
-                    chunk_indices = group_df.iloc[start_idx:end_idx].index
-                    chunk_name = f"{group_name}_{suffix}{i+1:02d}"
-                    df.loc[chunk_indices, output_column] = chunk_name
-            else:
-                # No split needed
-                df.loc[group_df.index, output_column] = group_name
-
-        return df
+        pass
 
     def generate_pipeline_config(
         self,
         df: pd.DataFrame,
-        max_tables_per_pipeline: int = 250
+        max_tables_per_pipeline: int = None
     ) -> pd.DataFrame:
         """
         Generate SaaS pipeline configuration with single-level load balancing.
@@ -708,11 +891,15 @@ class SaaSConnector(BaseConnector):
 
         Args:
             df: Normalized input DataFrame
-            max_tables_per_pipeline: Maximum items per pipeline (default: 250)
+            max_tables_per_pipeline: Maximum items per pipeline (default: DEFAULT_MAX_TABLES_PER_PIPELINE)
 
         Returns:
             DataFrame with 'pipeline_group' column added
         """
+        # Apply default constant if not specified
+        if max_tables_per_pipeline is None:
+            max_tables_per_pipeline = self.DEFAULT_MAX_TABLES_PER_PIPELINE
+
         df = df.copy()
 
         # Ensure consistent string formatting
@@ -735,3 +922,59 @@ class SaaSConnector(BaseConnector):
         df = df.drop(columns=['base_group'])
 
         return df
+
+    def generate_yaml_files(
+        self,
+        df: pd.DataFrame,
+        output_dir: str,
+        targets: Dict[str, Dict]
+    ):
+        """
+        Generate YAML files for SaaS connectors (no gateways).
+
+        Creates a DAB structure for each project:
+        - databricks.yml (root configuration)
+        - resources/pipelines.yml (pipeline definitions)
+        - resources/jobs.yml (scheduled jobs)
+
+        Args:
+            df: DataFrame with pipeline configuration
+            output_dir: Output directory for DAB files
+            targets: Dictionary of target environments
+
+        Raises:
+            YAMLGenerationError: If file writing fails
+        """
+        logger.info(f"Generating DAB YAML for {self.connector_type}")
+        logger.debug(f"Total items: {len(df)}, pipelines: {df['pipeline_group'].nunique()}")
+
+        # Group by project_name and create separate DAB packages
+        for project_name, project_df in df.groupby('project_name'):
+            project_output_dir = Path(output_dir) / str(project_name)
+            logger.info(f"Creating DAB for project: {project_name}")
+            logger.debug(f"  Items: {len(project_df)}, pipelines: {project_df['pipeline_group'].nunique()}")
+
+            # Generate YAML content for this project
+            pipelines_yaml = self._create_pipelines(project_df, str(project_name))
+            jobs_yaml = self._create_jobs(project_df, str(project_name))
+            databricks_yaml = self._create_databricks_yml(
+                project_name=str(project_name),
+                targets=targets,
+                default_target='dev'
+            )
+
+            # Create directory structure
+            resources_dir = project_output_dir / 'resources'
+            try:
+                resources_dir.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                raise YAMLGenerationError(f"Failed to create directory {resources_dir}: {e}")
+
+            # Write YAML files with retry logic
+            databricks_yml_path = project_output_dir / 'databricks.yml'
+            pipelines_yml_path = resources_dir / 'pipelines.yml'
+            jobs_yml_path = resources_dir / 'jobs.yml'
+
+            self._write_yaml_file(databricks_yml_path, databricks_yaml)
+            self._write_yaml_file(pipelines_yml_path, pipelines_yaml)
+            self._write_yaml_file(jobs_yml_path, jobs_yaml)

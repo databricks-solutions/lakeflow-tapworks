@@ -15,7 +15,7 @@ Each example folder contains:
 ### basic
 Basic GA4 configuration example:
 - Multiple GA4 properties grouped by business unit
-- Prefix + priority grouping strategy
+- Prefix + subgroup grouping strategy
 - Standard GA4 tables (events, events_intraday, users)
 - Per-pipeline schedule configuration
 
@@ -53,11 +53,11 @@ GA4 CSV requires these columns:
 - `source_schema` (GA4 property, e.g., "analytics_123456789")
 - `tables` (comma-separated, e.g., "events,events_intraday,users")
 - `target_catalog`, `target_schema`
-- `prefix`, `priority` (for grouping)
+- `prefix`, `subgroup` (for grouping)
 - `schedule` (optional)
 
 ## Pipeline Grouping
 
-Properties are grouped by unique (prefix, priority) combinations:
-- `prefix="business_unit1", priority="01"` → pipeline `business_unit1_01`
-- `prefix="business_unit1", priority="02"` → pipeline `business_unit1_02`
+Properties are grouped by unique (prefix, subgroup) combinations:
+- `prefix="business_unit1", subgroup="01"` → pipeline `business_unit1_01`
+- `prefix="business_unit1", subgroup="02"` → pipeline `business_unit1_02`

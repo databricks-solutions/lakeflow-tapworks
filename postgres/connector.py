@@ -8,13 +8,17 @@ DatabaseConnector interface for PostgreSQL data sources.
 import sys
 import os
 import yaml
+import logging
 import pandas as pd
 from pathlib import Path
 from typing import Dict
 
 # Add parent directory to path to import core utilities
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from core import DatabaseConnector
+from core import DatabaseConnector, YAMLGenerationError
+
+# Configure module logger
+logger = logging.getLogger(__name__)
 
 
 class PostgreSQLConnector(DatabaseConnector):
@@ -76,6 +80,11 @@ class PostgreSQLConnector(DatabaseConnector):
     def default_project_name(self) -> str:
         return "postgres_ingestion"
 
+    @property
+    def supported_scd_types(self) -> list:
+        """Return supported SCD types for PostgreSQL connector."""
+        return ["SCD_TYPE_1", "SCD_TYPE_2"]
+
     def _create_gateways(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
         Create gateway YAML configuration from dataframe.
@@ -110,8 +119,8 @@ class PostgreSQLConnector(DatabaseConnector):
             }
 
             # Add cluster configuration if node types are provided
-            has_worker_type = pd.notna(worker_type) and str(worker_type).strip()
-            has_driver_type = pd.notna(driver_type) and str(driver_type).strip()
+            has_worker_type = self._is_value_set(worker_type)
+            has_driver_type = self._is_value_set(driver_type)
             if has_worker_type or has_driver_type:
                 cluster_config = {"num_workers": 1}
                 if has_worker_type:
@@ -155,7 +164,7 @@ class PostgreSQLConnector(DatabaseConnector):
             pipelines[names["pipeline_resource_name"]] = {
                 "name": names["pipeline_name"],
                 "configuration": {
-                    "pipelines.***REMOVED***": "600",
+                    "pipelines.***REMOVED***": str(self.DEFAULT_TIMEOUT_SECONDS),
                 },
                 "ingestion_definition": {
                     "ingestion_gateway_id": f"${{resources.pipelines.{project_name}_pipeline_{project_name}_gateway_{gateway_id}.id}}",
@@ -176,11 +185,18 @@ class PostgreSQLConnector(DatabaseConnector):
         - resources/gateways.yml (gateway definitions)
         - resources/pipelines.yml (pipeline definitions)
         - resources/jobs.yml (scheduled jobs)
+
+        Raises:
+            YAMLGenerationError: If file writing fails
         """
         for project, project_df in df.groupby("project_name"):
-            project_output_dir = os.path.join(output_dir, str(project))
-            resources_dir = os.path.join(project_output_dir, "resources")
-            os.makedirs(resources_dir, exist_ok=True)
+            project_output_dir = Path(output_dir) / str(project)
+            resources_dir = project_output_dir / "resources"
+
+            try:
+                resources_dir.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                raise YAMLGenerationError(f"Failed to create directory {resources_dir}: {e}")
 
             gateways_yaml = self._create_gateways(project_df, str(project))
             pipelines_yaml = self._create_pipelines(project_df, str(project))
@@ -191,19 +207,16 @@ class PostgreSQLConnector(DatabaseConnector):
                 default_target="dev",
             )
 
-            databricks_yml_path = os.path.join(project_output_dir, "databricks.yml")
-            gateway_yml_path = os.path.join(resources_dir, "gateways.yml")
-            pipeline_yml_path = os.path.join(resources_dir, "pipelines.yml")
-            jobs_yml_path = os.path.join(resources_dir, "jobs.yml")
+            # Write YAML files with retry logic
+            databricks_yml_path = project_output_dir / "databricks.yml"
+            gateway_yml_path = resources_dir / "gateways.yml"
+            pipeline_yml_path = resources_dir / "pipelines.yml"
+            jobs_yml_path = resources_dir / "jobs.yml"
 
-            with open(databricks_yml_path, "w") as f:
-                yaml.dump(databricks_yaml, f, default_flow_style=False, sort_keys=False)
-            with open(gateway_yml_path, "w") as f:
-                yaml.dump(gateways_yaml, f, default_flow_style=False, sort_keys=False)
-            with open(pipeline_yml_path, "w") as f:
-                yaml.dump(pipelines_yaml, f, default_flow_style=False, sort_keys=False)
-            with open(jobs_yml_path, "w") as f:
-                yaml.dump(jobs_yaml, f, default_flow_style=False, sort_keys=False)
+            self._write_yaml_file(databricks_yml_path, databricks_yaml)
+            self._write_yaml_file(gateway_yml_path, gateways_yaml)
+            self._write_yaml_file(pipeline_yml_path, pipelines_yaml)
+            self._write_yaml_file(jobs_yml_path, jobs_yaml)
 
-        print(f"Generated DAB project structure in: {output_dir}")
+            logger.info(f"Created DAB for project: {project}")
 
