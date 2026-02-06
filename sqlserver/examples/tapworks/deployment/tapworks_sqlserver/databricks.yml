@@ -1,5 +1,5 @@
 bundle:
-  name: tapworks_sfdc
+  name: tapworks_sqlserver
 include:
 - resources/*.yml
 targets:

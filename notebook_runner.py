@@ -15,12 +15,14 @@ Supported connectors:
 """
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC # DAB Pipeline Generator
 # MAGIC
 # MAGIC Edit the configuration in the next cell, then run all cells to generate your DAB files.
 
 # COMMAND ----------
+
 # ============================================================================
 # CONFIGURATION - Edit these values
 # ============================================================================
@@ -63,30 +65,25 @@ max_tables_per_gateway = 250  # Only used for database connectors
 output_config = None  # Set to path like "/Workspace/.../processed_config.csv"
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Run Pipeline Generation
 # MAGIC
 # MAGIC The cells below execute the pipeline generation. No edits needed.
 
 # COMMAND ----------
-# Import and run
-import sys
-from pathlib import Path
-
-# Add repo root to path if running from repo
-repo_root = Path.cwd()
-if str(repo_root) not in sys.path:
-    sys.path.insert(0, str(repo_root))
 
 from core.runner import run_pipeline_generation, list_connectors, get_connector_info
 
 # COMMAND ----------
+
 # Show available connectors (optional - for reference)
 print("Available connectors:")
 for name in list_connectors():
     print(f"  - {name}")
 
 # COMMAND ----------
+
 # Show connector info (optional - for reference)
 info = get_connector_info(connector_name)
 print(f"\nConnector: {info['name']}")
@@ -94,6 +91,7 @@ print(f"Required columns: {info['required_columns']}")
 print(f"Default values: {info['default_values']}")
 
 # COMMAND ----------
+
 # Run pipeline generation
 result_df = run_pipeline_generation(
     connector_name=connector_name,
@@ -103,9 +101,7 @@ result_df = run_pipeline_generation(
     default_values=default_values,
     override_config=override_config,
     max_tables_per_pipeline=max_tables_per_pipeline,
-    max_tables_per_gateway=max_tables_per_gateway,
-    output_config=output_config,
-    spark_session=spark,  # Use Databricks spark session
+    max_tables_per_gateway=max_tables_per_gateway
 )
 
 print(f"\nProcessed {len(result_df)} tables")
@@ -114,16 +110,19 @@ if 'gateway' in result_df.columns:
     print(f"Gateways: {result_df['gateway'].nunique()}")
 
 # COMMAND ----------
+
 # Display the result
 display(result_df)
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Generated Files
 # MAGIC
 # MAGIC The following files were generated:
 
 # COMMAND ----------
+
 # List generated files
 import os
 
@@ -137,6 +136,7 @@ for root, dirs, files in os.walk(output_dir):
         print(f"{sub_indent}{file}")
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Next Steps
 # MAGIC
