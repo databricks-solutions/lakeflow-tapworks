@@ -9,6 +9,7 @@ import pandas as pd
 import yaml
 import os
 from pathlib import Path
+from core import ConfigurationError
 
 
 class TestSalesforceEndToEnd:
@@ -410,13 +411,13 @@ class TestErrorHandling:
         sample_targets_minimal,
         temp_output_dir
     ):
-        """Should raise error for missing required columns."""
+        """Should raise ConfigurationError for missing required columns."""
         incomplete_df = pd.DataFrame({
             'source_database': ['Salesforce'],
             # Missing many required columns
         })
 
-        with pytest.raises(ValueError, match="Missing required columns"):
+        with pytest.raises(ConfigurationError, match="Missing required columns"):
             salesforce_connector.run_complete_pipeline_generation(
                 df=incomplete_df,
                 output_dir=str(temp_output_dir),
@@ -429,10 +430,10 @@ class TestErrorHandling:
         sample_targets_minimal,
         temp_output_dir
     ):
-        """Should raise error for empty DataFrame."""
+        """Should raise ConfigurationError for empty DataFrame."""
         empty_df = pd.DataFrame()
 
-        with pytest.raises(ValueError, match="empty"):
+        with pytest.raises(ConfigurationError, match="empty"):
             salesforce_connector.run_complete_pipeline_generation(
                 df=empty_df,
                 output_dir=str(temp_output_dir),
@@ -445,8 +446,8 @@ class TestErrorHandling:
         sample_salesforce_df,
         temp_output_dir
     ):
-        """Should raise error when targets is empty."""
-        with pytest.raises(ValueError, match="target"):
+        """Should raise ConfigurationError when targets is empty."""
+        with pytest.raises(ConfigurationError, match="target"):
             salesforce_connector.run_complete_pipeline_generation(
                 df=sample_salesforce_df,
                 output_dir=str(temp_output_dir),

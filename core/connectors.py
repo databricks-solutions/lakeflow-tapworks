@@ -27,6 +27,8 @@ Usage:
 """
 
 import logging
+import re
+import time
 from abc import ABC, abstractmethod
 import pandas as pd
 import yaml
@@ -36,6 +38,9 @@ import sys
 
 # Import shared utilities
 from utilities import load_input_csv, convert_cron_to_quartz
+
+# Import custom exceptions
+from .exceptions import ConfigurationError, ValidationError, YAMLGenerationError
 
 # Configure module logger
 logger = logging.getLogger(__name__)
@@ -146,6 +151,120 @@ class BaseConnector(ABC):
             return False
         return True
 
+    def _validate_cron_expression(self, cron: str, context: str = "schedule") -> str:
+        """
+        Validate cron expression format.
+
+        Accepts both standard 5-field cron and 6-field Quartz format.
+
+        Args:
+            cron: Cron expression string to validate
+            context: Context for error message (e.g., "schedule", "job")
+
+        Returns:
+            The validated cron expression (stripped)
+
+        Raises:
+            ValidationError: If cron expression is invalid
+        """
+        if not self._is_value_set(cron):
+            raise ValidationError(f"Empty {context} cron expression")
+
+        cron = str(cron).strip()
+        parts = cron.split()
+
+        # Standard cron: 5 fields (minute hour day month weekday)
+        # Quartz cron: 6 fields (second minute hour day month weekday) or 7 fields (+ year)
+        if len(parts) not in [5, 6, 7]:
+            raise ValidationError(
+                f"Invalid {context} cron expression '{cron}': "
+                f"expected 5-7 fields, got {len(parts)}"
+            )
+
+        return cron
+
+    def _validate_resource_name(self, name: str, resource_type: str = "resource") -> str:
+        """
+        Validate Databricks resource naming rules.
+
+        Databricks resource names must:
+        - Start with a letter
+        - Contain only letters, numbers, underscores, and hyphens
+        - Be no longer than 128 characters
+
+        Args:
+            name: Resource name to validate
+            resource_type: Type of resource for error message (e.g., "pipeline", "job")
+
+        Returns:
+            The validated resource name (stripped)
+
+        Raises:
+            ValidationError: If resource name is invalid
+        """
+        if not self._is_value_set(name):
+            raise ValidationError(f"Empty {resource_type} name")
+
+        name = str(name).strip()
+
+        if not name[0].isalpha():
+            raise ValidationError(
+                f"Invalid {resource_type} name '{name}': must start with a letter"
+            )
+
+        if not re.match(r'^[a-zA-Z][a-zA-Z0-9_-]*$', name):
+            raise ValidationError(
+                f"Invalid {resource_type} name '{name}': "
+                f"can only contain letters, numbers, underscores, and hyphens"
+            )
+
+        if len(name) > 128:
+            raise ValidationError(
+                f"Invalid {resource_type} name '{name}': "
+                f"exceeds maximum length of 128 characters ({len(name)} chars)"
+            )
+
+        return name
+
+    def _write_yaml_file(
+        self,
+        path: Path,
+        content: dict,
+        retries: int = 3,
+        retry_delay: float = 0.5
+    ) -> None:
+        """
+        Write YAML file with retry logic and error handling.
+
+        Args:
+            path: Path to write the YAML file
+            content: Dictionary content to serialize as YAML
+            retries: Number of retry attempts (default: 3)
+            retry_delay: Delay between retries in seconds (default: 0.5)
+
+        Raises:
+            YAMLGenerationError: If file write fails after all retries
+        """
+        last_error = None
+
+        for attempt in range(retries):
+            try:
+                with open(path, 'w') as f:
+                    yaml.dump(content, f, sort_keys=False, default_flow_style=False, indent=2)
+                logger.debug(f"Written: {path}")
+                return
+            except (IOError, OSError, yaml.YAMLError) as e:
+                last_error = e
+                if attempt < retries - 1:
+                    logger.warning(
+                        f"Retry {attempt + 1}/{retries} writing {path}: {e}"
+                    )
+                    time.sleep(retry_delay)
+
+        raise YAMLGenerationError(
+            f"Failed to write {path} after {retries} attempts: {last_error}"
+        )
+
     def _validate_scd_type(self, scd_type: str, item_name: str) -> str:
         """
         Validate and return SCD type if valid, None otherwise.
@@ -216,19 +335,19 @@ class BaseConnector(ABC):
             Normalized DataFrame with all required and optional columns
 
         Raises:
-            ValueError: If required columns are missing or DataFrame is empty
+            ConfigurationError: If required columns are missing or DataFrame is empty
         """
         # Make a copy to avoid modifying the original dataframe
         df = df.copy()
 
         # Check if dataframe is empty
         if df.empty:
-            raise ValueError("Input DataFrame is empty")
+            raise ConfigurationError("Input DataFrame is empty")
 
         # Validate required columns exist
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            raise ValueError(
+            raise ConfigurationError(
                 f"Missing required columns: {missing_columns}\n"
                 f"Required columns: {', '.join(required_columns)}"
             )
@@ -342,11 +461,21 @@ class BaseConnector(ABC):
                 - job_name: Resource identifier for job
                 - job_display_name: Display name for job
                 - task_key: Task key for pipeline task
+
+        Raises:
+            ValidationError: If generated resource names are invalid
         """
+        pipeline_resource_name = f"pipeline_{pipeline_group}"
+        job_name = f"job_{pipeline_group}"
+
+        # Validate generated resource names
+        self._validate_resource_name(pipeline_resource_name, "pipeline")
+        self._validate_resource_name(job_name, "job")
+
         return {
             'pipeline_name': f"Ingestion - {pipeline_group}",
-            'pipeline_resource_name': f"pipeline_{pipeline_group}",
-            'job_name': f"job_{pipeline_group}",
+            'pipeline_resource_name': pipeline_resource_name,
+            'job_name': job_name,
             'job_display_name': f"Pipeline Scheduler - {pipeline_group}",
             'task_key': "run_pipeline"
         }
@@ -416,7 +545,14 @@ class BaseConnector(ABC):
             schedule = group_df.iloc[0]['schedule']
 
             # Only create job if schedule is defined
-            if pd.notna(schedule) and schedule and str(schedule).strip():
+            if self._is_value_set(schedule):
+                # Validate cron expression format
+                try:
+                    self._validate_cron_expression(schedule, f"schedule for {pipeline_group}")
+                except ValidationError as e:
+                    logger.warning(f"Skipping job for {pipeline_group}: {e}")
+                    continue
+
                 names = self._generate_resource_names(pipeline_group)
 
                 # Convert standard cron to Quartz format
@@ -463,12 +599,15 @@ class BaseConnector(ABC):
 
         Returns:
             Dictionary with databricks.yml structure
+
+        Raises:
+            ConfigurationError: If targets configuration is invalid
         """
         if not targets:
-            raise ValueError("At least one target must be provided")
+            raise ConfigurationError("At least one target must be provided")
 
         if default_target not in targets:
-            raise ValueError(f"default_target '{default_target}' must be one of: {list(targets.keys())}")
+            raise ConfigurationError(f"default_target '{default_target}' must be one of: {list(targets.keys())}")
 
         config = {
             'bundle': {'name': project_name},
@@ -478,7 +617,7 @@ class BaseConnector(ABC):
 
         for target_name, target_config in targets.items():
             if 'workspace_host' not in target_config:
-                raise ValueError(f"Target '{target_name}' must have 'workspace_host'")
+                raise ConfigurationError(f"Target '{target_name}' must have 'workspace_host'")
 
             # Auto-determine mode if not explicitly provided
             mode = target_config.get('mode')
@@ -802,6 +941,9 @@ class SaaSConnector(BaseConnector):
             df: DataFrame with pipeline configuration
             output_dir: Output directory for DAB files
             targets: Dictionary of target environments
+
+        Raises:
+            YAMLGenerationError: If file writing fails
         """
         logger.info(f"Generating DAB YAML for {self.connector_type}")
         logger.debug(f"Total items: {len(df)}, pipelines: {df['pipeline_group'].nunique()}")
@@ -823,20 +965,16 @@ class SaaSConnector(BaseConnector):
 
             # Create directory structure
             resources_dir = project_output_dir / 'resources'
-            resources_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                resources_dir.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                raise YAMLGenerationError(f"Failed to create directory {resources_dir}: {e}")
 
-            # Write YAML files
+            # Write YAML files with retry logic
             databricks_yml_path = project_output_dir / 'databricks.yml'
             pipelines_yml_path = resources_dir / 'pipelines.yml'
             jobs_yml_path = resources_dir / 'jobs.yml'
 
-            with open(databricks_yml_path, 'w') as f:
-                yaml.dump(databricks_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
-
-            with open(pipelines_yml_path, 'w') as f:
-                yaml.dump(pipelines_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
-
-            with open(jobs_yml_path, 'w') as f:
-                yaml.dump(jobs_yaml, f, sort_keys=False, default_flow_style=False, indent=2)
-
-            logger.debug(f"  Written: {databricks_yml_path}, {pipelines_yml_path}, {jobs_yml_path}")
+            self._write_yaml_file(databricks_yml_path, databricks_yaml)
+            self._write_yaml_file(pipelines_yml_path, pipelines_yaml)
+            self._write_yaml_file(jobs_yml_path, jobs_yaml)
