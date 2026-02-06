@@ -14,10 +14,10 @@ python cli.py --list
 python cli.py salesforce --info
 
 # Generate pipelines using settings file
-python cli.py salesforce --input-config tables.csv --settings settings.json
+python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
 
 # Generate pipelines using inline JSON
-python cli.py sqlserver --input-config tables.csv \
+python cli.py sqlserver --input-config tables.csv --output-dir output \
   --targets '{"dev": {"workspace_host": "https://..."}}' \
   --default-values '{"project_name": "my_project"}'
 ```
@@ -114,25 +114,25 @@ Use `python cli.py <connector> --info` to see required columns and defaults for 
 
 **Salesforce** (`sf`):
 ```bash
-python cli.py sf --input-config tables.csv --settings settings.json
+python cli.py sf --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
 **Google Analytics 4** (`ga4`):
 ```bash
-python cli.py ga4 --input-config tables.csv --settings settings.json
+python cli.py ga4 --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
 **ServiceNow** (`snow`):
 ```bash
-python cli.py snow --input-config tables.csv --settings settings.json
+python cli.py snow --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
 **Workday Reports** (`wd`):
 ```bash
-python cli.py wd --input-config tables.csv --settings settings.json
+python cli.py wd --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_url`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `primary_keys`
 
@@ -142,7 +142,7 @@ Database connectors support two-level load balancing with gateways.
 
 **SQL Server** (`sql`):
 ```bash
-python cli.py sql --input-config tables.csv --settings settings.json
+python cli.py sql --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
@@ -150,7 +150,7 @@ Optional: `gateway_catalog`, `gateway_schema`, `gateway_worker_type`, `gateway_d
 
 **PostgreSQL** (`pg`):
 ```bash
-python cli.py pg --input-config tables.csv --settings settings.json
+python cli.py pg --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 

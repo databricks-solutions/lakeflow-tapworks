@@ -36,7 +36,7 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
    python cli.py sqlserver --info
 
    # Generate DAB files
-   python cli.py sqlserver --input-config tables.csv 
+   python cli.py sqlserver --input-config tables.csv --output-dir output 
    ```
 
    **Notebook / Python:**
@@ -68,8 +68,8 @@ Use short aliases for convenience:
 | `wd`, `workday` | workday_reports |
 
 ```bash
-python cli.py sf --input-config tables.csv 
-python cli.py pg --input-config tables.csv 
+python cli.py sf --input-config tables.csv --output-dir output
+python cli.py pg --input-config tables.csv --output-dir output
 ```
 
 ## Load Balancing
@@ -162,7 +162,7 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables).
 
 **Inline JSON:**
 ```bash
-python cli.py salesforce --input-config tables.csv \
+python cli.py salesforce --input-config tables.csv --output-dir output \
   --targets '{"dev": {"workspace_host": "https://dev.cloud.databricks.com"}}' \
   --default-values '{"project_name": "sfdc_prod", "schedule": "0 */6 * * *"}' \
   --override '{"pause_status": "PAUSED"}'
@@ -192,7 +192,7 @@ python cli.py salesforce --input-config tables.csv \
 ```
 
 ```bash
-python cli.py salesforce --input-config tables.csv --settings settings.json
+python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
 ```
 
 ### Notebook Example
