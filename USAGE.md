@@ -4,7 +4,7 @@ This guide shows how to use Lakehouse Tapworks through both command line (CLI) a
 
 ## Quick Start - Unified CLI
 
-The unified CLI (`cli.py`) is the recommended entry point for all connectors:
+The unified CLI (`cli.py`) is the single entry point for all connectors:
 
 ```bash
 # List available connectors
@@ -67,402 +67,129 @@ display(result_df)
 
 ---
 
-## Configuration Methods
-
-Both CLI and programmatic interfaces support the same configuration options:
+## Configuration Options
 
 | Parameter | Description |
 |-----------|-------------|
 | `targets` | Target environments (dev, prod) with workspace settings |
-| `default_values` | Default values for optional input config columns |
-| `override_input_config` | Force override values (ignores input config) |
+| `default_values` | Default values for optional columns (fills missing/empty values) |
+| `override_input_config` | Force override values for ALL rows |
 | `max_tables_per_pipeline` | Maximum tables per pipeline (default: 250) |
 | `max_tables_per_gateway` | Maximum tables per gateway - database connectors only (default: 250) |
 
 ---
 
-## Connector-Specific Usage
+## Settings File Format
 
-The following sections document the original connector-specific CLI and programmatic interfaces. These still work but the unified CLI above is recommended.
-
----
-
-## SaaS Connectors
-
-### Salesforce
-
-**CLI - Using config file:**
-```bash
-python salesforce/pipeline_generator.py \
-  --input-csv salesforce/examples/basic/pipeline_config.csv \
-  --config config.json
-```
-
-**CLI - Using inline JSON:**
-```bash
-python salesforce/pipeline_generator.py \
-  --input-csv salesforce/examples/basic/pipeline_config.csv \
-  --targets '{"dev": {"workspace_host": "https://my-workspace.cloud.databricks.com"}}' \
-  --default-values '{"project_name": "sfdc_ingestion", "schedule": "*/30 * * * *"}'
-```
-
-**Notebook/Programmatic:**
-```python
-from salesforce.connector import SalesforceConnector
-from utilities import load_input_csv
-
-connector = SalesforceConnector()
-df = load_input_csv('salesforce/examples/basic/pipeline_config.csv')
-
-result = connector.run_complete_pipeline_generation(
-    df=df,
-    output_dir='dab_deployment',
-    targets={
-        'dev': {'workspace_host': 'https://my-workspace.cloud.databricks.com'},
-        'prod': {'workspace_host': 'https://prod-workspace.cloud.databricks.com'}
-    },
-    default_values={
-        'project_name': 'sfdc_ingestion',
-        'schedule': '*/30 * * * *'
-    },
-    override_input_config=None,  # Optional: force override values
-    max_tables_per_pipeline=250
-)
-```
-
----
-
-### Google Analytics 4
-
-**CLI - Using config file:**
-```bash
-python google_analytics/pipeline_generator.py \
-  --input-csv google_analytics/examples/basic/pipeline_config.csv \
-  --config config.json
-```
-
-**CLI - Using inline JSON:**
-```bash
-python google_analytics/pipeline_generator.py \
-  --input-csv google_analytics/examples/basic/pipeline_config.csv \
-  --targets '{"dev": {"workspace_host": "https://my-workspace.cloud.databricks.com"}}' \
-  --default-values '{"project_name": "ga4_ingestion", "schedule": "0 */6 * * *"}'
-```
-
-**Notebook/Programmatic:**
-```python
-from google_analytics.connector import GoogleAnalyticsConnector
-from utilities import load_input_csv
-
-connector = GoogleAnalyticsConnector()
-df = load_input_csv('google_analytics/examples/basic/pipeline_config.csv')
-
-result = connector.run_complete_pipeline_generation(
-    df=df,
-    output_dir='dab_project',
-    targets={
-        'dev': {'workspace_host': 'https://my-workspace.cloud.databricks.com'}
-    },
-    default_values={
-        'project_name': 'ga4_ingestion',
-        'schedule': '0 */6 * * *'
-    },
-    max_tables_per_pipeline=250
-)
-```
-
----
-
-### ServiceNow
-
-**CLI - Using config file:**
-```bash
-python servicenow/pipeline_generator.py \
-  --input-csv servicenow/examples/basic/pipeline_config.csv \
-  --config config.json
-```
-
-**CLI - Using inline JSON:**
-```bash
-python servicenow/pipeline_generator.py \
-  --input-csv servicenow/examples/basic/pipeline_config.csv \
-  --targets '{"dev": {"workspace_host": "https://my-workspace.cloud.databricks.com"}}' \
-  --default-values '{"project_name": "snow_ingestion", "schedule": "*/15 * * * *"}'
-```
-
-**Notebook/Programmatic:**
-```python
-from servicenow.connector import ServiceNowConnector
-from utilities import load_input_csv
-
-connector = ServiceNowConnector()
-df = load_input_csv('servicenow/examples/basic/pipeline_config.csv')
-
-result = connector.run_complete_pipeline_generation(
-    df=df,
-    output_dir='dab_deployment',
-    targets={
-        'dev': {'workspace_host': 'https://my-workspace.cloud.databricks.com'}
-    },
-    default_values={
-        'project_name': 'snow_ingestion',
-        'schedule': '*/15 * * * *',
-        'scd_type': 'SCD_TYPE_2'  # Optional: set default SCD type
-    },
-    max_tables_per_pipeline=250
-)
-```
-
----
-
-### Workday Reports
-
-**CLI - Using config file:**
-```bash
-python workday_reports/pipeline_generator.py \
-  --input-csv workday_reports/examples/basic/pipeline_config.csv \
-  --config config.json
-```
-
-**CLI - Using inline JSON:**
-```bash
-python workday_reports/pipeline_generator.py \
-  --input-csv workday_reports/examples/basic/pipeline_config.csv \
-  --targets '{"dev": {"workspace_host": "https://my-workspace.cloud.databricks.com"}}' \
-  --default-values '{"project_name": "workday_ingestion", "schedule": "0 */6 * * *"}'
-```
-
-**Notebook/Programmatic:**
-```python
-from workday_reports.connector import WorkdayReportsConnector
-from utilities import load_input_csv
-
-connector = WorkdayReportsConnector()
-df = load_input_csv('workday_reports/examples/basic/pipeline_config.csv')
-
-result = connector.run_complete_pipeline_generation(
-    df=df,
-    output_dir='dab_deployment',
-    targets={
-        'dev': {'workspace_host': 'https://my-workspace.cloud.databricks.com'}
-    },
-    default_values={
-        'project_name': 'workday_ingestion',
-        'schedule': '0 */6 * * *'
-    },
-    max_tables_per_pipeline=250
-)
-```
-
----
-
-## Database Connectors
-
-Database connectors support two-level load balancing with gateways and pipelines.
-
-### SQL Server
-
-**CLI - Using config file:**
-```bash
-python sqlserver/pipeline_generator.py \
-  --input-csv sqlserver/examples/basic/pipeline_config.csv \
-  --config config.json
-```
-
-**CLI - Using inline JSON:**
-```bash
-python sqlserver/pipeline_generator.py \
-  --input-csv sqlserver/examples/basic/pipeline_config.csv \
-  --targets '{"dev": {"workspace_host": "https://my-workspace.cloud.databricks.com", "root_path": "/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}"}}' \
-  --default-values '{"project_name": "sqlserver_ingestion", "gateway_worker_type": "m5d.large"}'
-```
-
-**Notebook/Programmatic:**
-```python
-from sqlserver.connector import SQLServerConnector
-from utilities import load_input_csv
-
-connector = SQLServerConnector()
-df = load_input_csv('sqlserver/examples/basic/pipeline_config.csv')
-
-result = connector.run_complete_pipeline_generation(
-    df=df,
-    output_dir='dab_project',
-    targets={
-        'dev': {
-            'workspace_host': 'https://my-workspace.cloud.databricks.com',
-            'root_path': '/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}'
-        },
-        'prod': {
-            'workspace_host': 'https://prod-workspace.cloud.databricks.com',
-            'root_path': '/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}'
-        }
-    },
-    default_values={
-        'project_name': 'sqlserver_ingestion',
-        'schedule': '*/15 * * * *',
-        'gateway_worker_type': 'm5d.large',
-        'gateway_driver_type': 'c5a.8xlarge'
-    },
-    max_tables_per_gateway=500,
-    max_tables_per_pipeline=250
-)
-```
-
----
-
-### PostgreSQL
-
-**CLI - Using config file:**
-```bash
-python postgres/pipeline_generator.py \
-  --input-csv postgres/examples/basic/pipeline_config.csv \
-  --config config.json
-```
-
-**CLI - Using inline JSON:**
-```bash
-python postgres/pipeline_generator.py \
-  --input-csv postgres/examples/basic/pipeline_config.csv \
-  --targets '{"dev": {"workspace_host": "https://my-workspace.cloud.databricks.com", "root_path": "/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}"}}' \
-  --default-values '{"project_name": "postgres_ingestion", "gateway_worker_type": "m6d.xlarge"}'
-```
-
-**Notebook/Programmatic:**
-```python
-from postgres.connector import PostgreSQLConnector
-from utilities import load_input_csv
-
-connector = PostgreSQLConnector()
-df = load_input_csv('postgres/examples/basic/pipeline_config.csv')
-
-result = connector.run_complete_pipeline_generation(
-    df=df,
-    output_dir='dab_project',
-    targets={
-        'dev': {
-            'workspace_host': 'https://my-workspace.cloud.databricks.com',
-            'root_path': '/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}'
-        }
-    },
-    default_values={
-        'project_name': 'postgres_ingestion',
-        'schedule': '*/15 * * * *',
-        'gateway_worker_type': 'm6d.xlarge',
-        'gateway_driver_type': 'm6d.xlarge'
-    },
-    max_tables_per_gateway=500,
-    max_tables_per_pipeline=250
-)
-```
-
----
-
-## Config File Format
-
-Config files can be JSON or YAML format.
-
-**JSON Example (`config.json`):**
 ```json
 {
   "targets": {
     "dev": {
-      "workspace_host": "https://dev-workspace.cloud.databricks.com",
-      "root_path": "/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}"
+      "workspace_host": "https://dev.cloud.databricks.com",
+      "root_path": "/Shared/pipelines/dev"
     },
     "prod": {
-      "workspace_host": "https://prod-workspace.cloud.databricks.com",
-      "root_path": "/Users/user@company.com/.bundle/${bundle.name}/${bundle.target}"
+      "workspace_host": "https://prod.cloud.databricks.com",
+      "root_path": "/Shared/pipelines/prod"
     }
   },
   "default_values": {
-    "project_name": "my_ingestion",
-    "schedule": "*/15 * * * *",
-    "gateway_worker_type": "m5d.large",
-    "gateway_driver_type": "c5a.8xlarge"
+    "project_name": "my_project",
+    "schedule": "0 */6 * * *"
   },
   "override_input_config": {
-    "schedule": null
+    "pause_status": "PAUSED"
   },
-  "max_tables_per_gateway": 500,
   "max_tables_per_pipeline": 250
 }
 ```
 
-**YAML Example (`config.yaml`):**
-```yaml
-targets:
-  dev:
-    workspace_host: https://dev-workspace.cloud.databricks.com
-    root_path: /Users/user@company.com/.bundle/${bundle.name}/${bundle.target}
-  prod:
-    workspace_host: https://prod-workspace.cloud.databricks.com
-    root_path: /Users/user@company.com/.bundle/${bundle.name}/${bundle.target}
-
-default_values:
-  project_name: my_ingestion
-  schedule: "*/15 * * * *"
-  gateway_worker_type: m5d.large
-  gateway_driver_type: c5a.8xlarge
-
-override_input_config:
-  schedule: null
-
-max_tables_per_gateway: 500
-max_tables_per_pipeline: 250
-```
-
 ---
 
-## Configuration Precedence
+## Connector Reference
 
-When using CLI, configuration is merged with the following precedence (highest to lowest):
+Use `python cli.py <connector> --info` to see required columns and defaults for any connector.
 
-1. **Inline JSON arguments** (`--targets`, `--default-values`, `--override`)
-2. **Config file** (`--config`)
+### SaaS Connectors
 
-This allows you to use a base config file and override specific values:
-
+**Salesforce** (`sf`):
 ```bash
-python salesforce/pipeline_generator.py \
-  --input-csv data.csv \
-  --config base_config.json \
-  --override '{"schedule": "0 0 * * *"}'  # Override just the schedule
+python cli.py sf --input-config tables.csv --settings settings.json
 ```
+Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
+
+**Google Analytics 4** (`ga4`):
+```bash
+python cli.py ga4 --input-config tables.csv --settings settings.json
+```
+Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
+
+**ServiceNow** (`snow`):
+```bash
+python cli.py snow --input-config tables.csv --settings settings.json
+```
+Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
+
+**Workday Reports** (`wd`):
+```bash
+python cli.py wd --input-config tables.csv --settings settings.json
+```
+Required columns: `source_url`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `primary_keys`
+
+### Database Connectors
+
+Database connectors support two-level load balancing with gateways.
+
+**SQL Server** (`sql`):
+```bash
+python cli.py sql --input-config tables.csv --settings settings.json
+```
+Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
+
+Optional: `gateway_catalog`, `gateway_schema`, `gateway_worker_type`, `gateway_driver_type`
+
+**PostgreSQL** (`pg`):
+```bash
+python cli.py pg --input-config tables.csv --settings settings.json
+```
+Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
+
+Optional: `gateway_catalog`, `gateway_schema`, `gateway_worker_type`, `gateway_driver_type`
 
 ---
 
-## Override vs Default Values
+## Programmatic Usage
 
-- **`default_values`**: Used when input config column is missing or empty
-- **`override_input_config`**: Always applied, ignoring input config values
+You can also use connectors directly in Python:
 
-**Example:**
 ```python
-# Input config has schedule="*/15 * * * *" for some rows
+from core import get_connector, run_pipeline_generation
 
+# Option 1: Use the unified runner
+result = run_pipeline_generation(
+    connector_name='salesforce',
+    input_source='tables.csv',
+    output_dir='output',
+    targets={'dev': {'workspace_host': 'https://...'}},
+)
+
+# Option 2: Use connector directly
+connector = get_connector('salesforce')
 result = connector.run_complete_pipeline_generation(
     df=df,
     output_dir='output',
-    targets={'dev': {'workspace_host': '...'}},
-
-    # This sets schedule for rows where it's missing
-    default_values={'schedule': '0 */6 * * *'},
-
-    # This forces ALL rows to use this schedule (ignores input config)
-    override_input_config={'schedule': '0 0 * * *'}
+    targets={'dev': {'workspace_host': 'https://...'}},
 )
 ```
 
 ---
 
-## Verbose Mode
+## Example Notebooks
 
-Add `--verbose` or `-v` to see detailed logging:
-
-```bash
-python salesforce/pipeline_generator.py \
-  --input-csv data.csv \
-  --config config.json \
-  --verbose
-```
+Each connector folder contains an `example.ipynb` notebook:
+- `salesforce/example.ipynb`
+- `sqlserver/example.ipynb`
+- `postgres/example.ipynb`
+- `google_analytics/example.ipynb`
+- `servicenow/example.ipynb`
+- `workday_reports/example.ipynb`
