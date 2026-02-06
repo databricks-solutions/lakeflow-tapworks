@@ -30,7 +30,7 @@ python cli.py --list
 python cli.py salesforce --info
 
 # Generate pipelines
-python cli.py salesforce --input-config tables.csv 
+python cli.py salesforce --input-config tables.csv --output-dir output 
 ```
 
 ### Programmatic
