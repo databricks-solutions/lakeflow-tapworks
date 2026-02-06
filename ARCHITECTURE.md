@@ -30,7 +30,8 @@ python cli.py --list
 python cli.py salesforce --info
 
 # Generate pipelines
-python cli.py salesforce --input-config tables.csv --output-dir output 
+python cli.py salesforce --input-config tables.csv --output-dir output \
+  --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}' 
 ```
 
 ### Programmatic

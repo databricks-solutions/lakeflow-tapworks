@@ -36,7 +36,8 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
    python cli.py sqlserver --info
 
    # Generate DAB files
-   python cli.py sqlserver --input-config tables.csv --output-dir output 
+   python cli.py sqlserver --input-config tables.csv --output-dir output \
+     --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}' 
    ```
 
    **Notebook / Python:**
@@ -68,8 +69,10 @@ Use short aliases for convenience:
 | `wd`, `workday` | workday_reports |
 
 ```bash
-python cli.py sf --input-config tables.csv --output-dir output
-python cli.py pg --input-config tables.csv --output-dir output
+python cli.py sf --input-config tables.csv --output-dir output \
+  --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
+python cli.py pg --input-config tables.csv --output-dir output \
+  --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
 ```
 
 ## Load Balancing
