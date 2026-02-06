@@ -37,7 +37,7 @@ from pathlib import Path
 import sys
 
 # Import shared utilities
-from utilities import load_input_csv, convert_cron_to_quartz
+from .utilities import load_input_csv, convert_cron_to_quartz
 
 # Import custom exceptions
 from .exceptions import ConfigurationError, ValidationError, YAMLGenerationError

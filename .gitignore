@@ -85,3 +85,4 @@ resources/pipelines/
 # Generated DAB projects (OOP pipeline generators)
 output/
 dab_project/
+**/deployment/
