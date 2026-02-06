@@ -154,9 +154,70 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables):
   └──────────────┘               └──────────────┘
 ```
 
+## Defaults and Overrides
+
+- **default_values** - Fill missing/empty columns with defaults (e.g., set schedule for rows that don't have one)
+- **override** - Force values for ALL rows, ignoring what's in the input (e.g., pause all jobs)
+
+### CLI Examples
+
+**Inline JSON:**
+```bash
+python cli.py salesforce --input config.csv \
+  --targets '{"dev": {"workspace_host": "https://dev.cloud.databricks.com"}}' \
+  --default-values '{"project_name": "sfdc_prod", "schedule": "0 */6 * * *"}' \
+  --override '{"pause_status": "PAUSED"}'
+```
+
+**Config file (config.yaml):**
+```yaml
+targets:
+  dev:
+    workspace_host: https://dev.cloud.databricks.com
+    root_path: /Shared/pipelines/dev
+  prod:
+    workspace_host: https://prod.cloud.databricks.com
+    root_path: /Shared/pipelines/prod
+
+default_values:
+  project_name: sfdc_prod
+  schedule: "0 */6 * * *"
+
+override_input_config:
+  pause_status: PAUSED
+```
+
+```bash
+python cli.py salesforce --input config.csv --config config.yaml
+```
+
+### Notebook Example
+
+```python
+from core import run_pipeline_generation
+
+result = run_pipeline_generation(
+    connector_name='salesforce',
+    input_source='config.csv',
+    output_dir='output',
+    targets={
+        'dev': {'workspace_host': 'https://dev.cloud.databricks.com'},
+        'prod': {'workspace_host': 'https://prod.cloud.databricks.com'},
+    },
+    # Fill missing values
+    default_values={
+        'project_name': 'sfdc_prod',
+        'schedule': '0 */6 * * *',
+    },
+    # Override ALL rows (e.g., pause all jobs during maintenance)
+    override_config={
+        'pause_status': 'PAUSED',
+    },
+)
+```
+
 ## Additional Features
 
-- **Defaults and overrides** - Set default values for missing config columns or override existing values globally (e.g., pause all jobs)
 - **Multi-environment** - Generate DABs for dev, staging, prod from the same config
 - **Flexible storage** - Config can live in CSV, Delta tables, or any DataFrame-compatible source
 
