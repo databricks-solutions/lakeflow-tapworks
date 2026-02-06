@@ -94,14 +94,12 @@ class BaseConnector(ABC):
         """
         Return default values for optional columns.
 
-        These values are used when columns are missing or contain empty/NaN values.
-        Should include defaults for all optional connector-specific columns.
+        These values if specified are used when columns are missing or contain empty/NaN values.
 
         Example:
             {
                 'schedule': '*/15 * * * *',
-                'gateway_worker_type': None,
-                'gateway_driver_type': None
+                'gateway_driver_type': 'node type'
             }
         """
         pass
@@ -271,7 +269,7 @@ class BaseConnector(ABC):
         Load and normalize input CSV data.
 
         Applies the configuration hierarchy:
-        1. CSV values (base)
+        1. User config values (base)
         2. Connector default_values (for missing/empty)
         3. User-provided default_values parameter (overrides connector defaults)
         4. override_input_config (overrides everything)
