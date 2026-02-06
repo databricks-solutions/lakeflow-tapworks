@@ -30,7 +30,7 @@ python cli.py --list
 python cli.py salesforce --info
 
 # Generate pipelines
-python cli.py salesforce --input-config tables.csv --settings settings.json
+python cli.py salesforce --input-config tables.csv 
 ```
 
 ### Programmatic
@@ -134,24 +134,6 @@ project_name/
     └── jobs.yml
 ```
 
-## Resource Relationships
-
-```
-Gateway (Database connectors only)
-├── Holds connection config + cluster specs
-├── Storage location (catalog.schema)
-└── Multiple pipelines can share one gateway
-
-Pipeline
-├── References gateway (DB) or connection directly (SaaS)
-├── Contains table/object mappings
-└── Column filters (SaaS only)
-
-Job
-├── 1:1 relationship with pipeline
-├── Cron schedule (converted to Quartz format)
-└── Can be paused via override_input_config
-```
 
 ## Core Classes
 
@@ -190,15 +172,6 @@ Base class for SaaS connectors without gateway support.
 - Simpler YAML structure
 - Implements `generate_pipeline_config()` using `generate_saas_pipeline_config()`
 
-## Connector Comparison
-
-| Feature | DatabaseConnector | SaaSConnector |
-|---------|-------------------|---------------|
-| Load balancing levels | 2 (gateway + pipeline) | 1 (pipeline only) |
-| Max gateway size | 250 (configurable) | N/A |
-| Max pipeline size | 250 (configurable) | 250 (configurable) |
-| YAML files | 4 (includes gateways.yml) | 3 |
-| Examples | SQL Server, PostgreSQL | Salesforce, GA4, ServiceNow, Workday |
 
 ## Adding a New Connector
 
@@ -312,18 +285,3 @@ For `pipeline_group = "sales_01_gw01_g01"`:
 | Pipeline resource ID | `pipeline_sales_01_gw01_g01` |
 | Job resource ID | `job_sales_01_gw01_g01` |
 | Job display | `Pipeline Scheduler - sales_01_gw01_g01` |
-
-## File Locations
-
-| Component | Path |
-|-----------|------|
-| Base classes | `core/connectors.py` |
-| Registry | `core/registry.py` |
-| Runner | `core/runner.py` |
-| CLI | `cli.py` |
-| SQL Server | `sqlserver/connector.py` |
-| PostgreSQL | `postgres/connector.py` |
-| Salesforce | `salesforce/connector.py` |
-| Google Analytics | `google_analytics/connector.py` |
-| ServiceNow | `servicenow/connector.py` |
-| Workday | `workday_reports/connector.py` |

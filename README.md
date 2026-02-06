@@ -6,18 +6,15 @@ Automated DAB (Databricks Asset Bundle) generation toolkit for Lakeflow Connect 
 
 Manually creating and maintaining DABs for Lakeflow connectors doesn't scale. Common challenges include:
 
-- **Migration complexity** - Customers have existing metadata from tools like ADF that they want to leverage automatically
 - **Manual table management** - Adding hundreds or thousands of tables to DABs by hand is error-prone and time-consuming
 - **Load balancing** - Distributing tables across pipelines based on size, SLAs, or performance metrics is impossible to do manually at scale
 - **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards requires automation
-- **Config validation** - Catching issues like missing catalogs, schemas, or connections before deployment prevents pipeline failures
 - **DAB syntax errors** - Minor syntax mistakes (e.g., missing spaces) cause cryptic errors that generate support tickets
 
 ## Solution
 
 Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame source) and automatically generates complete DAB packages with load balancing, validation, and proper syntax.
 
-**Supported connectors:** SQL Server, PostgreSQL, Salesforce, Google Analytics 4, ServiceNow, Workday
 
 ## How It Works
 
@@ -39,7 +36,7 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
    python cli.py sqlserver --info
 
    # Generate DAB files
-   python cli.py sqlserver --input-config tables.csv --settings settings.json
+   python cli.py sqlserver --input-config tables.csv 
    ```
 
    **Notebook / Python:**
@@ -71,8 +68,8 @@ Use short aliases for convenience:
 | `wd`, `workday` | workday_reports |
 
 ```bash
-python cli.py sf --input-config tables.csv --settings settings.json
-python cli.py pg --input-config tables.csv --settings settings.json
+python cli.py sf --input-config tables.csv 
+python cli.py pg --input-config tables.csv 
 ```
 
 ## Load Balancing
@@ -144,7 +141,8 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables):
                           │
           ┌───────────────┴───────────────┐
           ▼                               ▼
-    subgroup="critical"             subgroup="01" (auto)
+    subgroup="01"              subgroup="" or subgroup="02"
+    (for 5 critical tables)          (for the rest)             
           │                               │
           ▼                               ▼
   ┌──────────────┐               ┌──────────────┐
@@ -221,10 +219,9 @@ result = run_pipeline_generation(
 )
 ```
 
-## Additional Features
+## Target Environement
 
-- **Multi-environment** - Generate DABs for dev, staging, prod from the same config
-- **Flexible storage** - Config can live in CSV, Delta tables, or any DataFrame-compatible source
+- Using target it is possible to specify different workspaces for deployment (e.g., dev, staging, prod)
 
 ## Output Structure
 
