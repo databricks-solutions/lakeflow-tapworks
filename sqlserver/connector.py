@@ -8,6 +8,7 @@ DatabaseConnector interface for SQL Server data sources.
 import sys
 import os
 import yaml
+import logging
 import pandas as pd
 from pathlib import Path
 from typing import Dict
@@ -15,6 +16,9 @@ from typing import Dict
 # Add parent directory to path to import utilities
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from core import DatabaseConnector
+
+# Configure module logger
+logger = logging.getLogger(__name__)
 
 
 class SQLServerConnector(DatabaseConnector):
@@ -125,8 +129,8 @@ class SQLServerConnector(DatabaseConnector):
             }
 
             # Add cluster configuration if node types are provided
-            has_worker_type = pd.notna(worker_type) and worker_type != '' and worker_type is not None
-            has_driver_type = pd.notna(driver_type) and driver_type != '' and driver_type is not None
+            has_worker_type = self._is_value_set(worker_type)
+            has_driver_type = self._is_value_set(driver_type)
 
             if has_worker_type or has_driver_type:
                 cluster_config = {'num_workers': 1}
@@ -207,10 +211,10 @@ class SQLServerConnector(DatabaseConnector):
         # Group by project_name and create separate DAB packages
         for project, project_df in df.groupby('project_name'):
             project_output_dir = os.path.join(output_dir, str(project))
-            print(f"\nCreating DAB for project: {project}")
-            print(f"  Tables: {len(project_df)}")
-            print(f"  Pipelines: {project_df['pipeline_group'].nunique()}")
-            print(f"  Output: {project_output_dir}")
+            logger.info(f"Creating DAB for project: {project}")
+            logger.debug(f"  Tables: {len(project_df)}")
+            logger.debug(f"  Pipelines: {project_df['pipeline_group'].nunique()}")
+            logger.debug(f"  Output: {project_output_dir}")
 
             # Create directory structure
             resources_dir = os.path.join(project_output_dir, 'resources')
@@ -245,8 +249,4 @@ class SQLServerConnector(DatabaseConnector):
             with open(jobs_yml_path, 'w') as f:
                 yaml.dump(jobs_yaml, f, default_flow_style=False, sort_keys=False)
 
-        print(f"Generated DAB project structure in: {output_dir}")
-        print(f"  - {databricks_yml_path}")
-        print(f"  - {gateway_yml_path}")
-        print(f"  - {pipeline_yml_path}")
-        print(f"  - {jobs_yml_path}")
+            logger.debug(f"  Written: {databricks_yml_path}, {gateway_yml_path}, {pipeline_yml_path}, {jobs_yml_path}")

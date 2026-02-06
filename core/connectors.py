@@ -123,6 +123,26 @@ class BaseConnector(ABC):
         """
         return []
 
+    def _is_value_set(self, value) -> bool:
+        """
+        Check if a value is meaningfully set (not None, NaN, or empty string).
+
+        Use this method for consistent null-checking across the codebase.
+
+        Args:
+            value: Any value to check
+
+        Returns:
+            True if value is set and non-empty, False otherwise
+        """
+        if value is None:
+            return False
+        if pd.isna(value):
+            return False
+        if isinstance(value, str) and not value.strip():
+            return False
+        return True
+
     def _validate_scd_type(self, scd_type: str, item_name: str) -> str:
         """
         Validate and return SCD type if valid, None otherwise.
@@ -327,6 +347,52 @@ class BaseConnector(ABC):
             'job_display_name': f"Pipeline Scheduler - {pipeline_group}",
             'task_key': "run_pipeline"
         }
+
+    def _split_groups_by_size(
+        self,
+        df: pd.DataFrame,
+        group_column: str,
+        max_size: int,
+        output_column: str,
+        suffix: str
+    ) -> pd.DataFrame:
+        """
+        Split groups that exceed max_size into smaller chunks with sequential suffixes.
+
+        This method is used for load balancing - splitting large groups of tables
+        into smaller chunks that fit within pipeline or gateway capacity limits.
+
+        Args:
+            df: Input DataFrame with groups to split
+            group_column: Column containing group identifiers to split
+            max_size: Maximum rows per group
+            output_column: Column name for output group names
+            suffix: Suffix pattern for split groups ('g' for pipelines, 'gw' for gateways)
+
+        Returns:
+            DataFrame with output_column populated with split group names
+        """
+        df = df.copy()
+        df[output_column] = ''
+
+        for group_name in df[group_column].unique():
+            group_df = df[df[group_column] == group_name]
+
+            if len(group_df) > max_size:
+                # Split into chunks
+                num_chunks = (len(group_df) - 1) // max_size + 1
+
+                for i in range(num_chunks):
+                    start_idx = i * max_size
+                    end_idx = min((i + 1) * max_size, len(group_df))
+                    chunk_indices = group_df.iloc[start_idx:end_idx].index
+                    chunk_name = f"{group_name}_{suffix}{i+1:02d}"
+                    df.loc[chunk_indices, output_column] = chunk_name
+            else:
+                # No split needed
+                df.loc[group_df.index, output_column] = group_name
+
+        return df
 
     def _create_jobs(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
@@ -583,49 +649,6 @@ class DatabaseConnector(BaseConnector):
 
         return df
 
-    def _split_groups_by_size(
-        self,
-        df: pd.DataFrame,
-        group_column: str,
-        max_size: int,
-        output_column: str,
-        suffix: str
-    ) -> pd.DataFrame:
-        """
-        Split groups that exceed max_size into smaller chunks with sequential suffixes.
-
-        Args:
-            df: Input DataFrame with groups to split
-            group_column: Column containing group identifiers to split
-            max_size: Maximum rows per group
-            output_column: Column name for output group names
-            suffix: Suffix pattern for split groups ('g' for pipelines, 'gw' for gateways)
-
-        Returns:
-            DataFrame with output_column populated
-        """
-        df = df.copy()
-        df[output_column] = ''
-
-        for group_name in df[group_column].unique():
-            group_df = df[df[group_column] == group_name]
-
-            if len(group_df) > max_size:
-                # Split into chunks
-                num_chunks = (len(group_df) - 1) // max_size + 1
-
-                for i in range(num_chunks):
-                    start_idx = i * max_size
-                    end_idx = min((i + 1) * max_size, len(group_df))
-                    chunk_indices = group_df.iloc[start_idx:end_idx].index
-                    chunk_name = f"{group_name}_{suffix}{i+1:02d}"
-                    df.loc[chunk_indices, output_column] = chunk_name
-            else:
-                # No split needed
-                df.loc[group_df.index, output_column] = group_name
-
-        return df
-
     def generate_pipeline_config(
         self,
         df: pd.DataFrame,
@@ -706,49 +729,6 @@ class SaaSConnector(BaseConnector):
             Dictionary with pipeline YAML configuration
         """
         pass
-
-    def _split_groups_by_size(
-        self,
-        df: pd.DataFrame,
-        group_column: str,
-        max_size: int,
-        output_column: str,
-        suffix: str
-    ) -> pd.DataFrame:
-        """
-        Split groups that exceed max_size into smaller chunks with sequential suffixes.
-
-        Args:
-            df: Input DataFrame with groups to split
-            group_column: Column containing group identifiers to split
-            max_size: Maximum rows per group
-            output_column: Column name for output group names
-            suffix: Suffix pattern for split groups ('g' for pipelines)
-
-        Returns:
-            DataFrame with output_column populated
-        """
-        df = df.copy()
-        df[output_column] = ''
-
-        for group_name in df[group_column].unique():
-            group_df = df[df[group_column] == group_name]
-
-            if len(group_df) > max_size:
-                # Split into chunks
-                num_chunks = (len(group_df) - 1) // max_size + 1
-
-                for i in range(num_chunks):
-                    start_idx = i * max_size
-                    end_idx = min((i + 1) * max_size, len(group_df))
-                    chunk_indices = group_df.iloc[start_idx:end_idx].index
-                    chunk_name = f"{group_name}_{suffix}{i+1:02d}"
-                    df.loc[chunk_indices, output_column] = chunk_name
-            else:
-                # No split needed
-                df.loc[group_df.index, output_column] = group_name
-
-        return df
 
     def generate_pipeline_config(
         self,
