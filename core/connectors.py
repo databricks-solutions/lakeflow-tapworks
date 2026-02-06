@@ -572,10 +572,12 @@ class DatabaseConnector(BaseConnector):
         # Handle gateway_catalog and gateway_schema defaults
         # Use target values if gateway values are not provided
         if 'gateway_catalog' in df.columns:
+            df['gateway_catalog'] = df['gateway_catalog'].astype(object)
             mask = df['gateway_catalog'].isna()
             df.loc[mask, 'gateway_catalog'] = df.loc[mask, 'target_catalog']
 
         if 'gateway_schema' in df.columns:
+            df['gateway_schema'] = df['gateway_schema'].astype(object)
             mask = df['gateway_schema'].isna()
             df.loc[mask, 'gateway_schema'] = df.loc[mask, 'target_schema']
 
