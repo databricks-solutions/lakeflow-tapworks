@@ -42,6 +42,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utilities import load_input_csv
 from connector import SQLServerConnector
+from core import BaseConnector
 
 
 def load_config_file(config_path: str) -> dict:
@@ -174,14 +175,14 @@ Config file format (JSON or YAML):
     parser.add_argument(
         '--max-tables-gateway',
         type=int,
-        default=250,
-        help='Maximum tables per gateway (default: 250)'
+        default=BaseConnector.DEFAULT_MAX_TABLES_PER_GATEWAY,
+        help=f'Maximum tables per gateway (default: {BaseConnector.DEFAULT_MAX_TABLES_PER_GATEWAY})'
     )
     parser.add_argument(
         '--max-tables-pipeline',
         type=int,
-        default=250,
-        help='Maximum tables per pipeline within gateway (default: 250)'
+        default=BaseConnector.DEFAULT_MAX_TABLES_PER_PIPELINE,
+        help=f'Maximum tables per pipeline within gateway (default: {BaseConnector.DEFAULT_MAX_TABLES_PER_PIPELINE})'
     )
     parser.add_argument(
         '--schedule',

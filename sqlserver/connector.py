@@ -181,7 +181,7 @@ class SQLServerConnector(DatabaseConnector):
             pipelines[names['pipeline_resource_name']] = {
                 'name': names['pipeline_name'],
                 'configuration': {
-                    'pipelines.***REMOVED***': '600'
+                    'pipelines.***REMOVED***': str(self.DEFAULT_TIMEOUT_SECONDS)
                 },
                 'ingestion_definition': {
                     'ingestion_gateway_id': f"${{resources.pipelines.{project_name}_pipeline_{project_name}_gateway_{gateway_id}.id}}",
