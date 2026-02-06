@@ -13,16 +13,16 @@ Usage:
     python cli.py salesforce --info
 
     # Generate pipelines using config file
-    python cli.py salesforce --input config.csv --config config.yaml
+    python cli.py salesforce --input-config config.csv --output-dir output --settings config.json
 
     # Generate pipelines using inline JSON
-    python cli.py sqlserver --input config.csv \
+    python cli.py sqlserver --input-config config.csv --output-dir output \
         --targets '{"dev": {"workspace_host": "https://..."}}' \
         --default-values '{"project_name": "my_project"}'
 
     # Using connector aliases
-    python cli.py sf --input config.csv --config config.yaml
-    python cli.py pg --input config.csv --config config.yaml
+    python cli.py sf --input-config config.csv --output-dir output --settings config.json
+    python cli.py pg --input-config config.csv --output-dir output --settings config.json
 """
 
 import argparse
@@ -120,16 +120,16 @@ Examples:
   python cli.py salesforce --info
 
   # Generate pipelines using settings file
-  python cli.py salesforce --input-config tables.csv --settings settings.json
+  python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
 
   # Generate pipelines with inline JSON
-  python cli.py sqlserver --input-config tables.csv \\
+  python cli.py sqlserver --input-config tables.csv --output-dir output \\
     --targets '{"dev": {"workspace_host": "https://..."}}' \\
     --default-values '{"project_name": "my_project"}'
 
   # Use connector aliases
-  python cli.py sf --input-config tables.csv --settings settings.json
-  python cli.py pg --input-config tables.csv --settings settings.json
+  python cli.py sf --input-config tables.csv --output-dir output --settings settings.json
+  python cli.py pg --input-config tables.csv --output-dir output --settings settings.json
 
 Connector aliases:
   sf, salesforce     -> salesforce
