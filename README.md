@@ -143,13 +143,14 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables).
           ┌───────────────┴───────────────┐
           ▼                               ▼
       subgroup="01"                  subgroup="02"
-    (5 critical tables)            (remaining tables)
+    (5 critical tables)          (595 remaining tables)
           │                               │
           ▼                               ▼
-  ┌───────────────┐              ┌───────────────┐
-  │   Pipeline    │              │  Pipeline(s)  │
-  │ sales_01_g01  │              │ sales_02_g01  │
-  └───────────────┘              └───────────────┘
+  ┌───────────────┐       ┌───────────────┬───────────────┬───────────────┐
+  │   Pipeline    │       │   Pipeline    │   Pipeline    │   Pipeline    │
+  │ sales_01_g01  │       │ sales_02_g01  │ sales_02_g02  │ sales_02_g03  │
+  │  (5 tables)   │       │ (250 tables)  │ (250 tables)  │  (95 tables)  │
+  └───────────────┘       └───────────────┴───────────────┴───────────────┘
 ```
 
 ## Defaults and Overrides
