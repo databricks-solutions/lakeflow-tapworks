@@ -241,7 +241,6 @@ output/<project_name>/
 
 - [USAGE.md](USAGE.md) - CLI and notebook usage examples for all connectors
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and class hierarchy
-- [IMPROVEMENTS.md](IMPROVEMENTS.md) - Roadmap and future improvements
 
 **Quick reference:**
 ```bash

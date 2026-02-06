@@ -33,7 +33,7 @@ Produce a short design note that includes:
 
 ## Where to read (must-reference files)
 
-- `OOP_ARCHITECTURE.md` (high-level design)
+- `ARCHITECTURE.md` (high-level design)
 - `core/connectors.py` (the implementation; treat as source of truth)
 - Connector implementations:
   - `sqlserver/connector.py` (database connector reference)

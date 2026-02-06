@@ -18,6 +18,52 @@ BaseConnector (abstract)
 
 **Location:** `core/connectors.py`
 
+## Entry Points
+
+### Unified CLI
+
+```bash
+# List available connectors
+python cli.py --list
+
+# Show connector info
+python cli.py salesforce --info
+
+# Generate pipelines
+python cli.py salesforce --input-config tables.csv --settings settings.json
+```
+
+### Programmatic
+
+```python
+from core import run_pipeline_generation
+
+result = run_pipeline_generation(
+    connector_name='salesforce',
+    input_source='tables.csv',  # CSV, Delta table, or DataFrame
+    output_dir='output',
+    targets={'dev': {'workspace_host': 'https://...'}},
+    default_values={'project_name': 'my_project'},
+)
+```
+
+### Direct Connector Usage
+
+```python
+from sqlserver.connector import SQLServerConnector
+
+connector = SQLServerConnector()
+result = connector.run_complete_pipeline_generation(
+    df=input_df,
+    output_dir='output',
+    targets={'dev': {'workspace_host': '...', 'root_path': '...'}},
+    default_values={'project_name': 'my_project'},
+    override_input_config={'schedule': None},  # pause all jobs
+    max_tables_per_gateway=250,
+    max_tables_per_pipeline=250
+)
+```
+
 ## Core Flow
 
 ```
@@ -107,22 +153,42 @@ Job
 └── Can be paused via override_input_config
 ```
 
-## Entry Point
+## Core Classes
 
-**Method:** `run_complete_pipeline_generation()`
+### BaseConnector (Abstract)
 
-```python
-connector = SQLServerConnector()
-result = connector.run_complete_pipeline_generation(
-    df=input_df,
-    output_dir='output',
-    targets={'dev': {'workspace_host': '...', 'root_path': '...'}},
-    default_values={'project_name': 'my_project'},
-    override_input_config={'schedule': None},  # pause all jobs
-    max_tables_per_gateway=250,
-    max_tables_per_pipeline=250
-)
-```
+The root base class that defines the common interface for all connectors.
+
+**Abstract Properties:**
+- `connector_type` - Connector identifier ('sqlserver', 'salesforce', etc.)
+- `required_columns` - List of required CSV columns
+- `default_values` - Dictionary of default values for optional columns
+
+**Concrete Methods:**
+- `load_and_normalize_input()` - Loads and normalizes CSV input
+- `run_complete_pipeline_generation()` - Main entry point for pipeline generation
+
+**Abstract Methods:**
+- `generate_pipeline_config()` - Implements load balancing logic
+- `generate_yaml_files()` - Generates DAB YAML files
+
+### DatabaseConnector (Abstract)
+
+Base class for database connectors with gateway support.
+
+**Features:**
+- Two-level load balancing (gateways + pipelines)
+- Gateway configuration handling
+- Implements `generate_pipeline_config()` using `generate_database_pipeline_config()`
+
+### SaaSConnector (Abstract)
+
+Base class for SaaS connectors without gateway support.
+
+**Features:**
+- Single-level load balancing (pipelines only)
+- Simpler YAML structure
+- Implements `generate_pipeline_config()` using `generate_saas_pipeline_config()`
 
 ## Connector Comparison
 
@@ -141,10 +207,10 @@ result = connector.run_complete_pipeline_generation(
 - `DatabaseConnector` - source requires gateways (databases with network isolation)
 - `SaaSConnector` - no gateways needed (cloud-to-cloud)
 
-### Step 2: Implement Required Properties
+### Step 2: Create Connector Class
 
 ```python
-from core.connectors import DatabaseConnector  # or SaaSConnector
+from core import DatabaseConnector  # or SaaSConnector
 
 class MyConnector(DatabaseConnector):
     @property
@@ -167,29 +233,41 @@ class MyConnector(DatabaseConnector):
             'subgroup': '01',
             'schedule': '*/15 * * * *'
         }
+
+    def generate_yaml_files(self, df, output_dir, targets):
+        for project_name in df['project_name'].unique():
+            project_df = df[df['project_name'] == project_name]
+            project_dir = Path(output_dir) / project_name
+            resources_dir = project_dir / 'resources'
+            resources_dir.mkdir(parents=True, exist_ok=True)
+
+            # Use helper methods from base class
+            gateways = self._create_gateways(project_df, project_name)  # DB only
+            pipelines = self._create_pipelines(project_df)
+            jobs = self._create_jobs(project_df)
+            databricks_yml = self._create_databricks_yml(project_name, targets)
+
+            # Write YAML files
+            self._write_yaml(resources_dir / 'gateways.yml', gateways)
+            self._write_yaml(resources_dir / 'pipelines.yml', pipelines)
+            self._write_yaml(resources_dir / 'jobs.yml', jobs)
+            self._write_yaml(project_dir / 'databricks.yml', databricks_yml)
 ```
 
-### Step 3: Implement YAML Generation
+### Step 3: Register the Connector
+
+Add to `core/registry.py`:
 
 ```python
-def generate_yaml_files(self, df, output_dir, targets):
-    for project_name in df['project_name'].unique():
-        project_df = df[df['project_name'] == project_name]
-        project_dir = Path(output_dir) / project_name
-        resources_dir = project_dir / 'resources'
-        resources_dir.mkdir(parents=True, exist_ok=True)
+CONNECTORS = {
+    # ... existing connectors ...
+    'myservice': ('myservice.connector', 'MyServiceConnector'),
+}
 
-        # Use helper methods from base class
-        gateways = self._create_gateways(project_df, project_name)  # DB only
-        pipelines = self._create_pipelines(project_df)
-        jobs = self._create_jobs(project_df)
-        databricks_yml = self._create_databricks_yml(project_name, targets)
-
-        # Write YAML files
-        self._write_yaml(resources_dir / 'gateways.yml', gateways)
-        self._write_yaml(resources_dir / 'pipelines.yml', pipelines)
-        self._write_yaml(resources_dir / 'jobs.yml', jobs)
-        self._write_yaml(project_dir / 'databricks.yml', databricks_yml)
+CONNECTOR_ALIASES = {
+    # ... existing aliases ...
+    'ms': 'myservice',
+}
 ```
 
 ### Step 4: Optional - Custom Normalization
@@ -201,12 +279,26 @@ def _apply_connector_specific_normalization(self, df):
     return df
 ```
 
-## Utilities
+## Testing
 
-**Location:** `utilities/utilities.py`
+The OOP architecture makes testing easier:
 
-- `load_input_csv(path)` - Load CSV into DataFrame
-- `convert_cron_to_quartz(cron)` - Convert 5-field cron to 6-field Quartz format
+```python
+import pytest
+from sqlserver.connector import SQLServerConnector
+
+class TestSQLServerConnector:
+    def setup_method(self):
+        self.connector = SQLServerConnector()
+
+    def test_connector_type(self):
+        assert self.connector.connector_type == 'sqlserver'
+
+    def test_required_columns(self):
+        required = self.connector.required_columns
+        assert 'source_database' in required
+        assert 'connection_name' in required
+```
 
 ## Resource Naming Convention
 
@@ -226,7 +318,9 @@ For `pipeline_group = "sales_01_gw01_g01"`:
 | Component | Path |
 |-----------|------|
 | Base classes | `core/connectors.py` |
-| Utilities | `utilities/utilities.py` |
+| Registry | `core/registry.py` |
+| Runner | `core/runner.py` |
+| CLI | `cli.py` |
 | SQL Server | `sqlserver/connector.py` |
 | PostgreSQL | `postgres/connector.py` |
 | Salesforce | `salesforce/connector.py` |
