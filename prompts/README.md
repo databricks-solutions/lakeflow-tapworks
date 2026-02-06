@@ -1,38 +1,50 @@
-# Agentic coding prompts (OOP connector generators)
+# Connector Development Prompts
 
-These prompts/templates are modeled after `lakeflow-community-connectors/prompts/` and are intended to instruct Claude/Cursor how to build and extend this repository’s **OOP-based connector + DAB generator** framework.
+Guides for adding new connectors to the Lakehouse Tapworks framework.
 
-## How to use this folder (human vs agent)
+## How to Use
 
-This folder contains two different kinds of content:
+These prompts are designed to work with AI coding assistants (Claude, Cursor, etc.). You can:
 
-- **Workflows (human-facing)**: the numbered `0x_*.md` files are step-by-step playbooks you read and follow. They explain sequencing, acceptance criteria, and what to verify.
-- **Templates (agent/scaffold)**: files under `templates/` are copy/paste starter skeletons (code/CSV/notebook). They are intended to be turned into real repo files like `<connector>/connector.py`, `<connector>/pipeline_generator.py`, and `<connector>/pipeline_setup.ipynb`.
-
-Convention used throughout:
-- **“Audience: Human”** sections are meant to be read by the contributor.
-- **“Audience: Agent”** sections are meant to be pasted into Cursor/Claude chat (or used as a scaffold) to generate actual files.
+1. **Point the AI at the whole folder**: "Read the prompts folder and help me create a new connector for Jira"
+2. **Follow step by step**: Work through each numbered file in order
+3. **Reference specific sections**: Jump to what you need
 
 ## Workflow
 
-- **Step 1: Understand the framework** → `01_understand_oop_framework.md`
-- **Step 2: Add or update a connector class** → `02_add_or_update_connector.md`
-- **Step 3: Add connection creation helpers (optional)** → `03_add_connection_helpers.md`
-- **Step 4: Build a pipeline generator CLI** → `04_build_pipeline_generator_cli.md`
-- **Step 5: Generate / validate / deploy** → `05_generate_validate_deploy.md`
-- **Step 6: Troubleshoot common failures** → `06_troubleshoot_common_failures.md`
-- **Step 7: Cleanup / align with repo style** → `07_refactor_cleanup.md`
+| Step | File | Description |
+|------|------|-------------|
+| 1 | `01_understand_framework.md` | Learn the architecture before coding |
+| 2 | `02_add_connector.md` | Implement your connector class |
+| 3 | `03_test_and_deploy.md` | Test locally and deploy to Databricks |
+| 4 | `04_reference.md` | Quick reference for columns, methods, patterns |
 
-## Templates
+## Quick Start
 
-See `templates/` for:
-- Connector skeletons (database + SaaS)
-- Pipeline generator CLI skeleton
-- Pipeline setup notebook template (for interactive Databricks runs)
-- Example `pipeline_config.csv` formats
-- A standard test plan checklist
+If you're familiar with the codebase, here's the minimal path:
 
-## Example workflows
+1. **Create connector class** in `myconnector/connector.py`
+   - Extend `DatabaseConnector` or `SaaSConnector`
+   - Implement `connector_type`, `required_columns`, `default_values`
+   - Implement `_create_pipelines()` (SaaS) or full YAML generation (Database)
 
-- `examples/jira_new_connector_walkthrough.md`: end-to-end walkthrough for adding a new **SaaS** pipeline generator (Jira example), including how to encode source-specific constraints into CSV options.
+2. **Register** in `core/registry.py`
 
+3. **Add example** CSV in `myconnector/examples/basic/pipeline_config.csv`
+
+4. **Test**: `python -m core.cli myconnector --input-config myconnector/examples/basic/pipeline_config.csv --output-dir output`
+
+## Examples
+
+- `examples/jira_walkthrough.md` - End-to-end example for adding a Jira connector
+
+## Reference Implementations
+
+| Type | Connector | Notes |
+|------|-----------|-------|
+| Database | `sqlserver/` | Full gateway support |
+| Database | `postgres/` | Similar to SQL Server |
+| SaaS | `salesforce/` | Column filtering support |
+| SaaS | `google_analytics/` | GA4 with property config |
+| SaaS | `servicenow/` | Basic SaaS pattern |
+| SaaS | `workday_reports/` | Report-based ingestion |
