@@ -390,6 +390,43 @@ class TestSalesforceCreatePipelines:
         assert 'table_configuration' in table_obj['table']
         assert table_obj['table']['table_configuration']['exclude_columns'] == ['SystemModstamp', 'LastModifiedDate']
 
+    def test_primary_keys_added_to_table_config(self, salesforce_connector):
+        """Primary keys should be added to table_configuration (supports composite keys)."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['account'],
+            'connection_name': ['sfdc_conn'],
+            'primary_keys': ['Id,AccountId'],
+        })
+
+        result = salesforce_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01']
+        table_obj = pipeline['ingestion_definition']['objects'][0]
+        assert 'table_configuration' in table_obj['table']
+        assert table_obj['table']['table_configuration']['primary_keys'] == ['Id', 'AccountId']
+
+    def test_primary_keys_empty_not_included(self, salesforce_connector):
+        """Empty primary_keys should not create table_configuration."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['account'],
+            'connection_name': ['sfdc_conn'],
+            'primary_keys': ['   '],
+        })
+
+        result = salesforce_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01']
+        table_obj = pipeline['ingestion_definition']['objects'][0]
+        assert 'table_configuration' not in table_obj['table']
+
 
 class TestDatabaseConnectorCreateGateways:
     """Tests for database connector _create_gateways method."""
