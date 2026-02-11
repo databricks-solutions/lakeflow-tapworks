@@ -132,6 +132,11 @@ class WorkdayReportsConnector(SaaSConnector):
                 },
             }
 
+            # Optional: tags (applied to the pipeline)
+            tags = self._parse_tags(group_reports[0].get("tags"))
+            if tags:
+                pipeline_def["tags"] = tags
+
             # Add reports to this pipeline
             for item in group_reports:
                 report_entry = {

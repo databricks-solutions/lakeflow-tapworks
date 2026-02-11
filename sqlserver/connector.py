@@ -128,6 +128,11 @@ class SQLServerConnector(DatabaseConnector):
                 'catalog': gateway_catalog
             }
 
+            # Optional: tags (applied to the gateway pipeline)
+            tags = self._parse_tags(row.get("tags"))
+            if tags:
+                gateway_config["tags"] = tags
+
             # Add cluster configuration if node types are provided
             has_worker_type = self._is_value_set(worker_type)
             has_driver_type = self._is_value_set(driver_type)
@@ -190,6 +195,11 @@ class SQLServerConnector(DatabaseConnector):
                 'schema': target_schema,
                 'catalog': target_catalog
             }
+
+            # Optional: tags (applied to the ingestion pipeline)
+            tags = self._parse_tags(group_df.iloc[0].get("tags"))
+            if tags:
+                pipelines[names["pipeline_resource_name"]]["tags"] = tags
 
         return {'resources': {'pipelines': pipelines}}
 
