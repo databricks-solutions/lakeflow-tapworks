@@ -118,6 +118,8 @@ python cli.py sf --input-config tables.csv --output-dir output --settings settin
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
+Optional: `include_columns`, `exclude_columns`, `primary_keys` (comma-separated; supports composite keys)
+
 **Google Analytics 4** (`ga4`):
 ```bash
 python cli.py ga4 --input-config tables.csv --output-dir output --settings settings.json

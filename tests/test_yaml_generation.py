@@ -264,6 +264,19 @@ class TestCreateJobs:
         job = result['resources']['jobs']['job_test_01']
         assert job['pause_status'] == 'PAUSED'
 
+    def test_job_tags_included_when_specified(self, salesforce_connector):
+        """Job tags should be included when specified."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01'],
+            'schedule': ['*/15 * * * *'],
+            'tags': ['team=field-eng,demo=true'],
+        })
+
+        result = salesforce_connector._create_jobs(df, 'project')
+
+        job = result['resources']['jobs']['job_test_01']
+        assert job['tags'] == {'team': 'field-eng', 'demo': 'true'}
+
 
 class TestSalesforceCreatePipelines:
     """Tests for Salesforce _create_pipelines method."""
@@ -390,6 +403,60 @@ class TestSalesforceCreatePipelines:
         assert 'table_configuration' in table_obj['table']
         assert table_obj['table']['table_configuration']['exclude_columns'] == ['SystemModstamp', 'LastModifiedDate']
 
+    def test_primary_keys_added_to_table_config(self, salesforce_connector):
+        """Primary keys should be added to table_configuration (supports composite keys)."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['account'],
+            'connection_name': ['sfdc_conn'],
+            'primary_keys': ['Id,AccountId'],
+        })
+
+        result = salesforce_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01']
+        table_obj = pipeline['ingestion_definition']['objects'][0]
+        assert 'table_configuration' in table_obj['table']
+        assert table_obj['table']['table_configuration']['primary_keys'] == ['Id', 'AccountId']
+
+    def test_primary_keys_empty_not_included(self, salesforce_connector):
+        """Empty primary_keys should not create table_configuration."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['account'],
+            'connection_name': ['sfdc_conn'],
+            'primary_keys': ['   '],
+        })
+
+        result = salesforce_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01']
+        table_obj = pipeline['ingestion_definition']['objects'][0]
+        assert 'table_configuration' not in table_obj['table']
+
+    def test_pipeline_tags_included_when_specified(self, salesforce_connector):
+        """Pipeline tags should be included when specified."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['account'],
+            'connection_name': ['sfdc_conn'],
+            'tags': ['team=field-eng,demo=true'],
+        })
+
+        result = salesforce_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01']
+        assert pipeline['tags'] == {'team': 'field-eng', 'demo': 'true'}
+
 
 class TestDatabaseConnectorCreateGateways:
     """Tests for database connector _create_gateways method."""
@@ -505,6 +572,22 @@ class TestDatabaseConnectorCreateGateways:
         gateway_key = 'project_pipeline_project_gateway_test_01'
         gateway = result['resources']['pipelines'][gateway_key]
         assert 'clusters' not in gateway
+
+    def test_gateway_tags_included_when_specified(self, sqlserver_connector):
+        """Gateway tags should be included when specified."""
+        df = pd.DataFrame({
+            'gateway': ['test_01'],
+            'connection_name': ['conn'],
+            'gateway_catalog': ['main'],
+            'gateway_schema': ['gateway'],
+            'tags': ['team=field-eng,demo=true'],
+        })
+
+        result = sqlserver_connector._create_gateways(df, 'project')
+
+        gateway_key = 'project_pipeline_project_gateway_test_01'
+        gateway = result['resources']['pipelines'][gateway_key]
+        assert gateway['tags'] == {'team': 'field-eng', 'demo': 'true'}
 
 
 class TestDatabaseConnectorCreatePipelines:

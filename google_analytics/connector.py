@@ -143,15 +143,22 @@ class GoogleAnalyticsConnector(SaaSConnector):
                     }
                     ingestion_objects.append(table_obj)
 
-            # Add pipeline
-            pipelines[names['pipeline_resource_name']] = {
-                "name": names['pipeline_name'],
+            pipeline_def = {
+                "name": names["pipeline_name"],
                 "catalog": target_catalog,
                 "schema": target_schema,
                 "ingestion_definition": {
                     "connection_name": connection_name,
-                    "objects": ingestion_objects
-                }
+                    "objects": ingestion_objects,
+                },
             }
+
+            # Optional: tags (applied to the pipeline)
+            tags = self._parse_tags(group_properties[0].get("tags"))
+            if tags:
+                pipeline_def["tags"] = tags
+
+            # Add pipeline
+            pipelines[names["pipeline_resource_name"]] = pipeline_def
 
         return {'resources': {'pipelines': pipelines}}

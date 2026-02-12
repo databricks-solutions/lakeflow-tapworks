@@ -27,6 +27,7 @@ Usage:
 """
 
 import logging
+import json
 import re
 import time
 from abc import ABC, abstractmethod
@@ -150,6 +151,48 @@ class BaseConnector(ABC):
         if isinstance(value, str) and not value.strip():
             return False
         return True
+
+    def _parse_tags(self, tags_value) -> Dict[str, str]:
+        """
+        Parse a tags value into a Databricks-compatible tags dictionary.
+
+        Supported formats:
+        - dict-like: {"team": "field-eng", "demo": "true"}
+        - JSON string: '{"team":"field-eng","demo":"true"}'
+        - key/value string: 'team=field-eng,demo=true' (commas or semicolons)
+        """
+        if not self._is_value_set(tags_value):
+            return {}
+
+        if isinstance(tags_value, dict):
+            return {str(k): str(v) for k, v in tags_value.items()}
+
+        s = str(tags_value).strip()
+        if not s:
+            return {}
+
+        # JSON dict string
+        if s.startswith("{") and s.endswith("}"):
+            try:
+                obj = json.loads(s)
+            except Exception:
+                return {}
+            if isinstance(obj, dict):
+                return {str(k): str(v) for k, v in obj.items()}
+            return {}
+
+        # key=value pairs
+        tags: Dict[str, str] = {}
+        parts = [p.strip() for p in s.replace(";", ",").split(",") if p.strip()]
+        for part in parts:
+            if "=" not in part:
+                continue
+            k, v = part.split("=", 1)
+            k = k.strip()
+            v = v.strip()
+            if k:
+                tags[str(k)] = str(v)
+        return tags
 
     def _validate_cron_expression(self, cron: str, context: str = "schedule") -> str:
         """
@@ -598,6 +641,12 @@ class BaseConnector(ABC):
                     pause_status = group_df.iloc[0]['pause_status']
                     if pd.notna(pause_status) and pause_status and str(pause_status).strip():
                         job_config['pause_status'] = str(pause_status).upper()
+
+                # Optional: tags
+                if 'tags' in group_df.columns:
+                    tags = self._parse_tags(group_df.iloc[0]['tags'])
+                    if tags:
+                        job_config['tags'] = tags
 
                 jobs[names['job_name']] = job_config
 

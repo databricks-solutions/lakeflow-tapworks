@@ -161,6 +161,10 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables).
 - **default_values** - Fill missing/empty columns with defaults (e.g., set schedule for rows that don't have one)
 - **override** - Force values for ALL rows, ignoring what's in the input (e.g., pause all jobs)
 
+### Salesforce optional primary keys
+
+For Salesforce, you can optionally include a `primary_keys` CSV column (comma-separated). This supports composite keys and will be emitted as `table_configuration.primary_keys` in the generated pipeline YAML.
+
 ### CLI Examples
 
 **Inline JSON:**

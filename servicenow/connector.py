@@ -131,6 +131,11 @@ class ServiceNowConnector(SaaSConnector):
                 },
             }
 
+            # Optional: tags (applied to the pipeline)
+            tags = self._parse_tags(group_tables[0].get("tags"))
+            if tags:
+                pipeline_def["tags"] = tags
+
             # Add tables to this pipeline
             for item in group_tables:
                 table_entry = {
