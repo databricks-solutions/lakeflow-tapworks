@@ -17,20 +17,10 @@ python cli.py salesforce --info
 python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
 
 # Generate pipelines using inline JSON
-python cli.py sqlserver --input-config tables.csv --output-dir output \
+python cli.py sql_server --input-config tables.csv --output-dir output \
   --targets '{"dev": {"workspace_host": "https://..."}}' \
   --default-values '{"project_name": "my_project"}'
 ```
-
-**Connector aliases** for convenience:
-| Alias | Connector |
-|-------|-----------|
-| `sf` | salesforce |
-| `sql`, `mssql` | sqlserver |
-| `pg`, `postgresql` | postgres |
-| `ga`, `ga4` | google_analytics |
-| `snow` | servicenow |
-| `wd`, `workday` | workday_reports |
 
 ---
 
@@ -112,29 +102,29 @@ Use `python cli.py <connector> --info` to see required columns and defaults for 
 
 ### SaaS Connectors
 
-**Salesforce** (`sf`):
+**Salesforce**:
 ```bash
-python cli.py sf --input-config tables.csv --output-dir output --settings settings.json
+python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
 Optional: `include_columns`, `exclude_columns`, `primary_keys` (comma-separated; supports composite keys)
 
-**Google Analytics 4** (`ga4`):
+**Google Analytics 4**:
 ```bash
-python cli.py ga4 --input-config tables.csv --output-dir output --settings settings.json
+python cli.py google_analytics --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
-**ServiceNow** (`snow`):
+**ServiceNow**:
 ```bash
-python cli.py snow --input-config tables.csv --output-dir output --settings settings.json
+python cli.py servicenow --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
-**Workday Reports** (`wd`):
+**Workday Reports**:
 ```bash
-python cli.py wd --input-config tables.csv --output-dir output --settings settings.json
+python cli.py workday_reports --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_url`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `primary_keys`
 
@@ -142,17 +132,17 @@ Required columns: `source_url`, `target_catalog`, `target_schema`, `target_table
 
 Database connectors support two-level load balancing with gateways.
 
-**SQL Server** (`sql`):
+**SQL Server**:
 ```bash
-python cli.py sql --input-config tables.csv --output-dir output --settings settings.json
+python cli.py sql_server --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
 Optional: `gateway_catalog`, `gateway_schema`, `gateway_worker_type`, `gateway_driver_type`
 
-**PostgreSQL** (`pg`):
+**PostgreSQL**:
 ```bash
-python cli.py pg --input-config tables.csv --output-dir output --settings settings.json
+python cli.py postgresql --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
@@ -190,8 +180,8 @@ result = connector.run_complete_pipeline_generation(
 
 Each connector folder contains an `example_notebook.ipynb`:
 - `salesforce/example_notebook.ipynb`
-- `sqlserver/example_notebook.ipynb`
-- `postgres/example_notebook.ipynb`
+- `sql_server/example_notebook.ipynb`
+- `postgresql/example_notebook.ipynb`
 - `google_analytics/example_notebook.ipynb`
 - `servicenow/example_notebook.ipynb`
 - `workday_reports/example_notebook.ipynb`

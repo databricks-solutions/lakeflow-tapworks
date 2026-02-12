@@ -68,5 +68,5 @@ Before proceeding, you should be able to answer:
 
 ## Reference Implementations
 
-- **Database:** `sqlserver/connector.py`, `postgres/connector.py`
+- **Database:** `sql_server/connector.py`, `postgresql/connector.py`
 - **SaaS:** `salesforce/connector.py`, `google_analytics/connector.py`

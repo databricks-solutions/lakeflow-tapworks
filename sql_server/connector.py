@@ -53,7 +53,7 @@ class SQLServerConnector(DatabaseConnector):
     @property
     def connector_type(self) -> str:
         """Return connector type identifier."""
-        return 'sqlserver'
+        return 'sql_server'
 
     @property
     def required_columns(self) -> list:

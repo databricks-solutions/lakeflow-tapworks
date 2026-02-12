@@ -6,12 +6,12 @@ This notebook provides a single entry point for generating DAB pipelines
 for any connector type. Edit the configuration section below and run all cells.
 
 Supported connectors:
-  - salesforce (alias: sf)
-  - sqlserver (alias: sql, mssql)
-  - postgres (alias: pg, postgresql)
-  - google_analytics (alias: ga, ga4)
-  - servicenow (alias: snow)
-  - workday_reports (alias: wd, workday)
+  - salesforce
+  - sql_server
+  - postgresql
+  - google_analytics
+  - servicenow
+  - workday_reports
 """
 
 # COMMAND ----------
