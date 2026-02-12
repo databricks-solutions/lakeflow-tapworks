@@ -69,7 +69,7 @@ class BaseConnector(ABC):
     @abstractmethod
     def connector_type(self) -> str:
         """
-        Return the connector type identifier (e.g., 'sqlserver', 'salesforce', 'ga4').
+        Return the connector type identifier (e.g., 'sql_server', 'salesforce', 'google_analytics').
 
         Used for:
         - Naming conventions in generated resources

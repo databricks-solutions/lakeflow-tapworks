@@ -42,8 +42,8 @@ If you're familiar with the codebase, here's the minimal path:
 
 | Type | Connector | Notes |
 |------|-----------|-------|
-| Database | `sqlserver/` | Full gateway support |
-| Database | `postgres/` | Similar to SQL Server |
+| Database | `sql_server/` | Full gateway support |
+| Database | `postgresql/` | Similar to SQL Server |
 | SaaS | `salesforce/` | Column filtering support |
 | SaaS | `google_analytics/` | GA4 with property config |
 | SaaS | `servicenow/` | Basic SaaS pattern |

@@ -102,12 +102,6 @@ CONNECTORS = {
     # ... existing connectors ...
     'myconnector': ('myconnector.connector', 'MyConnector'),
 }
-
-# Optional: add aliases
-CONNECTOR_ALIASES = {
-    # ... existing aliases ...
-    'mc': 'myconnector',
-}
 ```
 
 ### 3. Create Example CSV
@@ -137,7 +131,7 @@ If extending `DatabaseConnector`, you also need:
 
 3. **Override `generate_yaml_files()`** to include `gateways.yml`
 
-See `sqlserver/connector.py` for a complete example.
+See `sql_server/connector.py` for a complete example.
 
 ## Connector-Specific Normalization
 

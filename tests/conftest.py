@@ -227,14 +227,14 @@ def salesforce_connector():
 @pytest.fixture
 def sqlserver_connector():
     """SQLServerConnector instance."""
-    from sqlserver.connector import SQLServerConnector
+    from sql_server.connector import SQLServerConnector
     return SQLServerConnector()
 
 
 @pytest.fixture
 def postgres_connector():
     """PostgreSQLConnector instance."""
-    from postgres.connector import PostgreSQLConnector
+    from postgresql.connector import PostgreSQLConnector
     return PostgreSQLConnector()
 
 

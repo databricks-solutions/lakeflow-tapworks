@@ -13,11 +13,9 @@ from core.registry import (
     get_connector,
     get_connector_class,
     list_connectors,
-    list_aliases,
     get_connector_info,
     resolve_connector_name,
     CONNECTORS,
-    CONNECTOR_ALIASES,
 )
 from core.runner import run_pipeline_generation, _load_input
 from core import ConfigurationError
@@ -30,8 +28,8 @@ class TestConnectorRegistry:
         """Should return all registered connectors."""
         connectors = list_connectors()
         assert 'salesforce' in connectors
-        assert 'sqlserver' in connectors
-        assert 'postgres' in connectors
+        assert 'sql_server' in connectors
+        assert 'postgresql' in connectors
         assert 'google_analytics' in connectors
         assert 'servicenow' in connectors
         assert 'workday_reports' in connectors
@@ -41,29 +39,15 @@ class TestConnectorRegistry:
         connectors = list_connectors()
         assert connectors == sorted(connectors)
 
-    def test_list_aliases_returns_dict(self):
-        """Should return aliases dictionary."""
-        aliases = list_aliases()
-        assert isinstance(aliases, dict)
-        assert 'sf' in aliases
-        assert aliases['sf'] == 'salesforce'
-
     def test_resolve_canonical_name(self):
         """Should return canonical name unchanged."""
         assert resolve_connector_name('salesforce') == 'salesforce'
-        assert resolve_connector_name('sqlserver') == 'sqlserver'
-
-    def test_resolve_alias(self):
-        """Should resolve aliases to canonical names."""
-        assert resolve_connector_name('sf') == 'salesforce'
-        assert resolve_connector_name('pg') == 'postgres'
-        assert resolve_connector_name('ga4') == 'google_analytics'
+        assert resolve_connector_name('sql_server') == 'sql_server'
 
     def test_resolve_case_insensitive(self):
         """Should be case insensitive."""
         assert resolve_connector_name('SALESFORCE') == 'salesforce'
-        assert resolve_connector_name('SF') == 'salesforce'
-        assert resolve_connector_name('Postgres') == 'postgres'
+        assert resolve_connector_name('Postgresql') == 'postgresql'
 
     def test_resolve_unknown_raises_error(self):
         """Should raise ValueError for unknown connector."""
@@ -74,11 +58,6 @@ class TestConnectorRegistry:
         """Should return instantiated connector."""
         connector = get_connector('salesforce')
         assert connector is not None
-        assert connector.connector_type == 'salesforce'
-
-    def test_get_connector_with_alias(self):
-        """Should work with aliases."""
-        connector = get_connector('sf')
         assert connector.connector_type == 'salesforce'
 
     def test_get_connector_class_returns_class(self):
@@ -171,23 +150,6 @@ class TestRunPipelineGeneration:
             connector_name='salesforce',
             input_source=str(csv_path),
             output_dir=str(output_path),
-            targets=sample_targets_minimal,
-            default_values={'project_name': 'test_project'},
-        )
-
-        assert len(result) == len(sample_salesforce_df)
-
-    def test_run_with_alias(
-        self,
-        sample_salesforce_df,
-        sample_targets_minimal,
-        temp_output_dir
-    ):
-        """Should work with connector alias."""
-        result = run_pipeline_generation(
-            connector_name='sf',  # alias
-            input_source=sample_salesforce_df,
-            output_dir=str(temp_output_dir),
             targets=sample_targets_minimal,
             default_values={'project_name': 'test_project'},
         )
@@ -292,7 +254,7 @@ class TestDatabaseConnectorRunner:
     ):
         """Should run SQL Server connector."""
         result = run_pipeline_generation(
-            connector_name='sqlserver',
+            connector_name='sql_server',
             input_source=sample_sqlserver_df_with_gateway,
             output_dir=str(temp_output_dir),
             targets=sample_targets,
@@ -301,23 +263,6 @@ class TestDatabaseConnectorRunner:
 
         assert 'gateway' in result.columns
         assert 'pipeline_group' in result.columns
-
-    def test_run_sqlserver_with_alias(
-        self,
-        sample_sqlserver_df_with_gateway,
-        sample_targets,
-        temp_output_dir
-    ):
-        """Should work with SQL Server aliases."""
-        for alias in ['sql', 'mssql']:
-            result = run_pipeline_generation(
-                connector_name=alias,
-                input_source=sample_sqlserver_df_with_gateway,
-                output_dir=str(temp_output_dir / alias),
-                targets=sample_targets,
-                default_values={'project_name': f'{alias}_test'},
-            )
-            assert len(result) > 0
 
 
 class TestAllConnectorsLoad:
@@ -330,9 +275,3 @@ class TestAllConnectorsLoad:
         assert connector is not None
         assert connector.connector_type is not None
         assert connector.required_columns is not None
-
-    @pytest.mark.parametrize('alias,canonical', list(CONNECTOR_ALIASES.items()))
-    def test_alias_resolves(self, alias, canonical):
-        """Each alias should resolve to its canonical name."""
-        resolved = resolve_connector_name(alias)
-        assert resolved == canonical
