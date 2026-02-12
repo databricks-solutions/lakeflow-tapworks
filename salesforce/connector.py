@@ -44,6 +44,7 @@ class SalesforceConnector(SaaSConnector):
     - schedule: Cron schedule (e.g., '0 0 * * *', default: '*/15 * * * *')
     - include_columns: Comma-separated list of columns to include (default: '')
     - exclude_columns: Comma-separated list of columns to exclude (default: '')
+    - primary_keys: Comma-separated list of primary key columns (optional; supports composite keys)
     """
 
     @property
@@ -131,6 +132,11 @@ class SalesforceConnector(SaaSConnector):
                 }
             }
 
+            # Optional: tags (applied to the pipeline)
+            tags = self._parse_tags(group_tables[0].get('tags'))
+            if tags:
+                pipeline_def["tags"] = tags
+
             # Add tables to this pipeline
             for item in group_tables:
                 table_entry = {
@@ -153,6 +159,20 @@ class SalesforceConnector(SaaSConnector):
                 if 'exclude_columns' in item and pd.notna(item['exclude_columns']) and item['exclude_columns'].strip():
                     exclude_cols = [col.strip() for col in str(item['exclude_columns']).split(',')]
                     table_config['exclude_columns'] = exclude_cols
+
+                # Optional: primary keys (supports composite keys)
+                if (
+                    'primary_keys' in item
+                    and pd.notna(item['primary_keys'])
+                    and str(item['primary_keys']).strip()
+                ):
+                    primary_keys = [
+                        k.strip()
+                        for k in str(item['primary_keys']).split(',')
+                        if k.strip()
+                    ]
+                    if primary_keys:
+                        table_config['primary_keys'] = primary_keys
 
                 if table_config:
                     table_entry["table"]["table_configuration"] = table_config
