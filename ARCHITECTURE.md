@@ -51,7 +51,7 @@ result = run_pipeline_generation(
 ### Direct Connector Usage
 
 ```python
-from sqlserver.connector import SQLServerConnector
+from sql_server.connector import SQLServerConnector
 
 connector = SQLServerConnector()
 result = connector.run_complete_pipeline_generation(
@@ -145,7 +145,7 @@ project_name/
 The root base class that defines the common interface for all connectors.
 
 **Abstract Properties:**
-- `connector_type` - Connector identifier ('sqlserver', 'salesforce', etc.)
+- `connector_type` - Connector identifier ('sql_server', 'salesforce', etc.)
 - `required_columns` - List of required CSV columns
 - `default_values` - Dictionary of default values for optional columns
 
@@ -239,11 +239,6 @@ CONNECTORS = {
     # ... existing connectors ...
     'myservice': ('myservice.connector', 'MyServiceConnector'),
 }
-
-CONNECTOR_ALIASES = {
-    # ... existing aliases ...
-    'ms': 'myservice',
-}
 ```
 
 ### Step 4: Optional - Custom Normalization
@@ -261,14 +256,14 @@ The OOP architecture makes testing easier:
 
 ```python
 import pytest
-from sqlserver.connector import SQLServerConnector
+from sql_server.connector import SQLServerConnector
 
 class TestSQLServerConnector:
     def setup_method(self):
         self.connector = SQLServerConnector()
 
     def test_connector_type(self):
-        assert self.connector.connector_type == 'sqlserver'
+        assert self.connector.connector_type == 'sql_server'
 
     def test_required_columns(self):
         required = self.connector.required_columns

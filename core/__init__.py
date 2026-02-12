@@ -32,11 +32,9 @@ from .registry import (
     get_connector,
     get_connector_class,
     list_connectors,
-    list_aliases,
     get_connector_info,
     resolve_connector_name,
     CONNECTORS,
-    CONNECTOR_ALIASES,
 )
 from .runner import run_pipeline_generation
 from .utilities import load_input_csv, convert_cron_to_quartz
@@ -55,11 +53,9 @@ __all__ = [
     'get_connector',
     'get_connector_class',
     'list_connectors',
-    'list_aliases',
     'get_connector_info',
     'resolve_connector_name',
     'CONNECTORS',
-    'CONNECTOR_ALIASES',
     # Runner
     'run_pipeline_generation',
     # Utilities

@@ -52,7 +52,7 @@ class PostgreSQLConnector(DatabaseConnector):
 
     @property
     def connector_type(self) -> str:
-        return "postgres"
+        return "postgresql"
 
     @property
     def required_columns(self) -> list:
@@ -78,7 +78,7 @@ class PostgreSQLConnector(DatabaseConnector):
 
     @property
     def default_project_name(self) -> str:
-        return "postgres_ingestion"
+        return "postgresql_ingestion"
 
     @property
     def supported_scd_types(self) -> list:
