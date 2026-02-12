@@ -34,8 +34,7 @@ def run_pipeline_generation(
     This is the core function shared by CLI and notebook entry points.
 
     Args:
-        connector_name: Name of the connector (e.g., 'salesforce', 'sqlserver')
-                       Aliases are supported (e.g., 'sf', 'pg')
+        connector_name: Name of the connector (e.g., 'salesforce', 'sql_server', 'postgresql')
         input_source: One of:
                      - Path to CSV file (str ending in .csv)
                      - Delta table name (str like 'catalog.schema.table')

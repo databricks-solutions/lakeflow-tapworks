@@ -22,7 +22,7 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
 
    ```csv
    source_schema,source_table,target_catalog,target_schema,target_table,connection_name
-   dbo,customers,bronze,sales,customers,sqlserver_conn
+   dbo,customers,bronze,sales,customers,sql_server_conn
    ```
 
 2. **Run the generator** - From CLI or notebook:
@@ -33,10 +33,10 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
    python cli.py --list
 
    # Show connector requirements
-   python cli.py sqlserver --info
+   python cli.py sql_server --info
 
    # Generate DAB files
-   python cli.py sqlserver --input-config tables.csv --output-dir output \
+   python cli.py sql_server --input-config tables.csv --output-dir output \
      --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}' 
    ```
 
@@ -45,7 +45,7 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
    from core import run_pipeline_generation
 
    result = run_pipeline_generation(
-       connector_name='sqlserver',
+       connector_name='sql_server',
        input_source='tables.csv',  # or Delta table or DataFrame
        output_dir='output',
        targets={'dev': {'workspace_host': 'https://...'}},
@@ -54,26 +54,6 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
    ```
 
 3. **Deploy** - Use the generated DAB files with `databricks bundle deploy`
-
-## Connector Aliases
-
-Use short aliases for convenience:
-
-| Alias | Connector |
-|-------|-----------|
-| `sf` | salesforce |
-| `sql`, `mssql` | sqlserver |
-| `pg`, `postgresql` | postgres |
-| `ga`, `ga4` | google_analytics |
-| `snow` | servicenow |
-| `wd`, `workday` | workday_reports |
-
-```bash
-python cli.py sf --input-config tables.csv --output-dir output \
-  --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
-python cli.py pg --input-config tables.csv --output-dir output \
-  --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
-```
 
 ## Load Balancing
 
@@ -254,5 +234,5 @@ python cli.py <connector> --info
 
 # Examples
 python cli.py salesforce --info
-python cli.py sqlserver --info
+python cli.py sql_server --info
 ```

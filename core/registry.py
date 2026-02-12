@@ -11,34 +11,20 @@ from typing import Dict, Type
 # Registry mapping connector names to their module paths
 CONNECTORS: Dict[str, str] = {
     'salesforce': 'salesforce.connector.SalesforceConnector',
-    'sqlserver': 'sqlserver.connector.SQLServerConnector',
-    'postgres': 'postgres.connector.PostgreSQLConnector',
+    'sql_server': 'sql_server.connector.SQLServerConnector',
+    'postgresql': 'postgresql.connector.PostgreSQLConnector',
     'google_analytics': 'google_analytics.connector.GoogleAnalyticsConnector',
     'servicenow': 'servicenow.connector.ServiceNowConnector',
     'workday_reports': 'workday_reports.connector.WorkdayReportsConnector',
 }
 
-# Aliases for convenience
-CONNECTOR_ALIASES: Dict[str, str] = {
-    'sf': 'salesforce',
-    'sql': 'sqlserver',
-    'mssql': 'sqlserver',
-    'pg': 'postgres',
-    'postgresql': 'postgres',
-    'ga4': 'google_analytics',
-    'ga': 'google_analytics',
-    'snow': 'servicenow',
-    'workday': 'workday_reports',
-    'wd': 'workday_reports',
-}
-
 
 def resolve_connector_name(name: str) -> str:
     """
-    Resolve a connector name or alias to the canonical name.
+    Resolve a connector name to the canonical name.
 
     Args:
-        name: Connector name or alias (case-insensitive)
+        name: Connector name (case-insensitive)
 
     Returns:
         Canonical connector name
@@ -48,20 +34,14 @@ def resolve_connector_name(name: str) -> str:
     """
     name_lower = name.lower()
 
-    # Check if it's already a canonical name
+    # Check if it's a canonical name
     if name_lower in CONNECTORS:
         return name_lower
 
-    # Check aliases
-    if name_lower in CONNECTOR_ALIASES:
-        return CONNECTOR_ALIASES[name_lower]
-
     # Not found
-    available = list(CONNECTORS.keys()) + list(CONNECTOR_ALIASES.keys())
     raise ValueError(
         f"Unknown connector: '{name}'. "
-        f"Available connectors: {', '.join(sorted(CONNECTORS.keys()))}. "
-        f"Aliases: {', '.join(sorted(CONNECTOR_ALIASES.keys()))}"
+        f"Available connectors: {', '.join(sorted(CONNECTORS.keys()))}"
     )
 
 
@@ -70,7 +50,7 @@ def get_connector(name: str):
     Get a connector instance by name.
 
     Args:
-        name: Connector name or alias (case-insensitive)
+        name: Connector name (case-insensitive)
 
     Returns:
         Instantiated connector object
@@ -97,7 +77,7 @@ def get_connector_class(name: str) -> Type:
     Get a connector class (not instantiated) by name.
 
     Args:
-        name: Connector name or alias (case-insensitive)
+        name: Connector name (case-insensitive)
 
     Returns:
         Connector class
@@ -125,22 +105,12 @@ def list_connectors() -> list:
     return sorted(CONNECTORS.keys())
 
 
-def list_aliases() -> Dict[str, str]:
-    """
-    List all connector aliases.
-
-    Returns:
-        Dictionary mapping aliases to canonical names
-    """
-    return CONNECTOR_ALIASES.copy()
-
-
 def get_connector_info(name: str) -> dict:
     """
     Get information about a connector.
 
     Args:
-        name: Connector name or alias
+        name: Connector name
 
     Returns:
         Dictionary with connector information

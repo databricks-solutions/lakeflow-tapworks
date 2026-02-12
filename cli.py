@@ -16,13 +16,9 @@ Usage:
     python cli.py salesforce --input-config config.csv --output-dir output --settings config.json
 
     # Generate pipelines using inline JSON
-    python cli.py sqlserver --input-config config.csv --output-dir output \
+    python cli.py sql_server --input-config config.csv --output-dir output \
         --targets '{"dev": {"workspace_host": "https://..."}}' \
         --default-values '{"project_name": "my_project"}'
-
-    # Using connector aliases
-    python cli.py sf --input-config config.csv --output-dir output --settings config.json
-    python cli.py pg --input-config config.csv --output-dir output --settings config.json
 """
 
 import argparse
@@ -34,7 +30,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from core.registry import list_connectors, list_aliases, get_connector_info, resolve_connector_name
+from core.registry import list_connectors, get_connector_info, resolve_connector_name
 from core.runner import run_pipeline_generation
 from core import BaseConnector
 
@@ -64,17 +60,11 @@ def parse_json_arg(value: str) -> dict:
 
 
 def print_connector_list():
-    """Print list of available connectors and aliases."""
+    """Print list of available connectors."""
     print("\nAvailable connectors:")
     print("-" * 40)
     for name in list_connectors():
         print(f"  {name}")
-
-    print("\nAliases:")
-    print("-" * 40)
-    aliases = list_aliases()
-    for alias, canonical in sorted(aliases.items()):
-        print(f"  {alias:<12} -> {canonical}")
 
     print("\nUse 'python cli.py <connector> --info' for connector details.")
 
@@ -123,21 +113,9 @@ Examples:
   python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
 
   # Generate pipelines with inline JSON
-  python cli.py sqlserver --input-config tables.csv --output-dir output \\
+  python cli.py sql_server --input-config tables.csv --output-dir output \\
     --targets '{"dev": {"workspace_host": "https://..."}}' \\
     --default-values '{"project_name": "my_project"}'
-
-  # Use connector aliases
-  python cli.py sf --input-config tables.csv --output-dir output --settings settings.json
-  python cli.py pg --input-config tables.csv --output-dir output --settings settings.json
-
-Connector aliases:
-  sf, salesforce     -> salesforce
-  sql, mssql         -> sqlserver
-  pg, postgresql     -> postgres
-  ga, ga4            -> google_analytics
-  snow               -> servicenow
-  wd, workday        -> workday_reports
 
 Settings file format (settings.json):
   {
@@ -155,14 +133,14 @@ Settings file format (settings.json):
     parser.add_argument(
         '--list', '-l',
         action='store_true',
-        help='List all available connectors and aliases'
+        help='List all available connectors'
     )
 
     # Connector name (positional, optional if --list is used)
     parser.add_argument(
         'connector',
         nargs='?',
-        help='Connector name or alias (e.g., salesforce, sqlserver, sf, pg)'
+        help='Connector name (e.g., salesforce, sql_server, postgresql, google_analytics, servicenow, workday_reports)'
     )
 
     # Connector info
