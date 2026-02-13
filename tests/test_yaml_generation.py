@@ -978,3 +978,226 @@ class TestGatewayValidation:
 
         result = sqlserver_connector._create_gateways(df, 'project')
         assert 'project_pipeline_project_gateway_g01' in result['resources']['pipelines']
+
+
+class TestGroupBasedConfiguration:
+    """Tests for group-based defaults and overrides."""
+
+    def test_flat_defaults_applied_globally(self, salesforce_connector):
+        """Flat default dict should apply to all rows."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['conn', 'conn'],
+            'project_name': ['project1', 'project2'],
+        })
+
+        result = salesforce_connector._process_input_config(
+            df=df,
+            required_columns=salesforce_connector.required_columns,
+            default_values={'schedule': '*/15 * * * *'},
+        )
+
+        assert all(result['schedule'] == '*/15 * * * *')
+
+    def test_grouped_defaults_applied_per_group(self, salesforce_connector):
+        """Grouped defaults should apply to matching rows only."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard', 'standard'],
+            'source_table_name': ['Account', 'Contact', 'Lead'],
+            'target_catalog': ['main', 'main', 'main'],
+            'target_schema': ['salesforce', 'salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact', 'lead'],
+            'connection_name': ['conn', 'conn', 'conn'],
+            'project_name': ['sales_project', 'sales_project', 'hr_project'],
+        })
+
+        result = salesforce_connector._process_input_config(
+            df=df,
+            required_columns=salesforce_connector.required_columns,
+            default_values={
+                '*': {'schedule': '*/15 * * * *'},
+                'sales_project': {'schedule': '*/30 * * * *'},
+            },
+        )
+
+        assert result.loc[0, 'schedule'] == '*/30 * * * *'
+        assert result.loc[1, 'schedule'] == '*/30 * * * *'
+        assert result.loc[2, 'schedule'] == '*/15 * * * *'
+
+    def test_grouped_overrides_applied_per_group(self, salesforce_connector):
+        """Grouped overrides should apply to matching rows only."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard', 'standard'],
+            'source_table_name': ['Account', 'Contact', 'Lead'],
+            'target_catalog': ['main', 'main', 'main'],
+            'target_schema': ['salesforce', 'salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact', 'lead'],
+            'connection_name': ['conn', 'conn', 'conn'],
+            'project_name': ['sales_project', 'sales_project', 'hr_project'],
+            'pause_status': ['UNPAUSED', 'UNPAUSED', 'UNPAUSED'],
+        })
+
+        result = salesforce_connector._process_input_config(
+            df=df,
+            required_columns=salesforce_connector.required_columns,
+            override_input_config={
+                '*': {'pause_status': 'UNPAUSED'},
+                'hr_project': {'pause_status': 'PAUSED'},
+            },
+        )
+
+        assert result.loc[0, 'pause_status'] == 'UNPAUSED'
+        assert result.loc[1, 'pause_status'] == 'UNPAUSED'
+        assert result.loc[2, 'pause_status'] == 'PAUSED'
+
+    def test_prefix_takes_priority_over_project_name(self, salesforce_connector):
+        """When prefix exists, it should be used for matching instead of project_name."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['conn', 'conn'],
+            'project_name': ['my_project', 'my_project'],
+            'prefix': ['sales', 'hr'],
+        })
+
+        result = salesforce_connector._process_input_config(
+            df=df,
+            required_columns=salesforce_connector.required_columns,
+            default_values={
+                '*': {'schedule': '*/15 * * * *'},
+                'sales': {'schedule': '*/30 * * * *'},
+                'hr': {'schedule': '0 * * * *'},
+            },
+        )
+
+        assert result.loc[0, 'schedule'] == '*/30 * * * *'
+        assert result.loc[1, 'schedule'] == '0 * * * *'
+
+    def test_defaults_only_fill_missing_values(self, salesforce_connector):
+        """Defaults should only fill missing/empty values, not overwrite existing."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['conn', 'conn'],
+            'project_name': ['sales_project', 'sales_project'],
+            'schedule': ['0 0 * * *', ''],  # First has value, second is empty
+        })
+
+        result = salesforce_connector._process_input_config(
+            df=df,
+            required_columns=salesforce_connector.required_columns,
+            default_values={
+                'sales_project': {'schedule': '*/30 * * * *'},
+            },
+        )
+
+        assert result.loc[0, 'schedule'] == '0 0 * * *'  # Unchanged
+        assert result.loc[1, 'schedule'] == '*/30 * * * *'  # Filled with default
+
+    def test_overrides_overwrite_all_values(self, salesforce_connector):
+        """Overrides should overwrite all values, not just missing ones."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['conn', 'conn'],
+            'project_name': ['sales_project', 'sales_project'],
+            'schedule': ['0 0 * * *', '*/15 * * * *'],
+        })
+
+        result = salesforce_connector._process_input_config(
+            df=df,
+            required_columns=salesforce_connector.required_columns,
+            override_input_config={
+                'sales_project': {'schedule': '*/30 * * * *'},
+            },
+        )
+
+        assert result.loc[0, 'schedule'] == '*/30 * * * *'
+        assert result.loc[1, 'schedule'] == '*/30 * * * *'
+
+    def test_group_specific_wins_over_global(self, salesforce_connector):
+        """Group-specific config should take precedence over global."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['conn', 'conn'],
+            'project_name': ['sales_project', 'other_project'],
+        })
+
+        result = salesforce_connector._process_input_config(
+            df=df,
+            required_columns=salesforce_connector.required_columns,
+            default_values={
+                '*': {'schedule': '*/15 * * * *', 'pause_status': 'UNPAUSED'},
+                'sales_project': {'schedule': '*/30 * * * *'},
+            },
+        )
+
+        # sales_project: group schedule, global pause_status
+        assert result.loc[0, 'schedule'] == '*/30 * * * *'
+        assert result.loc[0, 'pause_status'] == 'UNPAUSED'
+
+        # other_project: global schedule, global pause_status
+        assert result.loc[1, 'schedule'] == '*/15 * * * *'
+        assert result.loc[1, 'pause_status'] == 'UNPAUSED'
+
+    def test_combined_defaults_and_overrides(self, salesforce_connector):
+        """Both defaults and overrides should work together correctly."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard', 'standard'],
+            'source_table_name': ['Account', 'Contact', 'Lead'],
+            'target_catalog': ['main', 'main', 'main'],
+            'target_schema': ['salesforce', 'salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact', 'lead'],
+            'connection_name': ['conn', 'conn', 'conn'],
+            'project_name': ['sales', 'hr', 'finance'],
+        })
+
+        result = salesforce_connector._process_input_config(
+            df=df,
+            required_columns=salesforce_connector.required_columns,
+            default_values={
+                '*': {'schedule': '*/15 * * * *'},
+                'sales': {'schedule': '*/30 * * * *'},
+            },
+            override_input_config={
+                '*': {'pause_status': 'UNPAUSED'},
+                'finance': {'pause_status': 'PAUSED'},
+            },
+        )
+
+        # sales: group default schedule, global override pause_status
+        assert result.loc[0, 'schedule'] == '*/30 * * * *'
+        assert result.loc[0, 'pause_status'] == 'UNPAUSED'
+
+        # hr: global default schedule, global override pause_status
+        assert result.loc[1, 'schedule'] == '*/15 * * * *'
+        assert result.loc[1, 'pause_status'] == 'UNPAUSED'
+
+        # finance: global default schedule, group override pause_status
+        assert result.loc[2, 'schedule'] == '*/15 * * * *'
+        assert result.loc[2, 'pause_status'] == 'PAUSED'
