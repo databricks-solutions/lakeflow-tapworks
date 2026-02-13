@@ -1128,22 +1128,30 @@ class SaaSConnector(BaseConnector):
     # Validation configuration - fields that must be consistent within pipeline groups (SaaS-specific)
     PIPELINE_CONSISTENCY_FIELDS = ['connection_name', 'tags']
 
-    @abstractmethod
     def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
-        Create pipeline YAML configuration from dataframe.
+        Validate pipeline consistency and prepare for pipeline creation.
 
-        Must be implemented by each SaaS connector to handle connector-specific
-        pipeline structure (table mappings, column filters, etc.).
+        This method validates that pipeline-level fields are consistent within
+        each pipeline group. Child classes should call super()._create_pipelines()
+        first to get validation, then implement their connector-specific pipeline
+        structure (table mappings, column filters, etc.).
 
         Args:
             df: DataFrame with pipeline configuration for a single project
             project_name: Project name for resource naming
 
         Returns:
-            Dictionary with pipeline YAML configuration
+            None - validation only, children implement the actual pipeline creation
         """
-        pass
+        # Validate pipeline-level fields
+        for pipeline_group, group_df in df.groupby('pipeline_group'):
+            self._validate_group_consistency(
+                group_df=group_df,
+                group_name=pipeline_group,
+                fields_to_validate=self.PIPELINE_CONSISTENCY_FIELDS,
+                context='pipeline group'
+            )
 
     def generate_pipeline_config(
         self,
@@ -1220,15 +1228,6 @@ class SaaSConnector(BaseConnector):
             project_output_dir = Path(output_dir) / str(project_name)
             logger.info(f"Creating DAB for project: {project_name}")
             logger.debug(f"  Items: {len(project_df)}, pipelines: {project_df['pipeline_group'].nunique()}")
-
-            # Validate pipeline-level fields before creating pipelines
-            for pipeline_group, group_df in project_df.groupby('pipeline_group'):
-                self._validate_group_consistency(
-                    group_df=group_df,
-                    group_name=pipeline_group,
-                    fields_to_validate=self.PIPELINE_CONSISTENCY_FIELDS,
-                    context='pipeline group'
-                )
 
             # Generate YAML content for this project
             pipelines_yaml = self._create_pipelines(project_df, str(project_name))
