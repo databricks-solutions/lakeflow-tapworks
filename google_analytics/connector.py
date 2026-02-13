@@ -96,6 +96,9 @@ class GoogleAnalyticsConnector(SaaSConnector):
         Returns:
             Dictionary with pipeline YAML configuration
         """
+        # Call parent to validate pipeline consistency
+        super()._create_pipelines(df, project_name)
+
         pipelines = {}
 
         # Group properties by pipeline_group
