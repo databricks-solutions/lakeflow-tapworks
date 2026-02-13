@@ -1,5 +1,7 @@
 # Group-Based Configuration
 
+> **Status:** Implemented in `feature/group_based_overrides` branch
+
 This document describes per-group defaults and overrides, allowing different configuration values to be applied to different pipeline groups from a single CSV file.
 
 ## Overview
