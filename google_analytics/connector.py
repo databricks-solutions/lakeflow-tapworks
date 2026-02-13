@@ -106,17 +106,6 @@ class GoogleAnalyticsConnector(SaaSConnector):
         for pipeline_group in sorted(groups.keys()):
             group_properties = groups[pipeline_group]
 
-            # Convert to DataFrame for validation
-            group_df = pd.DataFrame(group_properties)
-
-            # Validate connection_name and tags consistency
-            self._validate_group_consistency(
-                group_df=group_df,
-                group_name=pipeline_group,
-                fields_to_validate=self.PIPELINE_CONSISTENCY_FIELDS,
-                context='pipeline group'
-            )
-
             # Generate resource names
             names = self._generate_resource_names(pipeline_group)
 

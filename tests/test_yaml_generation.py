@@ -781,9 +781,10 @@ class TestCronToQuartzConversion:
 class TestSaaSPipelineValidation:
     """Tests for SaaS connector pipeline validation (connection_name, tags)."""
 
-    def test_raises_error_conflicting_connection_names(self, salesforce_connector):
+    def test_raises_error_conflicting_connection_names(self, salesforce_connector, tmp_path, sample_targets):
         """Should raise ValidationError when tables in same pipeline_group have different connection_names."""
         df = pd.DataFrame({
+            'project_name': ['project', 'project', 'project'],
             'pipeline_group': ['group_01', 'group_01', 'group_01'],
             'target_catalog': ['bronze', 'bronze', 'bronze'],
             'target_schema': ['sales', 'sales', 'sales'],
@@ -793,7 +794,7 @@ class TestSaaSPipelineValidation:
         })
 
         with pytest.raises(ValidationError, match="conflicting connection_name"):
-            salesforce_connector._create_pipelines(df, 'project')
+            salesforce_connector.generate_yaml_files(df, str(tmp_path), sample_targets)
 
     def test_allows_same_connection_name(self, salesforce_connector):
         """Should allow same connection_name for all tables in pipeline_group."""
@@ -809,9 +810,10 @@ class TestSaaSPipelineValidation:
         result = salesforce_connector._create_pipelines(df, 'project')
         assert 'pipeline_group_01' in result['resources']['pipelines']
 
-    def test_raises_error_conflicting_pipeline_tags(self, salesforce_connector):
+    def test_raises_error_conflicting_pipeline_tags(self, salesforce_connector, tmp_path, sample_targets):
         """Should raise ValidationError when tables in same pipeline_group have different tags."""
         df = pd.DataFrame({
+            'project_name': ['project', 'project'],
             'pipeline_group': ['group_01', 'group_01'],
             'target_catalog': ['bronze', 'bronze'],
             'target_schema': ['sales', 'sales'],
@@ -822,7 +824,7 @@ class TestSaaSPipelineValidation:
         })
 
         with pytest.raises(ValidationError, match="conflicting tags"):
-            salesforce_connector._create_pipelines(df, 'project')
+            salesforce_connector.generate_yaml_files(df, str(tmp_path), sample_targets)
 
     def test_allows_same_tags(self, salesforce_connector):
         """Should allow same tags for all tables in pipeline_group."""
