@@ -92,6 +92,16 @@ class PostgreSQLConnector(DatabaseConnector):
         Uses the same gateway resource model as other database connectors.
         """
         gateways = {}
+
+        # Validate gateway consistency before processing
+        for gateway_id, gateway_df in df.groupby("gateway"):
+            self._validate_group_consistency(
+                group_df=gateway_df,
+                group_name=gateway_id,
+                fields_to_validate=self.GATEWAY_CONSISTENCY_FIELDS,
+                context='gateway'
+            )
+
         unique_gateways = df.groupby("gateway").first()
 
         for gateway_id, row in unique_gateways.iterrows():

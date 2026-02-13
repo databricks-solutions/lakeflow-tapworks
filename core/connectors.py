@@ -61,9 +61,59 @@ class BaseConnector(ABC):
     DEFAULT_MAX_TABLES_PER_GATEWAY = 250
     DEFAULT_TIMEOUT_SECONDS = 600
 
+    # Validation configuration - fields that must be consistent within pipeline groups
+    PIPELINE_GROUP_CONSISTENCY_FIELDS = ['schedule', 'pause_status', 'tags']
+
     def __init__(self):
         """Initialize the connector with its configuration."""
         self._validate_configuration()
+
+    def _validate_group_consistency(
+        self,
+        group_df: pd.DataFrame,
+        group_name: str,
+        fields_to_validate: list,
+        context: str = "pipeline group"
+    ):
+        """
+        Validate that specified fields have consistent values within a group.
+
+        This generic validation method ensures that critical configuration fields
+        have the same value for all tables in a group (pipeline_group, gateway, etc.).
+
+        Args:
+            group_df: DataFrame for a single group (pipeline_group, gateway, etc.)
+            group_name: Name of the group for error messages (e.g., 'sales_01_g01')
+            fields_to_validate: List of field names to check for consistency
+            context: Context for error message (e.g., 'pipeline group', 'gateway')
+
+        Raises:
+            ValidationError: If any field has conflicting values within the group
+
+        Example:
+            self._validate_group_consistency(
+                group_df=group_df,
+                group_name=pipeline_group,
+                fields_to_validate=['schedule', 'pause_status'],
+                context='pipeline group'
+            )
+        """
+        for field in fields_to_validate:
+            if field not in group_df.columns:
+                continue
+
+            # Get non-empty values
+            values = group_df[field].dropna()
+            values = values[values.astype(str).str.strip() != '']
+            unique_values = values.unique()
+
+            if len(unique_values) > 1:
+                raise ValidationError(
+                    f"{context.capitalize()} '{group_name}' has conflicting {field} values: {list(unique_values)}. "
+                    f"All tables in the same {context} must have the same {field}. "
+                    f"Solutions: (1) Use the same {field} value for all tables, or "
+                    f"(2) Use different 'subgroup' values to separate tables with different {field} values."
+                )
 
     @property
     @abstractmethod
@@ -609,20 +659,13 @@ class BaseConnector(ABC):
         jobs = {}
 
         for pipeline_group, group_df in df.groupby('pipeline_group'):
-            # Validate schedule consistency within pipeline group
-            if 'schedule' in group_df.columns:
-                # Get unique non-empty schedules
-                schedules = group_df['schedule'].dropna()
-                schedules = schedules[schedules.astype(str).str.strip() != '']
-                unique_schedules = schedules.unique()
-
-                if len(unique_schedules) > 1:
-                    raise ValidationError(
-                        f"Pipeline group '{pipeline_group}' has conflicting schedules: {list(unique_schedules)}. "
-                        f"All tables in the same pipeline group must have the same schedule. "
-                        f"Solutions: (1) Use the same schedule value for all tables, or "
-                        f"(2) Use different 'subgroup' values to separate tables with different schedules."
-                    )
+            # Validate all pipeline group consistency fields at once
+            self._validate_group_consistency(
+                group_df=group_df,
+                group_name=pipeline_group,
+                fields_to_validate=self.PIPELINE_GROUP_CONSISTENCY_FIELDS,
+                context='pipeline group'
+            )
 
             schedule = group_df.iloc[0]['schedule']
 
@@ -654,21 +697,8 @@ class BaseConnector(ABC):
                     }]
                 }
 
-                # Validate and add pause_status if specified
+                # Add pause_status if specified
                 if 'pause_status' in group_df.columns:
-                    # Validate pause_status consistency within pipeline group
-                    pause_statuses = group_df['pause_status'].dropna()
-                    pause_statuses = pause_statuses[pause_statuses.astype(str).str.strip() != '']
-                    unique_pause_statuses = pause_statuses.unique()
-
-                    if len(unique_pause_statuses) > 1:
-                        raise ValidationError(
-                            f"Pipeline group '{pipeline_group}' has conflicting pause_status values: {list(unique_pause_statuses)}. "
-                            f"All tables in the same pipeline group must have the same pause_status. "
-                            f"Solutions: (1) Use the same pause_status value for all tables, or "
-                            f"(2) Use different 'subgroup' values to separate tables with different pause_status values."
-                        )
-
                     pause_status = group_df.iloc[0]['pause_status']
                     if pd.notna(pause_status) and pause_status and str(pause_status).strip():
                         job_config['pause_status'] = str(pause_status).upper()
@@ -869,6 +899,9 @@ class DatabaseConnector(BaseConnector):
     Examples: SQL Server, MySQL, PostgreSQL, Oracle
     """
 
+    # Validation configuration - fields that must be consistent within gateway groups
+    GATEWAY_CONSISTENCY_FIELDS = ['gateway_catalog', 'gateway_schema', 'connection_name', 'tags']
+
     def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Apply database connector normalization including gateway defaults.
@@ -961,6 +994,9 @@ class SaaSConnector(BaseConnector):
 
     Examples: Salesforce, Google Analytics, ServiceNow, Workday
     """
+
+    # Validation configuration - fields that must be consistent within pipeline groups (SaaS-specific)
+    PIPELINE_CONSISTENCY_FIELDS = ['connection_name', 'tags']
 
     @abstractmethod
     def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:

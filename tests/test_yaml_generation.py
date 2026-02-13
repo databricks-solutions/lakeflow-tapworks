@@ -284,7 +284,7 @@ class TestCreateJobs:
             'schedule': ['*/15 * * * *', '*/30 * * * *', '0 0 * * *'],
         })
 
-        with pytest.raises(ValidationError, match="conflicting schedules"):
+        with pytest.raises(ValidationError, match="conflicting schedule"):
             salesforce_connector._create_jobs(df, 'project')
 
     def test_raises_error_shows_both_solutions(self, salesforce_connector):
@@ -776,3 +776,203 @@ class TestCronToQuartzConversion:
         from core import convert_cron_to_quartz
         result = convert_cron_to_quartz('0 0 9 * * ?')
         assert result == '0 0 9 * * ?'
+
+
+class TestSaaSPipelineValidation:
+    """Tests for SaaS connector pipeline validation (connection_name, tags)."""
+
+    def test_raises_error_conflicting_connection_names(self, salesforce_connector):
+        """Should raise ValidationError when tables in same pipeline_group have different connection_names."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01', 'group_01'],
+            'target_catalog': ['bronze', 'bronze', 'bronze'],
+            'target_schema': ['sales', 'sales', 'sales'],
+            'target_table_name': ['table1', 'table2', 'table3'],
+            'source_table_name': ['Account', 'Contact', 'Opportunity'],
+            'connection_name': ['prod_sf', 'dev_sf', 'prod_sf'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting connection_name"):
+            salesforce_connector._create_pipelines(df, 'project')
+
+    def test_allows_same_connection_name(self, salesforce_connector):
+        """Should allow same connection_name for all tables in pipeline_group."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01'],
+            'target_catalog': ['bronze', 'bronze'],
+            'target_schema': ['sales', 'sales'],
+            'target_table_name': ['table1', 'table2'],
+            'source_table_name': ['Account', 'Contact'],
+            'connection_name': ['prod_sf', 'prod_sf'],
+        })
+
+        result = salesforce_connector._create_pipelines(df, 'project')
+        assert 'pipeline_group_01' in result['resources']['pipelines']
+
+    def test_raises_error_conflicting_pipeline_tags(self, salesforce_connector):
+        """Should raise ValidationError when tables in same pipeline_group have different tags."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01'],
+            'target_catalog': ['bronze', 'bronze'],
+            'target_schema': ['sales', 'sales'],
+            'target_table_name': ['table1', 'table2'],
+            'source_table_name': ['Account', 'Contact'],
+            'connection_name': ['prod_sf', 'prod_sf'],
+            'tags': ['env=prod,team=sales', 'env=dev,team=marketing'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting tags"):
+            salesforce_connector._create_pipelines(df, 'project')
+
+    def test_allows_same_tags(self, salesforce_connector):
+        """Should allow same tags for all tables in pipeline_group."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01'],
+            'target_catalog': ['bronze', 'bronze'],
+            'target_schema': ['sales', 'sales'],
+            'target_table_name': ['table1', 'table2'],
+            'source_table_name': ['Account', 'Contact'],
+            'connection_name': ['prod_sf', 'prod_sf'],
+            'tags': ['env=prod,team=sales', 'env=prod,team=sales'],
+        })
+
+        result = salesforce_connector._create_pipelines(df, 'project')
+        assert 'pipeline_group_01' in result['resources']['pipelines']
+
+
+class TestJobTagsValidation:
+    """Tests for job-level tags validation."""
+
+    def test_raises_error_conflicting_job_tags(self, salesforce_connector):
+        """Should raise ValidationError when tables in same pipeline_group have different job tags."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *'],
+            'tags': ['env=prod', 'env=dev'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting tags"):
+            salesforce_connector._create_jobs(df, 'project')
+
+    def test_allows_same_job_tags(self, salesforce_connector):
+        """Should allow same tags for all tables in same pipeline_group."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *'],
+            'tags': ['env=prod', 'env=prod'],
+        })
+
+        result = salesforce_connector._create_jobs(df, 'project')
+        assert 'job_group_01' in result['resources']['jobs']
+
+    def test_ignores_empty_tags_in_conflict_check(self, salesforce_connector):
+        """Should ignore empty/NaN tags when checking for conflicts."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01', 'group_01'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *', '*/15 * * * *'],
+            'tags': ['env=prod', '', np.nan],
+        })
+
+        result = salesforce_connector._create_jobs(df, 'project')
+        assert 'job_group_01' in result['resources']['jobs']
+
+
+class TestGatewayValidation:
+    """Tests for gateway-level validation (gateway_catalog, gateway_schema, connection_name, tags)."""
+
+    def test_raises_error_conflicting_gateway_catalog(self, sqlserver_connector):
+        """Should raise ValidationError when tables in same gateway have different gateway_catalog."""
+        df = pd.DataFrame({
+            'gateway': ['g01', 'g01'],
+            'pipeline_group': ['group_01', 'group_01'],
+            'source_database': ['db1', 'db2'],
+            'source_schema': ['dbo', 'dbo'],
+            'source_table_name': ['table1', 'table2'],
+            'target_catalog': ['bronze', 'bronze'],
+            'target_schema': ['sales', 'sales'],
+            'target_table_name': ['table1', 'table2'],
+            'connection_name': ['prod_sql', 'prod_sql'],
+            'gateway_catalog': ['bronze', 'silver'],
+            'gateway_schema': ['ingestion', 'ingestion'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting gateway_catalog"):
+            sqlserver_connector._create_gateways(df, 'project')
+
+    def test_raises_error_conflicting_gateway_schema(self, sqlserver_connector):
+        """Should raise ValidationError when tables in same gateway have different gateway_schema."""
+        df = pd.DataFrame({
+            'gateway': ['g01', 'g01'],
+            'pipeline_group': ['group_01', 'group_01'],
+            'source_database': ['db1', 'db2'],
+            'source_schema': ['dbo', 'dbo'],
+            'source_table_name': ['table1', 'table2'],
+            'target_catalog': ['bronze', 'bronze'],
+            'target_schema': ['sales', 'sales'],
+            'target_table_name': ['table1', 'table2'],
+            'connection_name': ['prod_sql', 'prod_sql'],
+            'gateway_catalog': ['bronze', 'bronze'],
+            'gateway_schema': ['ingestion', 'staging'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting gateway_schema"):
+            sqlserver_connector._create_gateways(df, 'project')
+
+    def test_raises_error_conflicting_gateway_connection_name(self, sqlserver_connector):
+        """Should raise ValidationError when tables in same gateway have different connection_name."""
+        df = pd.DataFrame({
+            'gateway': ['g01', 'g01'],
+            'pipeline_group': ['group_01', 'group_01'],
+            'source_database': ['db1', 'db2'],
+            'source_schema': ['dbo', 'dbo'],
+            'source_table_name': ['table1', 'table2'],
+            'target_catalog': ['bronze', 'bronze'],
+            'target_schema': ['sales', 'sales'],
+            'target_table_name': ['table1', 'table2'],
+            'connection_name': ['prod_sql', 'dev_sql'],
+            'gateway_catalog': ['bronze', 'bronze'],
+            'gateway_schema': ['ingestion', 'ingestion'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting connection_name"):
+            sqlserver_connector._create_gateways(df, 'project')
+
+    def test_raises_error_conflicting_gateway_tags(self, sqlserver_connector):
+        """Should raise ValidationError when tables in same gateway have different tags."""
+        df = pd.DataFrame({
+            'gateway': ['g01', 'g01'],
+            'pipeline_group': ['group_01', 'group_01'],
+            'source_database': ['db1', 'db2'],
+            'source_schema': ['dbo', 'dbo'],
+            'source_table_name': ['table1', 'table2'],
+            'target_catalog': ['bronze', 'bronze'],
+            'target_schema': ['sales', 'sales'],
+            'target_table_name': ['table1', 'table2'],
+            'connection_name': ['prod_sql', 'prod_sql'],
+            'gateway_catalog': ['bronze', 'bronze'],
+            'gateway_schema': ['ingestion', 'ingestion'],
+            'tags': ['env=prod', 'env=dev'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting tags"):
+            sqlserver_connector._create_gateways(df, 'project')
+
+    def test_allows_consistent_gateway_fields(self, sqlserver_connector):
+        """Should allow same values for all gateway fields in same gateway."""
+        df = pd.DataFrame({
+            'gateway': ['g01', 'g01'],
+            'pipeline_group': ['group_01', 'group_01'],
+            'source_database': ['db1', 'db2'],
+            'source_schema': ['dbo', 'dbo'],
+            'source_table_name': ['table1', 'table2'],
+            'target_catalog': ['bronze', 'bronze'],
+            'target_schema': ['sales', 'sales'],
+            'target_table_name': ['table1', 'table2'],
+            'connection_name': ['prod_sql', 'prod_sql'],
+            'gateway_catalog': ['bronze', 'bronze'],
+            'gateway_schema': ['ingestion', 'ingestion'],
+            'tags': ['env=prod', 'env=prod'],
+        })
+
+        result = sqlserver_connector._create_gateways(df, 'project')
+        assert 'project_pipeline_project_gateway_g01' in result['resources']['pipelines']
