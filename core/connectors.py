@@ -61,8 +61,8 @@ class BaseConnector(ABC):
     DEFAULT_MAX_TABLES_PER_GATEWAY = 250
     ***REMOVED***
 
-    # Validation configuration - fields that must be consistent within pipeline groups
-    PIPELINE_GROUP_CONSISTENCY_FIELDS = ['schedule', 'pause_status', 'tags']
+    # Validation configuration - fields that must be consistent for jobs
+    JOB_CONSISTENCY_FIELDS = ['schedule', 'pause_status', 'tags']
 
     def __init__(self):
         """Initialize the connector with its configuration."""
@@ -659,11 +659,11 @@ class BaseConnector(ABC):
         jobs = {}
 
         for pipeline_group, group_df in df.groupby('pipeline_group'):
-            # Validate all pipeline group consistency fields at once
+            # Validate all job-level fields at once
             self._validate_group_consistency(
                 group_df=group_df,
                 group_name=pipeline_group,
-                fields_to_validate=self.PIPELINE_GROUP_CONSISTENCY_FIELDS,
+                fields_to_validate=self.JOB_CONSISTENCY_FIELDS,
                 context='pipeline group'
             )
 
@@ -899,8 +899,9 @@ class DatabaseConnector(BaseConnector):
     Examples: SQL Server, MySQL, PostgreSQL, Oracle
     """
 
-    # Validation configuration - fields that must be consistent within gateway groups
+    # Validation configuration - fields that must be consistent within groups
     GATEWAY_CONSISTENCY_FIELDS = ['gateway_catalog', 'gateway_schema', 'connection_name', 'tags']
+    PIPELINE_CONSISTENCY_FIELDS = ['tags']
 
     def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -983,6 +984,135 @@ class DatabaseConnector(BaseConnector):
         df = df.drop(columns=['base_group'])
 
         return df
+
+    def _create_gateways(self, df: pd.DataFrame, project_name: str) -> Dict:
+        """
+        Create gateway YAML configuration from dataframe.
+
+        Args:
+            df: DataFrame with gateway configuration
+            project_name: Project name for resource naming
+
+        Returns:
+            Dictionary with gateway YAML configuration
+        """
+        gateways = {}
+
+        # Validate gateway consistency before processing
+        for gateway_id, gateway_df in df.groupby('gateway'):
+            self._validate_group_consistency(
+                group_df=gateway_df,
+                group_name=gateway_id,
+                fields_to_validate=self.GATEWAY_CONSISTENCY_FIELDS,
+                context='gateway'
+            )
+
+        unique_gateways = df.groupby('gateway').first()
+
+        for gateway_id, row in unique_gateways.iterrows():
+            gateway_name = f"{project_name}_gateway_{gateway_id}"
+            pipeline_name = f"{project_name}_pipeline_{gateway_name}"
+
+            gateway_catalog = row['gateway_catalog']
+            gateway_schema = row['gateway_schema']
+            worker_type = row.get('gateway_worker_type')
+            driver_type = row.get('gateway_driver_type')
+
+            gateway_config = {
+                'name': gateway_name,
+                'gateway_definition': {
+                    'connection_name': row['connection_name'],
+                    'gateway_storage_catalog': gateway_catalog,
+                    'gateway_storage_schema': gateway_schema,
+                    'gateway_storage_name': gateway_name,
+                },
+                'schema': gateway_schema,
+                'continuous': True,
+                'catalog': gateway_catalog
+            }
+
+            # Optional: tags (applied to the gateway pipeline)
+            tags = self._parse_tags(row.get("tags"))
+            if tags:
+                gateway_config["tags"] = tags
+
+            # Add cluster configuration if node types are provided
+            has_worker_type = self._is_value_set(worker_type)
+            has_driver_type = self._is_value_set(driver_type)
+
+            if has_worker_type or has_driver_type:
+                cluster_config = {'num_workers': 1}
+                if has_worker_type:
+                    cluster_config['node_type_id'] = worker_type
+                if has_driver_type:
+                    cluster_config['driver_node_type_id'] = driver_type
+                gateway_config['clusters'] = [cluster_config]
+
+            gateways[pipeline_name] = gateway_config
+
+        return {'resources': {'pipelines': gateways}}
+
+    def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
+        """
+        Create pipeline YAML configuration from dataframe.
+
+        Args:
+            df: DataFrame with pipeline configuration
+            project_name: Project name for resource naming
+
+        Returns:
+            Dictionary with pipeline YAML configuration
+        """
+        pipelines = {}
+
+        for pipeline_group, group_df in df.groupby('pipeline_group'):
+            # Validate pipeline-level fields
+            self._validate_group_consistency(
+                group_df=group_df,
+                group_name=pipeline_group,
+                fields_to_validate=self.PIPELINE_CONSISTENCY_FIELDS,
+                context='pipeline group'
+            )
+
+            gateway_id = group_df.iloc[0]['gateway']
+
+            # Generate resource names
+            names = self._generate_resource_names(pipeline_group)
+
+            # Get target catalog and schema
+            target_catalog = group_df.iloc[0]['target_catalog']
+            target_schema = group_df.iloc[0]['target_schema']
+
+            tables = [{
+                'table': {
+                    'source_catalog': row['source_database'],
+                    'source_schema': row['source_schema'],
+                    'source_table': row['source_table_name'],
+                    'destination_catalog': row['target_catalog'],
+                    'destination_schema': row['target_schema'],
+                    'destination_table': row['target_table_name']
+                }
+            } for _, row in group_df.iterrows()]
+
+            pipelines[names['pipeline_resource_name']] = {
+                'name': names['pipeline_name'],
+                'configuration': {
+                    'pipelines.***REMOVED***': str(self.DEFAULT_TIMEOUT_SECONDS)
+                },
+                'ingestion_definition': {
+                    'ingestion_gateway_id': f"${{resources.pipelines.{project_name}_pipeline_{project_name}_gateway_{gateway_id}.id}}",
+                    'objects': tables
+                },
+                'schema': target_schema,
+                'catalog': target_catalog
+            }
+
+            # Optional: tags (applied to the ingestion pipeline)
+            tags = self._parse_tags(group_df.iloc[0].get("tags"))
+            if tags:
+                pipelines[names["pipeline_resource_name"]]["tags"] = tags
+
+        return {'resources': {'pipelines': pipelines}}
 
 
 class SaaSConnector(BaseConnector):
@@ -1090,6 +1220,15 @@ class SaaSConnector(BaseConnector):
             project_output_dir = Path(output_dir) / str(project_name)
             logger.info(f"Creating DAB for project: {project_name}")
             logger.debug(f"  Items: {len(project_df)}, pipelines: {project_df['pipeline_group'].nunique()}")
+
+            # Validate pipeline-level fields before creating pipelines
+            for pipeline_group, group_df in project_df.groupby('pipeline_group'):
+                self._validate_group_consistency(
+                    group_df=group_df,
+                    group_name=pipeline_group,
+                    fields_to_validate=self.PIPELINE_CONSISTENCY_FIELDS,
+                    context='pipeline group'
+                )
 
             # Generate YAML content for this project
             pipelines_yaml = self._create_pipelines(project_df, str(project_name))
