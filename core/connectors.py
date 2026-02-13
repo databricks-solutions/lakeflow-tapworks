@@ -602,10 +602,28 @@ class BaseConnector(ABC):
 
         Returns:
             Dictionary with jobs YAML structure
+
+        Raises:
+            ValidationError: If tables in the same pipeline group have conflicting schedules
         """
         jobs = {}
 
         for pipeline_group, group_df in df.groupby('pipeline_group'):
+            # Validate schedule consistency within pipeline group
+            if 'schedule' in group_df.columns:
+                # Get unique non-empty schedules
+                schedules = group_df['schedule'].dropna()
+                schedules = schedules[schedules.astype(str).str.strip() != '']
+                unique_schedules = schedules.unique()
+
+                if len(unique_schedules) > 1:
+                    raise ValidationError(
+                        f"Pipeline group '{pipeline_group}' has conflicting schedules: {list(unique_schedules)}. "
+                        f"All tables in the same pipeline group must have the same schedule. "
+                        f"Solutions: (1) Use the same schedule value for all tables, or "
+                        f"(2) Use different 'subgroup' values to separate tables with different schedules."
+                    )
+
             schedule = group_df.iloc[0]['schedule']
 
             # Only create job if schedule is defined
@@ -636,8 +654,21 @@ class BaseConnector(ABC):
                     }]
                 }
 
-                # Add pause_status if specified
+                # Validate and add pause_status if specified
                 if 'pause_status' in group_df.columns:
+                    # Validate pause_status consistency within pipeline group
+                    pause_statuses = group_df['pause_status'].dropna()
+                    pause_statuses = pause_statuses[pause_statuses.astype(str).str.strip() != '']
+                    unique_pause_statuses = pause_statuses.unique()
+
+                    if len(unique_pause_statuses) > 1:
+                        raise ValidationError(
+                            f"Pipeline group '{pipeline_group}' has conflicting pause_status values: {list(unique_pause_statuses)}. "
+                            f"All tables in the same pipeline group must have the same pause_status. "
+                            f"Solutions: (1) Use the same pause_status value for all tables, or "
+                            f"(2) Use different 'subgroup' values to separate tables with different pause_status values."
+                        )
+
                     pause_status = group_df.iloc[0]['pause_status']
                     if pd.notna(pause_status) and pause_status and str(pause_status).strip():
                         job_config['pause_status'] = str(pause_status).upper()

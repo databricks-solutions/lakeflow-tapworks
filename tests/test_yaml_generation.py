@@ -8,7 +8,7 @@ _create_gateways methods that generate DAB YAML structures.
 import pytest
 import pandas as pd
 import numpy as np
-from core import ConfigurationError
+from core import ConfigurationError, ValidationError
 
 
 class TestCreateDatabricksYml:
@@ -276,6 +276,117 @@ class TestCreateJobs:
 
         job = result['resources']['jobs']['job_test_01']
         assert job['tags'] == {'team': 'field-eng', 'demo': 'true'}
+
+    def test_raises_error_conflicting_schedules_in_same_group(self, salesforce_connector):
+        """Should raise ValidationError when tables in same pipeline_group have different schedules."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01', 'group_01'],
+            'schedule': ['*/15 * * * *', '*/30 * * * *', '0 0 * * *'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting schedules"):
+            salesforce_connector._create_jobs(df, 'project')
+
+    def test_raises_error_shows_both_solutions(self, salesforce_connector):
+        """Error message should mention both solutions: same schedule or different subgroups."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01'],
+            'schedule': ['*/15 * * * *', '*/30 * * * *'],
+        })
+
+        with pytest.raises(ValidationError) as exc_info:
+            salesforce_connector._create_jobs(df, 'project')
+
+        error_msg = str(exc_info.value)
+        assert "same schedule" in error_msg
+        assert "subgroup" in error_msg
+
+    def test_allows_same_schedule_in_same_group(self, salesforce_connector):
+        """Should allow multiple tables with same schedule in same pipeline_group."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01', 'group_01'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *', '*/15 * * * *'],
+        })
+
+        result = salesforce_connector._create_jobs(df, 'project')
+
+        assert 'job_group_01' in result['resources']['jobs']
+
+    def test_allows_different_schedules_in_different_groups(self, salesforce_connector):
+        """Should allow different schedules when in different pipeline_groups."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01', 'group_02', 'group_02'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *', '*/30 * * * *', '*/30 * * * *'],
+        })
+
+        result = salesforce_connector._create_jobs(df, 'project')
+
+        assert len(result['resources']['jobs']) == 2
+        assert 'job_group_01' in result['resources']['jobs']
+        assert 'job_group_02' in result['resources']['jobs']
+
+    def test_ignores_empty_schedules_in_conflict_check(self, salesforce_connector):
+        """Should ignore empty/NaN schedules when checking for conflicts."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01', 'group_01'],
+            'schedule': ['*/15 * * * *', '', np.nan],
+        })
+
+        # Should not raise error - empty schedules are ignored
+        result = salesforce_connector._create_jobs(df, 'project')
+        assert 'job_group_01' in result['resources']['jobs']
+
+    def test_raises_error_conflicting_pause_status_in_same_group(self, salesforce_connector):
+        """Should raise ValidationError when tables in same pipeline_group have different pause_status."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *'],
+            'pause_status': ['PAUSED', 'UNPAUSED'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting pause_status"):
+            salesforce_connector._create_jobs(df, 'project')
+
+    def test_pause_status_error_shows_both_solutions(self, salesforce_connector):
+        """Pause status error message should mention both solutions."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *'],
+            'pause_status': ['PAUSED', 'UNPAUSED'],
+        })
+
+        with pytest.raises(ValidationError) as exc_info:
+            salesforce_connector._create_jobs(df, 'project')
+
+        error_msg = str(exc_info.value)
+        assert "same pause_status" in error_msg
+        assert "subgroup" in error_msg
+
+    def test_allows_same_pause_status_in_same_group(self, salesforce_connector):
+        """Should allow multiple tables with same pause_status in same pipeline_group."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *'],
+            'pause_status': ['PAUSED', 'PAUSED'],
+        })
+
+        result = salesforce_connector._create_jobs(df, 'project')
+
+        job = result['resources']['jobs']['job_group_01']
+        assert job['pause_status'] == 'PAUSED'
+
+    def test_ignores_empty_pause_status_in_conflict_check(self, salesforce_connector):
+        """Should ignore empty/NaN pause_status when checking for conflicts."""
+        df = pd.DataFrame({
+            'pipeline_group': ['group_01', 'group_01', 'group_01'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *', '*/15 * * * *'],
+            'pause_status': ['PAUSED', '', np.nan],
+        })
+
+        # Should not raise error - empty pause_status values are ignored
+        result = salesforce_connector._create_jobs(df, 'project')
+        job = result['resources']['jobs']['job_group_01']
+        assert job['pause_status'] == 'PAUSED'
 
 
 class TestSalesforceCreatePipelines:
