@@ -139,11 +139,43 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables).
 ## Defaults and Overrides
 
 - **default_values** - Fill missing/empty columns with defaults (e.g., set schedule for rows that don't have one)
-- **override** - Force values for ALL rows, ignoring what's in the input (e.g., pause all jobs)
+- **override_config** - Force values for ALL rows, ignoring what's in the input (e.g., pause all jobs)
 
-### Salesforce optional primary keys
+### Simple Configuration
 
-For Salesforce, you can optionally include a `primary_keys` CSV column (comma-separated). This supports composite keys and will be emitted as `table_configuration.primary_keys` in the generated pipeline YAML.
+Apply the same values to all rows using a flat dictionary:
+
+```python
+default_values = {
+    'schedule': '0 */6 * * *',
+    'pause_status': 'UNPAUSED',
+}
+```
+
+### Group-Based Configuration
+
+Apply different values per pipeline group using nested dictionaries:
+
+```python
+default_values = {
+    '*': {'schedule': '0 */6 * * *'},        # Global fallback
+    'sales': {'schedule': '*/15 * * * *'},   # All sales pipelines
+    'hr': {'schedule': '0 0 * * *'},         # HR pipelines
+}
+
+override_config = {
+    '*': {'pause_status': 'UNPAUSED'},
+    'finance': {'pause_status': 'PAUSED'},   # Pause finance for audit
+}
+```
+
+**Matching precedence** (most specific wins):
+1. `pipeline_group` (prefix_subgroup) - e.g., `'sales_2'`
+2. `prefix` - e.g., `'sales'`
+3. `project_name` - e.g., `'my_project'`
+4. `'*'` (global)
+
+See [examples/group_based_config](examples/group_based_config) for detailed examples.
 
 ### CLI Examples
 
