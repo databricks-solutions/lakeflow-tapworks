@@ -1,0 +1,8 @@
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,gateway_catalog,gateway_schema,prefix
+sqlserver_ingestion,SalesDB,dbo,Customers,main,bronze,customers,,main,gw_sales,sales
+sqlserver_ingestion,SalesDB,dbo,Orders,main,bronze,orders,,main,gw_sales,sales
+sqlserver_ingestion,SalesDB,dbo,Products,main,bronze,products,,main,gw_sales,sales
+sqlserver_ingestion,HRDB,dbo,Employees,main,bronze,employees,,main,gw_hr,hr
+sqlserver_ingestion,HRDB,dbo,Departments,main,bronze,departments,,main,gw_hr,hr
+sqlserver_ingestion,FinanceDB,dbo,Invoices,main,bronze,invoices,,main,gw_finance,finance
+sqlserver_ingestion,FinanceDB,dbo,Payments,main,bronze,payments,,main,gw_finance,finance
