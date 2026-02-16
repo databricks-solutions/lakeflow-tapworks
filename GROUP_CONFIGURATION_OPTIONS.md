@@ -25,27 +25,32 @@ This is automatically normalized to:
 ```python
 default_values = {
     '*': {'schedule': '*/15 * * * *'},           # Global default
-    'sales': {'schedule': '*/30 * * * *'},       # Matches prefix='sales' or project_name='sales'
-    'hr_project': {'schedule': '0 * * * *'},     # Matches prefix='hr_project' or project_name='hr_project'
+    'sales': {'schedule': '*/30 * * * *'},       # Matches prefix='sales'
+    'sales_02': {'schedule': '0 * * * *'},       # Matches pipeline_group='sales_02' (most specific)
+    'hr_project': {'schedule': '0 0 * * *'},     # Matches project_name='hr_project'
 }
 
 override_config = {
     '*': {'pause_status': 'UNPAUSED'},           # Global override
-    'finance': {'pause_status': 'PAUSED'},       # Matches prefix='finance' or project_name='finance'
+    'finance': {'pause_status': 'PAUSED'},       # Matches prefix='finance'
+    'finance_01': {'pause_status': 'UNPAUSED'},  # Matches pipeline_group='finance_01'
 }
 ```
 
 ## Matching Logic
 
 ### Match Key Resolution
-For each row, the match key is determined by:
-1. `prefix` column (if it exists in the CSV)
-2. `project_name` column (fallback)
+For each row, the config key is matched in this order:
+1. `pipeline_group` (`{prefix}_{subgroup}`) - most specific
+2. `prefix` column
+3. `project_name` column - fallback
 
 ### Precedence
-Group-specific values take precedence over global (`*`) values:
-1. Global (`*`) is applied first
-2. Group-specific overwrites global (if match found)
+More specific matches take precedence:
+1. `pipeline_group` match (e.g., `sales_02`)
+2. `prefix` match (e.g., `sales`)
+3. `project_name` match
+4. Global (`*`)
 
 ## Processing Flow
 

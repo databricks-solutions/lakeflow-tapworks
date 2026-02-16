@@ -1201,3 +1201,63 @@ class TestGroupBasedConfiguration:
         # finance: global default schedule, group override pause_status
         assert result.loc[2, 'schedule'] == '*/15 * * * *'
         assert result.loc[2, 'pause_status'] == 'PAUSED'
+
+    def test_pipeline_group_matching(self, salesforce_connector):
+        """Should match on pipeline_group (prefix_subgroup) for granular control."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard', 'standard'],
+            'source_table_name': ['Account', 'Contact', 'Lead'],
+            'target_catalog': ['main', 'main', 'main'],
+            'target_schema': ['salesforce', 'salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact', 'lead'],
+            'connection_name': ['conn', 'conn', 'conn'],
+            'project_name': ['project', 'project', 'project'],
+            'prefix': ['sales', 'sales', 'sales'],
+            'subgroup': ['01', '02', '02'],
+        })
+
+        result = salesforce_connector._process_input_config(
+            df=df,
+            required_columns=salesforce_connector.required_columns,
+            default_values={
+                '*': {'schedule': '*/15 * * * *'},
+                'sales': {'schedule': '*/30 * * * *'},
+                'sales_02': {'schedule': '0 * * * *'},
+            },
+        )
+
+        # sales_01: matches 'sales' prefix
+        assert result.loc[0, 'schedule'] == '*/30 * * * *'
+        # sales_02: matches 'sales_02' pipeline_group (more specific)
+        assert result.loc[1, 'schedule'] == '0 * * * *'
+        assert result.loc[2, 'schedule'] == '0 * * * *'
+
+    def test_pipeline_group_precedence_over_prefix(self, salesforce_connector):
+        """pipeline_group match should take precedence over prefix match."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['conn', 'conn'],
+            'project_name': ['project', 'project'],
+            'prefix': ['hr', 'hr'],
+            'subgroup': ['01', '01'],
+        })
+
+        result = salesforce_connector._process_input_config(
+            df=df,
+            required_columns=salesforce_connector.required_columns,
+            default_values={
+                '*': {'schedule': '*/15 * * * *'},
+                'hr': {'schedule': '*/30 * * * *'},
+                'hr_01': {'schedule': '0 0 * * *'},
+            },
+        )
+
+        # Both should match hr_01 (pipeline_group) not hr (prefix)
+        assert result.loc[0, 'schedule'] == '0 0 * * *'
+        assert result.loc[1, 'schedule'] == '0 0 * * *'
