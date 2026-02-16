@@ -1,0 +1,7 @@
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix,subgroup
+sfdc_ingestion,Salesforce,standard,Account,main,salesforce,account,sfdc_connection,sales,1
+sfdc_ingestion,Salesforce,standard,Contact,main,salesforce,contact,sfdc_connection,sales,1
+sfdc_ingestion,Salesforce,standard,Opportunity,main,salesforce,opportunity,sfdc_connection,sales,2
+sfdc_ingestion,Salesforce,standard,Lead,main,salesforce,lead,sfdc_connection,sales,2
+sfdc_ingestion,Salesforce,standard,Campaign,main,salesforce,campaign,sfdc_connection,sales,3
+sfdc_ingestion,Salesforce,standard,Task,main,salesforce,task,sfdc_connection,sales,3
