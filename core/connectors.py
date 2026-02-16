@@ -552,7 +552,10 @@ class BaseConnector(ABC):
         """
         Get a boolean mask for rows matching a group key.
 
-        Matches on 'prefix' column if it exists, otherwise 'project_name'.
+        Matching precedence:
+        1. pipeline_group (prefix_subgroup) - exact match
+        2. prefix - exact match
+        3. project_name - exact match
 
         Args:
             df: DataFrame to match against
@@ -561,11 +564,23 @@ class BaseConnector(ABC):
         Returns:
             Boolean Series mask for matching rows
         """
+        # Try pipeline_group match (prefix_subgroup)
+        if 'prefix' in df.columns and 'subgroup' in df.columns:
+            pipeline_group = (
+                df['prefix'].astype(str).str.strip() + '_' +
+                df['subgroup'].astype(str).str.strip()
+            )
+            pg_match = pipeline_group == group_key
+            if pg_match.any():
+                return pg_match
+
+        # Try prefix match
         if 'prefix' in df.columns:
             prefix_match = df['prefix'].astype(str).str.strip() == group_key
             if prefix_match.any():
                 return prefix_match
 
+        # Try project_name match
         if 'project_name' in df.columns:
             return df['project_name'].astype(str).str.strip() == group_key
 
