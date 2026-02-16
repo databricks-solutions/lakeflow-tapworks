@@ -525,9 +525,13 @@ class BaseConnector(ABC):
         df = self._apply_defaults_to_df(df, global_defaults, empty_mask=empty_mask)
 
         # Step 2: Apply group-specific defaults (these override global defaults but not CSV values)
-        for group_key, group_defaults in grouped_defaults.items():
-            if group_key == '*':
-                continue  # Already applied
+        # Sort keys by specificity: less specific first (e.g., 'sales'), more specific last (e.g., 'sales_02')
+        # This ensures more specific matches override less specific ones
+        sorted_default_keys = self._sort_keys_by_specificity(
+            [k for k in grouped_defaults.keys() if k != '*']
+        )
+        for group_key in sorted_default_keys:
+            group_defaults = grouped_defaults[group_key]
             mask = self._get_group_mask(df, group_key)
             if mask.any():
                 df = self._apply_defaults_to_df(df, group_defaults, row_mask=mask, empty_mask=empty_mask)
@@ -536,10 +540,12 @@ class BaseConnector(ABC):
         global_overrides = grouped_overrides.get('*', {})
         df = self._apply_overrides_to_df(df, global_overrides)
 
-        # Step 4: Apply group-specific overrides
-        for group_key, group_overrides in grouped_overrides.items():
-            if group_key == '*':
-                continue  # Already applied
+        # Step 4: Apply group-specific overrides (sorted by specificity)
+        sorted_override_keys = self._sort_keys_by_specificity(
+            [k for k in grouped_overrides.keys() if k != '*']
+        )
+        for group_key in sorted_override_keys:
+            group_overrides = grouped_overrides[group_key]
             mask = self._get_group_mask(df, group_key)
             if mask.any():
                 df = self._apply_overrides_to_df(df, group_overrides, mask)
@@ -547,6 +553,23 @@ class BaseConnector(ABC):
         logger.info(f"Configuration validated: {len(df)} rows")
 
         return df
+
+    def _sort_keys_by_specificity(self, keys: list) -> list:
+        """
+        Sort config keys by specificity (less specific first, more specific last).
+
+        Keys containing '_' are considered more specific (pipeline_group format)
+        and should be processed last so they can override less specific matches.
+
+        Args:
+            keys: List of config keys to sort
+
+        Returns:
+            Sorted list with less specific keys first
+        """
+        # Keys with '_' are more specific (pipeline_group like 'sales_02')
+        # Keys without '_' are less specific (prefix like 'sales')
+        return sorted(keys, key=lambda k: ('_' in k, k))
 
     def _get_group_mask(self, df: pd.DataFrame, group_key: str) -> pd.Series:
         """
@@ -692,10 +715,26 @@ class BaseConnector(ABC):
         Returns:
             Normalized DataFrame with all required columns and defaults applied
         """
-        # Merge connector defaults with user-provided defaults
+        # Build connector defaults (flat format)
         built_in_defaults = {'project_name': self.default_project_name}
         connector_defaults = {**built_in_defaults, **self.default_values}
-        final_defaults = {**connector_defaults, **(default_values or {})}
+
+        # Merge connector defaults with user-provided defaults
+        # Handle both flat and grouped user defaults
+        if default_values:
+            # Check if user defaults are grouped (first value is a dict)
+            first_value = next(iter(default_values.values())) if default_values else None
+            if isinstance(first_value, dict):
+                # User provided grouped defaults - merge connector defaults into global '*'
+                final_defaults = dict(default_values)  # Copy user defaults
+                user_global = final_defaults.get('*', {})
+                # Connector defaults go in '*', user global overrides them
+                final_defaults['*'] = {**connector_defaults, **user_global}
+            else:
+                # User provided flat defaults - simple merge
+                final_defaults = {**connector_defaults, **default_values}
+        else:
+            final_defaults = connector_defaults
 
         # Process input configuration
         normalized_df = self._process_input_config(
