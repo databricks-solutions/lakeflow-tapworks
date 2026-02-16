@@ -1,8 +1,8 @@
-project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,gateway_catalog,gateway_schema,prefix,gateway_driver_type,gateway_worker_type
-sqlserver_ingestion,SalesDB,dbo,Customers,main,bronze,customers,sql_connection,main,gw_sales,sales,,
-sqlserver_ingestion,SalesDB,dbo,Orders,main,bronze,orders,sql_connection,main,gw_sales,sales,,
-sqlserver_ingestion,SalesDB,dbo,Products,main,bronze,products,sql_connection,main,gw_sales,sales,,
-sqlserver_ingestion,HRDB,dbo,Employees,main,bronze,employees,sql_connection,main,gw_hr,hr,,
-sqlserver_ingestion,HRDB,dbo,Departments,main,bronze,departments,sql_connection,main,gw_hr,hr,,
-sqlserver_ingestion,FinanceDB,dbo,Invoices,main,bronze,invoices,sql_connection,main,gw_finance,finance,,
-sqlserver_ingestion,FinanceDB,dbo,Payments,main,bronze,payments,sql_connection,main,gw_finance,finance,,
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix
+sqlserver_ingestion,SalesDB,dbo,Customers,main,bronze,customers,sql_connection,sales
+sqlserver_ingestion,SalesDB,dbo,Orders,main,bronze,orders,sql_connection,sales
+sqlserver_ingestion,SalesDB,dbo,Products,main,bronze,products,sql_connection,sales
+sqlserver_ingestion,HRDB,dbo,Employees,main,bronze,employees,sql_connection,hr
+sqlserver_ingestion,HRDB,dbo,Departments,main,bronze,departments,sql_connection,hr
+sqlserver_ingestion,FinanceDB,dbo,Invoices,main,bronze,invoices,sql_connection,finance
+sqlserver_ingestion,FinanceDB,dbo,Payments,main,bronze,payments,sql_connection,finance
