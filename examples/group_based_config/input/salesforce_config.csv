@@ -1,0 +1,9 @@
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix,subgroup
+sfdc_ingestion,Salesforce,standard,Account,main,salesforce,account,sfdc_connection,sales,01
+sfdc_ingestion,Salesforce,standard,Contact,main,salesforce,contact,sfdc_connection,sales,01
+sfdc_ingestion,Salesforce,standard,Opportunity,main,salesforce,opportunity,sfdc_connection,sales,02
+sfdc_ingestion,Salesforce,standard,Lead,main,salesforce,lead,sfdc_connection,sales,02
+sfdc_ingestion,Salesforce,standard,Employee__c,main,salesforce,employee,sfdc_connection,hr,01
+sfdc_ingestion,Salesforce,standard,Department__c,main,salesforce,department,sfdc_connection,hr,01
+sfdc_ingestion,Salesforce,standard,Invoice__c,main,salesforce,invoice,sfdc_connection,finance,01
+sfdc_ingestion,Salesforce,standard,Payment__c,main,salesforce,payment,sfdc_connection,finance,01
