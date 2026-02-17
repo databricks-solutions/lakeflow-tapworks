@@ -222,7 +222,7 @@ override_config = {
 3. `project_name` - e.g., `'my_project'`
 4. `'*'` (global)
 
-See [examples/group_based_config](examples/group_based_config) for detailed examples.
+See [examples/group_based_config](./examples/group_based_config) for detailed examples.
 
 ### CLI Examples
 
@@ -292,6 +292,6 @@ result = run_pipeline_generation(
 
 ## Documentation
 
-- [USAGE.md](USAGE.md) - CLI and notebook usage examples for all connectors
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and class hierarchy
+- [USAGE.md](./USAGE.md) - CLI and notebook usage examples for all connectors
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Technical architecture and class hierarchy
 
