@@ -1,4 +1,4 @@
-# Lakehouse Tapworks
+# Lakeflow Tapworks
 
 Automated DAB (Databricks Asset Bundle) generation toolkit for Lakeflow Connect pipelines.
 
@@ -8,26 +8,50 @@ Manually creating and maintaining DABs for Lakeflow connectors doesn't scale. Co
 
 - **Manual table management** - Adding hundreds or thousands of tables to DABs by hand is error-prone and time-consuming
 - **Load balancing** - Distributing tables across pipelines based on size, SLAs, or performance metrics is impossible to do manually at scale
-- **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards requires automation
-- **DAB syntax errors** - Minor syntax mistakes (e.g., missing spaces) cause cryptic errors that generate support tickets
+- **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards can be automated
+- **DAB syntax errors** - Minor syntax mistakes (e.g., missing spaces) cause errors and can be difficult to troubleshoot
+- **Config repetition** - Specifying the same values (e.g., schedule, connection) for every table is tedious and error-prone
 
 ## Solution
 
-Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame source) and automatically generates complete DAB packages with load balancing, validation, and proper syntax.
+Tapworks reads from a simple configuration (CSV, YAML, JSON, Delta table, or any DataFrame source) and automatically generates complete DAB packages with load balancing, validation, and proper syntax.
 
 
 ## How It Works
 
-1. **Define your config** - Specify source/target mappings in a simple format:
+1. **Define your config** - Specify at least source/target mappings or other extra configuration (e.g., schedule, gateway driver type, ...), and target environements. Using target it is possible to specify different workspaces for deployment (e.g., dev, staging, prod)
 
+
+Example of a basic CSV config:
    ```csv
    source_schema,source_table,target_catalog,target_schema,target_table,connection_name
    dbo,customers,bronze,sales,customers,sql_server_conn
    ```
 
-2. **Run the generator** - From CLI or notebook:
+example target environements:
 
-   **CLI (recommended):**
+    {
+        'dev': {'workspace_host': 'https://dev.cloud.databricks.com'},
+        'prod': {'workspace_host': 'https://prod.cloud.databricks.com', "root_path": "/Shared/pipelines/prod"},
+    }
+
+
+2. **Run the generator** - From CLI or notebook. This will write the DAB templates into the specified output dir.
+
+## Output Structure
+
+```
+output/<project_name>/
+  databricks.yml
+  resources/
+    gateways.yml    # database connectors only
+    pipelines.yml
+    jobs.yml
+```
+
+
+
+   **CLI:**
    ```bash
    # List available connectors
    python cli.py --list
@@ -37,7 +61,7 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
 
    # Generate DAB files
    python cli.py sql_server --input-config tables.csv --output-dir output \
-     --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}' 
+     --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
    ```
 
    **Notebook / Python:**
@@ -48,16 +72,26 @@ Tapworks reads from a simple configuration (CSV, Delta table, or any DataFrame s
        connector_name='sql_server',
        input_source='tables.csv',  # or Delta table or DataFrame
        output_dir='output',
-       targets={'dev': {'workspace_host': 'https://...'}},
-       default_values={'project_name': 'my_project'},
+       targets={'dev': {'workspace_host': 'https://your-workspace.databricks.com'}},
    )
    ```
 
 3. **Deploy** - Use the generated DAB files with `databricks bundle deploy`
 
+See [USAGE.md](USAGE.md) for detailed examples for all connectors.
+
 ## Load Balancing
 
-Tapworks automatically distributes tables across pipelines and gateways.
+Tapworks automatically distributes tables across pipelines and gateways. This is done according to limitations of the pipelines (e.g., maximum recommended number of tables per pipeline), and can be adjusted via user config. Users can group pipelines together using project, prefix, or subgroups.
+
+Example CSV with grouping columns:
+```csv
+source_table,target_catalog,target_schema,target_table,connection_name,prefix,subgroup
+customers,main,bronze,customers,sql_conn,sales,1
+orders,main,bronze,orders,sql_conn,sales,1
+products,main,bronze,products,sql_conn,sales,2
+employees,main,bronze,employees,sql_conn,hr,1
+```
 
 ### Hierarchy
 
@@ -138,12 +172,14 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables).
 
 ## Defaults and Overrides
 
+Users can define configs individually for objects or pipelines in the config, or they can specify config for a group of pipelines when calling generator, using default_values and override_configs.
+
 - **default_values** - Fill missing/empty columns with defaults (e.g., set schedule for rows that don't have one)
 - **override_config** - Force values for ALL rows, ignoring what's in the input (e.g., pause all jobs)
 
 ### Simple Configuration
 
-Apply the same values to all rows using a flat dictionary:
+Apply the same default values to all rows using a flat dictionary:
 
 ```python
 default_values = {
@@ -187,6 +223,14 @@ python cli.py salesforce --input-config tables.csv --output-dir output \
   --override '{"pause_status": "PAUSED"}'
 ```
 
+
+**using settings file**
+```bash
+python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
+```
+
+
+
 **Settings file (settings.json):**
 ```json
 {
@@ -208,10 +252,6 @@ python cli.py salesforce --input-config tables.csv --output-dir output \
     "pause_status": "PAUSED"
   }
 }
-```
-
-```bash
-python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
 ```
 
 ### Notebook Example
@@ -239,20 +279,7 @@ result = run_pipeline_generation(
 )
 ```
 
-## Target Environement
 
-- Using target it is possible to specify different workspaces for deployment (e.g., dev, staging, prod)
-
-## Output Structure
-
-```
-output/<project_name>/
-  databricks.yml
-  resources/
-    gateways.yml    # database connectors only
-    pipelines.yml
-    jobs.yml
-```
 
 ## Documentation
 
