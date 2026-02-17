@@ -10,7 +10,7 @@ Manually creating and maintaining DABs for Lakeflow connectors doesn't scale. Co
 - **Load balancing** - Distributing tables across pipelines based on size, SLAs, or performance metrics is impossible to do manually at scale
 - **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards can be automated
 - **DAB syntax errors** - Minor syntax mistakes (e.g., missing spaces) cause errors and can be difficult to troubleshoot
-- **Config repetition** - Specifying the same values (e.g., schedule, connection) for every table is tedious and error-prone
+- **Config re-use** - Existing table configurations from other tools can be reused as input for migration
 
 ## Solution
 
@@ -37,19 +37,6 @@ example target environements:
 
 
 2. **Run the generator** - From CLI or notebook. This will write the DAB templates into the specified output dir.
-
-## Output Structure
-
-```
-output/<project_name>/
-  databricks.yml
-  resources/
-    gateways.yml    # database connectors only
-    pipelines.yml
-    jobs.yml
-```
-
-
 
    **CLI:**
    ```bash
@@ -79,6 +66,17 @@ output/<project_name>/
 3. **Deploy** - Use the generated DAB files with `databricks bundle deploy`
 
 See [USAGE.md](USAGE.md) for detailed examples for all connectors.
+
+### Output Structure
+
+```
+output/<project_name>/
+  databricks.yml
+  resources/
+    gateways.yml    # database connectors only
+    pipelines.yml
+    jobs.yml
+```
 
 ## Load Balancing
 
