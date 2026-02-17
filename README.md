@@ -16,6 +16,23 @@ DAB is the recommended way for deploying Lakeflow connectors, however, manually 
 
 Tapworks reads from a simple configuration (CSV, YAML, JSON, Delta table, or any DataFrame source) and automatically generates complete DAB packages with load balancing, validation, and proper syntax while splitting the specified tables across pipelines for performance (load balancing).
 
+```
+┌─────────────────┐     ┌─────────────────────────────────┐     ┌─────────────────┐
+│     INPUT       │     │           TAPWORKS              │     │     OUTPUT      │
+│                 │     │                                 │     │                 │
+│  • Table config │────▶│  1. Validate config             │────▶│   DAB Package   │
+│    (CSV/Delta)  │     │  2. Apply defaults/overrides    │     │  ├─databricks.yml
+│  • Targets      │     │  3. Load balance (split tables) │     │  └─resources/   │
+│  • Defaults     │     │  4. Generate YAML               │     │    ├─pipelines  │
+│  • Overrides    │     │                                 │     │    ├─jobs       │
+└─────────────────┘     └─────────────────────────────────┘     │    └─gateways   │
+                                                                └────────┬────────┘
+                                                                         │
+                                                                         ▼
+                                                                ┌─────────────────┐
+                                                                │ bundle deploy   │
+                                                                └─────────────────┘
+```
 
 ## How It Works
 
