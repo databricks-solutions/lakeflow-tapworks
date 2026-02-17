@@ -47,6 +47,60 @@ from .exceptions import ConfigurationError, ValidationError, YAMLGenerationError
 logger = logging.getLogger(__name__)
 
 
+def _normalize_to_grouped_config(config: Optional[Dict]) -> Dict:
+    """
+    Normalize config to grouped format.
+
+    Converts flat config dicts to grouped format with '*' as the global key.
+    If already in grouped format (values are dicts), returns as-is.
+
+    Args:
+        config: Configuration dict, either flat or grouped format
+
+    Returns:
+        Grouped config dict with '*' as global key
+
+    Examples:
+        >>> _normalize_to_grouped_config({'schedule': '*/15 * * * *'})
+        {'*': {'schedule': '*/15 * * * *'}}
+
+        >>> _normalize_to_grouped_config({'*': {'schedule': '*/15 * * * *'}, 'sales': {'schedule': '*/30 * * * *'}})
+        {'*': {'schedule': '*/15 * * * *'}, 'sales': {'schedule': '*/30 * * * *'}}
+    """
+    if not config:
+        return {}
+
+    # Check if already in grouped format (first value is a dict)
+    first_value = next(iter(config.values()))
+    if isinstance(first_value, dict):
+        return config
+
+    # Flat format - wrap in '*' key
+    return {'*': config}
+
+
+def _get_match_key(row: pd.Series, df: pd.DataFrame) -> str:
+    """
+    Get the match key for a row to use for group-based config lookup.
+
+    Priority:
+    1. 'prefix' column if it exists and has a value
+    2. 'project_name' column as fallback
+
+    Args:
+        row: DataFrame row
+        df: Full DataFrame (to check if prefix column exists)
+
+    Returns:
+        Match key string for config lookup
+    """
+    if 'prefix' in df.columns and pd.notna(row.get('prefix')) and str(row.get('prefix')).strip():
+        return str(row['prefix']).strip()
+    if 'project_name' in df.columns and pd.notna(row.get('project_name')):
+        return str(row['project_name']).strip()
+    return ''
+
+
 class BaseConnector(ABC):
     """
     Abstract base class for all connectors.
@@ -418,11 +472,19 @@ class BaseConnector(ABC):
         This method ensures all required columns are present, adds optional columns
         with defaults if missing, and fills empty/NaN values appropriately.
 
+        Supports group-based configuration where defaults/overrides can be specified
+        per group (matching on 'prefix' or 'project_name'):
+
+            default_values = {
+                '*': {'schedule': '*/15 * * * *'},      # Global default
+                'sales': {'schedule': '*/30 * * * *'},  # Group-specific
+            }
+
         Args:
             df: Input DataFrame from any source (CSV, Delta, code)
             required_columns: List of required column names that must be present
-            default_values: Dictionary of optional columns with their default values
-            override_input_config: Dictionary of column overrides for all rows
+            default_values: Dictionary of defaults (flat or grouped format)
+            override_input_config: Dictionary of overrides (flat or grouped format)
 
         Returns:
             Normalized DataFrame with all required and optional columns
@@ -445,29 +507,188 @@ class BaseConnector(ABC):
                 f"Required columns: {', '.join(required_columns)}"
             )
 
-        # Add optional columns if not present and handle NaN/empty values
-        if default_values:
-            for col_name, default_value in default_values.items():
-                if col_name not in df.columns:
-                    logger.debug(f"Column '{col_name}' not found, adding with default: {default_value}")
-                    df[col_name] = default_value
-                else:
-                    # Fill NaN values with default (skip if default is None)
-                    if default_value is not None:
-                        df[col_name] = df[col_name].fillna(default_value)
+        # Normalize configs to grouped format
+        grouped_defaults = _normalize_to_grouped_config(default_values)
+        grouped_overrides = _normalize_to_grouped_config(override_input_config)
 
-                    # Replace empty strings with default (for string columns)
-                    if isinstance(default_value, str):
-                        mask = df[col_name].astype(str).str.strip() == ''
-                        df.loc[mask, col_name] = default_value
+        # Track which values were originally empty (before any defaults applied)
+        # These are the only values that defaults should fill
+        empty_mask = {}
+        for col in set(col for d in grouped_defaults.values() for col in d.keys()):
+            if col in df.columns:
+                empty_mask[col] = df[col].isna() | (df[col].astype(str).str.strip() == '')
+            else:
+                empty_mask[col] = pd.Series([True] * len(df), index=df.index)
 
-        # Apply overrides if provided
-        if override_input_config:
-            for col_name, override_value in override_input_config.items():
-                logger.debug(f"Overriding '{col_name}' with value: {override_value}")
-                df[col_name] = override_value
+        # Step 1: Apply global defaults first (ensures project_name exists for matching)
+        global_defaults = grouped_defaults.get('*', {})
+        df = self._apply_defaults_to_df(df, global_defaults, empty_mask=empty_mask)
+
+        # Step 2: Apply group-specific defaults (these override global defaults but not CSV values)
+        # Sort keys by specificity: less specific first (e.g., 'sales'), more specific last (e.g., 'sales_02')
+        # This ensures more specific matches override less specific ones
+        sorted_default_keys = self._sort_keys_by_specificity(
+            [k for k in grouped_defaults.keys() if k != '*']
+        )
+        for group_key in sorted_default_keys:
+            group_defaults = grouped_defaults[group_key]
+            mask = self._get_group_mask(df, group_key)
+            if mask.any():
+                df = self._apply_defaults_to_df(df, group_defaults, row_mask=mask, empty_mask=empty_mask)
+
+        # Step 3: Apply global overrides
+        global_overrides = grouped_overrides.get('*', {})
+        df = self._apply_overrides_to_df(df, global_overrides)
+
+        # Step 4: Apply group-specific overrides (sorted by specificity)
+        sorted_override_keys = self._sort_keys_by_specificity(
+            [k for k in grouped_overrides.keys() if k != '*']
+        )
+        for group_key in sorted_override_keys:
+            group_overrides = grouped_overrides[group_key]
+            mask = self._get_group_mask(df, group_key)
+            if mask.any():
+                df = self._apply_overrides_to_df(df, group_overrides, mask)
 
         logger.info(f"Configuration validated: {len(df)} rows")
+
+        return df
+
+    def _sort_keys_by_specificity(self, keys: list) -> list:
+        """
+        Sort config keys by specificity (less specific first, more specific last).
+
+        Keys containing '_' are considered more specific (pipeline_group format)
+        and should be processed last so they can override less specific matches.
+
+        Args:
+            keys: List of config keys to sort
+
+        Returns:
+            Sorted list with less specific keys first
+        """
+        # Keys with '_' are more specific (pipeline_group like 'sales_02')
+        # Keys without '_' are less specific (prefix like 'sales')
+        return sorted(keys, key=lambda k: ('_' in k, k))
+
+    def _get_group_mask(self, df: pd.DataFrame, group_key: str) -> pd.Series:
+        """
+        Get a boolean mask for rows matching a group key.
+
+        Matching precedence:
+        1. pipeline_group (prefix_subgroup) - exact match
+        2. prefix - exact match
+        3. project_name - exact match
+
+        Args:
+            df: DataFrame to match against
+            group_key: Group key to match
+
+        Returns:
+            Boolean Series mask for matching rows
+        """
+        # Try pipeline_group match (prefix_subgroup)
+        if 'prefix' in df.columns and 'subgroup' in df.columns:
+            pipeline_group = (
+                df['prefix'].astype(str).str.strip() + '_' +
+                df['subgroup'].astype(str).str.strip()
+            )
+            pg_match = pipeline_group == group_key
+            if pg_match.any():
+                return pg_match
+
+        # Try prefix match
+        if 'prefix' in df.columns:
+            prefix_match = df['prefix'].astype(str).str.strip() == group_key
+            if prefix_match.any():
+                return prefix_match
+
+        # Try project_name match
+        if 'project_name' in df.columns:
+            return df['project_name'].astype(str).str.strip() == group_key
+
+        return pd.Series([False] * len(df), index=df.index)
+
+    def _apply_defaults_to_df(
+        self,
+        df: pd.DataFrame,
+        defaults: Dict,
+        row_mask: pd.Series = None,
+        empty_mask: Dict[str, pd.Series] = None
+    ) -> pd.DataFrame:
+        """
+        Apply default values to DataFrame (only fills originally empty values).
+
+        Args:
+            df: DataFrame to apply defaults to
+            defaults: Dictionary of column defaults
+            row_mask: Optional boolean mask to apply defaults only to matching rows
+            empty_mask: Dict mapping column names to boolean masks indicating
+                       which rows were originally empty (before any defaults)
+
+        Returns:
+            DataFrame with defaults applied
+        """
+        if not defaults:
+            return df
+
+        for col_name, default_value in defaults.items():
+            if col_name not in df.columns:
+                # Add new column
+                if row_mask is None:
+                    df[col_name] = default_value
+                else:
+                    df[col_name] = None
+                    df.loc[row_mask, col_name] = default_value
+                logger.debug(f"Column '{col_name}' not found, adding with default: {default_value}")
+            else:
+                # Fill originally empty values only
+                if default_value is not None:
+                    # Get the original empty mask for this column
+                    col_empty_mask = empty_mask.get(col_name) if empty_mask else None
+
+                    if col_empty_mask is None:
+                        # Fallback: check current empty state
+                        col_empty_mask = df[col_name].isna() | (df[col_name].astype(str).str.strip() == '')
+
+                    if row_mask is None:
+                        # Global: fill all originally empty values
+                        df.loc[col_empty_mask, col_name] = default_value
+                    else:
+                        # Group-specific: fill originally empty values for matching rows
+                        combined_mask = row_mask & col_empty_mask
+                        df.loc[combined_mask, col_name] = default_value
+
+        return df
+
+    def _apply_overrides_to_df(
+        self,
+        df: pd.DataFrame,
+        overrides: Dict,
+        mask: pd.Series = None
+    ) -> pd.DataFrame:
+        """
+        Apply override values to DataFrame (overwrites all values).
+
+        Args:
+            df: DataFrame to apply overrides to
+            overrides: Dictionary of column overrides
+            mask: Optional boolean mask to apply overrides only to matching rows
+
+        Returns:
+            DataFrame with overrides applied
+        """
+        if not overrides:
+            return df
+
+        for col_name, override_value in overrides.items():
+            if mask is None:
+                df[col_name] = override_value
+            else:
+                if col_name not in df.columns:
+                    df[col_name] = None
+                df.loc[mask, col_name] = override_value
+            logger.debug(f"Overriding '{col_name}' with value: {override_value}")
 
         return df
 
@@ -494,10 +715,26 @@ class BaseConnector(ABC):
         Returns:
             Normalized DataFrame with all required columns and defaults applied
         """
-        # Merge connector defaults with user-provided defaults
+        # Build connector defaults (flat format)
         built_in_defaults = {'project_name': self.default_project_name}
         connector_defaults = {**built_in_defaults, **self.default_values}
-        final_defaults = {**connector_defaults, **(default_values or {})}
+
+        # Merge connector defaults with user-provided defaults
+        # Handle both flat and grouped user defaults
+        if default_values:
+            # Check if user defaults are grouped (first value is a dict)
+            first_value = next(iter(default_values.values())) if default_values else None
+            if isinstance(first_value, dict):
+                # User provided grouped defaults - merge connector defaults into global '*'
+                final_defaults = dict(default_values)  # Copy user defaults
+                user_global = final_defaults.get('*', {})
+                # Connector defaults go in '*', user global overrides them
+                final_defaults['*'] = {**connector_defaults, **user_global}
+            else:
+                # User provided flat defaults - simple merge
+                final_defaults = {**connector_defaults, **default_values}
+        else:
+            final_defaults = connector_defaults
 
         # Process input configuration
         normalized_df = self._process_input_config(
