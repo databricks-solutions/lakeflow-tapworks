@@ -113,7 +113,6 @@ class BaseConnector(ABC):
     # Default configuration constants
     DEFAULT_MAX_TABLES_PER_PIPELINE = 250
     DEFAULT_MAX_TABLES_PER_GATEWAY = 250
-    DEFAULT_TIMEOUT_SECONDS = 600
 
     # Validation configuration - fields that must be consistent for jobs
     JOB_CONSISTENCY_FIELDS = ['schedule', 'pause_status', 'tags']
@@ -1333,9 +1332,6 @@ class DatabaseConnector(BaseConnector):
 
             pipelines[names['pipeline_resource_name']] = {
                 'name': names['pipeline_name'],
-                'configuration': {
-                    'pipelines.cdcApplierFetchMetadataTimeoutSeconds': str(self.DEFAULT_TIMEOUT_SECONDS)
-                },
                 'ingestion_definition': {
                     'ingestion_gateway_id': f"${{resources.pipelines.{project_name}_pipeline_{project_name}_gateway_{gateway_id}.id}}",
                     'objects': tables
