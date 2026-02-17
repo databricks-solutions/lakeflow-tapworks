@@ -91,6 +91,35 @@ Values are applied in this order (later overrides earlier):
 4. override_input_config parameter (overwrites all)
 ```
 
+### Group-Based Configuration
+
+Both `default_values` and `override_input_config` support two formats:
+
+**Simple format** (applies to all rows):
+```python
+default_values = {'schedule': '0 */6 * * *'}
+```
+
+**Group-based format** (per pipeline group):
+```python
+default_values = {
+    '*': {'schedule': '0 */6 * * *'},        # Global fallback
+    'sales': {'schedule': '*/15 * * * *'},   # All sales pipelines
+    'sales_2': {'schedule': '*/30 * * * *'}, # Only sales_2 subgroup
+}
+```
+
+**Matching precedence** (most specific wins):
+1. `pipeline_group` (prefix_subgroup) - e.g., `'sales_2'`
+2. `prefix` - e.g., `'sales'`
+3. `project_name` - e.g., `'my_project'`
+4. `'*'` (global fallback)
+
+| Parameter | Behavior |
+|-----------|----------|
+| `default_values` | Fill missing/empty values only |
+| `override_input_config` | Overwrite all values (ignores CSV) |
+
 ## Base Class Methods
 
 ### BaseConnector
@@ -108,6 +137,7 @@ Values are applied in this order (later overrides earlier):
 | `_write_yaml_file()` | Write YAML with retries |
 | `_is_value_set()` | Check for non-empty value |
 | `_validate_cron_expression()` | Validate cron format |
+| `_apply_group_based_value()` | Apply group-based defaults/overrides |
 
 ### DatabaseConnector (extends BaseConnector)
 
