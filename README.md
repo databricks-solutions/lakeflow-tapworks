@@ -10,11 +10,11 @@ DAB is the recommended way for deploying Lakeflow connectors, however, manually 
 - **Load balancing** - Distributing tables across pipelines based on size, SLAs, or performance metrics is impossible to do manually at scale
 - **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards can be automated
 - **DAB syntax errors** - Minor syntax mistakes (e.g., missing spaces) cause errors and can be difficult to troubleshoot
-- **Config re-use** - Existing table configurations from other tools can be reused as input for migration
+- **Config re-use** - Existing table configurations from other tools can't be reused as input for migration
 
 ## Solution
 
-Tapworks reads from a simple configuration (CSV, YAML, JSON, Delta table, or any DataFrame source) and automatically generates complete DAB packages with load balancing, validation, and proper syntax while splitting the specified tables across pipelines for performance (load balancing).
+Tapworks reads from a simple configuration (e.g., CSV, YAML, JSON, Delta table, or any DataFrame source) and automatically generates complete DAB packages with load balancing, validation, and proper syntax while splitting the specified tables across pipelines for performance (load balancing).
 
 ```
 ┌─────────────────┐     ┌─────────────────────────────────┐     ┌─────────────────┐
@@ -36,7 +36,7 @@ Tapworks reads from a simple configuration (CSV, YAML, JSON, Delta table, or any
 
 ## How It Works
 
-1. **Define your config** - Specify at least source/target mappings or other extra configuration (e.g., schedule, gateway driver type, ...), and target environements. Using target it is possible to specify different workspaces for deployment (e.g., dev, staging, prod)
+1. **Define your config** - Specify at least source/target mappings or other extra configuration (e.g., schedule, SCD type, gateway driver type, ...), and target environements. Using target, it is possible to specify different workspaces for deployment (e.g., dev, staging, prod)
 
 
     **Example of a basic CSV config**
@@ -101,7 +101,7 @@ Tapworks reads from a simple configuration (CSV, YAML, JSON, Delta table, or any
 
 Tapworks automatically distributes tables across pipelines and gateways. This is done according to limitations of the pipelines (e.g., maximum recommended number of tables per pipeline), and can be adjusted via user config. Users can group pipelines together using project, prefix, or subgroups.
 
-Example CSV with grouping columns:
+**Example CSV with grouping columns**
 ```csv
 source_table,target_catalog,target_schema,target_table,connection_name,prefix,subgroup
 customers,main,bronze,customers,sql_conn,sales,1
@@ -112,14 +112,14 @@ employees,main,bronze,employees,sql_conn,hr,1
 
 ### Hierarchy
 
-**SaaS connectors** (Salesforce, GA4, ServiceNow, Workday):
+**SaaS connectors** (e.g., Salesforce, GA4, ServiceNow, Workday):
 ```
 Project (DAB Package)
 └── Prefix + Subgroup (logical grouping)
     └── Pipeline(s) - auto-split if > 250 tables
 ```
 
-**Database connectors** (SQL Server, PostgreSQL):
+**Database connectors** (e.g., SQL Server, PostgreSQL):
 ```
 Project (DAB Package)
 └── Prefix + Subgroup (logical grouping)
@@ -246,8 +246,6 @@ python cli.py salesforce --input-config tables.csv --output-dir output \
 python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
 ```
 
-
-
 **Settings file (settings.json):**
 ```json
 {
@@ -303,12 +301,3 @@ result = run_pipeline_generation(
 - [USAGE.md](USAGE.md) - CLI and notebook usage examples for all connectors
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture and class hierarchy
 
-**Quick reference:**
-```bash
-# Show connector requirements (columns, defaults, SCD types)
-python cli.py <connector> --info
-
-# Examples
-python cli.py salesforce --info
-python cli.py sql_server --info
-```
