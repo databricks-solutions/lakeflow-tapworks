@@ -4,7 +4,7 @@ Automated Load Balancer and DAB (Databricks Asset Bundle) generation toolkit for
 
 ## Problem
 
-DAB is the recommended way for deplying Lakelfow connectors, however, manually creating and maintaining DAB temapltes for Lakeflow connectors doesn't scale. Common challenges include:
+DAB is the recommended way for deploying Lakeflow connectors, however, manually creating and maintaining DAB templates for Lakeflow connectors doesn't scale. Common challenges include:
 
 - **Manual table/object management** - Adding hundreds or thousands of tables to DABs by hand is error-prone and time-consuming
 - **Load balancing** - Distributing tables across pipelines based on size, SLAs, or performance metrics is impossible to do manually at scale
@@ -77,8 +77,7 @@ Tapworks reads from a simple configuration (CSV, YAML, JSON, Delta table, or any
       )
       ```
 
-3. **Deploy** - Use the generated DAB files with `databricks bundle deploy`
-[https://docs.databricks.com/aws/en/dev-tools/cli/bundle-commands]
+3. **Deploy** - Use the generated DAB files with [`databricks bundle deploy`](https://docs.databricks.com/aws/en/dev-tools/cli/bundle-commands)
 
 
 ## Load Balancing
