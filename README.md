@@ -6,7 +6,7 @@ Automated Load Balancer and DAB (Databricks Asset Bundle) generation toolkit for
 
 DAB is the recommended way for deploying Lakeflow connectors, however, manually creating and maintaining DAB templates for Lakeflow connectors doesn't scale. Common challenges include:
 
-- **Manual table/object management** - Adding hundreds or thousands of tables to DABs by hand is error-prone and time-consuming
+- **Manual table/object management** - Adding hundreds or thousands of tables to DAB templates by hand is error-prone and time-consuming
 - **Load balancing** - Distributing tables across pipelines based on size, SLAs, or performance metrics is impossible to do manually at scale
 - **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards can be automated
 - **DAB syntax errors** - Minor syntax mistakes (e.g., missing spaces) cause errors and can be difficult to troubleshoot
@@ -23,9 +23,9 @@ Tapworks reads from a simple configuration (e.g., CSV, YAML, JSON, Delta table, 
 │  • Table config │────▶│  1. Validate config             │────▶│   DAB Package   │
 │    (CSV/Delta)  │     │  2. Apply defaults/overrides    │     │  ├─databricks.yml
 │  • Targets      │     │  3. Load balance (split tables) │     │  └─resources/   │
-│  • Defaults     │     │  4. Generate YAML               │     │    ├─pipelines  │
-│  • Overrides    │     │                                 │     │    ├─jobs       │
-└─────────────────┘     └─────────────────────────────────┘     │    └─gateways   │
+│  • Defaults     │     │  4. Generate YAML               │     │    ├─pipelines.yml  │
+│  • Overrides    │     │                                 │     │    ├─jobs.yml       │
+└─────────────────┘     └─────────────────────────────────┘     │    └─gateways.yml   │
                                                                 └────────┬────────┘
                                                                          │
                                                                          ▼
