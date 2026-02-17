@@ -295,3 +295,7 @@ result = run_pipeline_generation(
 - [USAGE.md](./USAGE.md) (<a href="$./USAGE.md">Databricks</a>) - CLI and notebook usage examples for all connectors
 - [ARCHITECTURE.md](./ARCHITECTURE.md) (<a href="$./ARCHITECTURE.md">Databricks</a>) - Technical architecture and class hierarchy
 
+## License
+
+&copy; 2025 Databricks, Inc. All rights reserved. The source in this notebook is provided subject to the Databricks License [https://databricks.com/db-license-source].
+
