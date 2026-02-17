@@ -62,10 +62,58 @@ display(result_df)
 | Parameter | Description |
 |-----------|-------------|
 | `targets` | Target environments (dev, prod) with workspace settings |
-| `default_values` | Default values for optional columns (fills missing/empty values) |
-| `override_input_config` | Force override values for ALL rows |
+| `default_values` | Default values for optional columns - fills missing/empty values (supports group-based) |
+| `override_input_config` | Force override values for ALL rows (supports group-based) |
 | `max_tables_per_pipeline` | Maximum tables per pipeline (default: 250) |
 | `max_tables_per_gateway` | Maximum tables per gateway - database connectors only (default: 250) |
+
+---
+
+## Defaults and Overrides
+
+Both `default_values` and `override_input_config` support two formats:
+
+### Simple Format (All Rows)
+
+```python
+default_values = {
+    'schedule': '0 */6 * * *',
+    'pause_status': 'UNPAUSED',
+}
+```
+
+### Group-Based Format (Per Pipeline Group)
+
+```python
+default_values = {
+    '*': {'schedule': '0 */6 * * *'},        # Global fallback
+    'sales': {'schedule': '*/15 * * * *'},   # All sales pipelines
+    'sales_2': {'schedule': '*/30 * * * *'}, # Only sales_2 subgroup
+    'hr': {'schedule': '0 0 * * *'},         # HR pipelines
+}
+
+override_config = {
+    '*': {'pause_status': 'UNPAUSED'},
+    'finance': {'pause_status': 'PAUSED'},   # Pause finance for audit
+}
+```
+
+### Matching Precedence
+
+Config keys are matched in this order (most specific wins):
+1. `pipeline_group` (prefix_subgroup) - e.g., `'sales_2'`
+2. `prefix` - e.g., `'sales'`
+3. `project_name` - e.g., `'my_project'`
+4. `'*'` (global fallback)
+
+### Defaults vs Overrides
+
+| Parameter | Behavior |
+|-----------|----------|
+| `default_values` | Fill missing/empty values only |
+| `override_config` | Overwrite all values (ignores CSV) |
+
+See [examples/group_based_config](./examples/group_based_config) (<a href="$./examples/group_based_config">Databricks</a>) for detailed examples.
 
 ---
 
