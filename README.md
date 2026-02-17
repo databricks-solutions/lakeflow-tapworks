@@ -10,7 +10,7 @@ Manually creating and maintaining DABs for Lakeflow connectors doesn't scale. Co
 - **Load balancing** - Distributing tables across pipelines based on size, SLAs, or performance metrics is impossible to do manually at scale
 - **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards can be automated
 - **DAB syntax errors** - Minor syntax mistakes (e.g., missing spaces) cause errors and can be difficult to troubleshoot
-- **Config repetition** - Specifying the same values (e.g., schedule, connection) for every table is tedious and error-prone
+- **Config re-use** - Existing table configurations from other tools can be reused as input for migration
 
 ## Solution
 
@@ -28,7 +28,7 @@ Example of a basic CSV config:
    dbo,customers,bronze,sales,customers,sql_server_conn
    ```
 
-example target environements:
+Example target environments:
 
     {
         'dev': {'workspace_host': 'https://dev.cloud.databricks.com'},
@@ -38,7 +38,7 @@ example target environements:
 
 2. **Run the generator** - From CLI or notebook. This will write the DAB templates into the specified output dir.
 
-## Output Structure
+### Output Structure
 
 ```
 output/<project_name>/
@@ -224,7 +224,7 @@ python cli.py salesforce --input-config tables.csv --output-dir output \
 ```
 
 
-**using settings file**
+**Using settings file:**
 ```bash
 python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
 ```
