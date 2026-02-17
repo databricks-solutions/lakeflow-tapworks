@@ -90,6 +90,26 @@ Also sets:
 
 **Subgroup validation:** If any table in a prefix has an explicit subgroup, all tables in that prefix must have explicit subgroups. This prevents accidental grouping of tables that should be isolated.
 
+#### Group-Based Configuration
+
+Both `default_values` and `override_input_config` support group-based matching via nested dictionaries:
+
+```python
+default_values = {
+    '*': {'schedule': '0 */6 * * *'},        # Global fallback
+    'sales': {'schedule': '*/15 * * * *'},   # All sales pipelines
+    'sales_2': {'schedule': '*/30 * * * *'}, # Only sales_2 subgroup
+}
+```
+
+**Method:** `_apply_group_based_value()`
+
+**Matching precedence** (most specific wins):
+1. `pipeline_group` (prefix_subgroup) - e.g., `'sales_2'`
+2. `prefix` - e.g., `'sales'`
+3. `project_name` - e.g., `'my_project'`
+4. `'*'` (global fallback)
+
 ### 2. Load Balancing
 
 **Method:** `generate_pipeline_config()`
