@@ -1,12 +1,12 @@
 # Lakeflow Tapworks
 
-Automated DAB (Databricks Asset Bundle) generation toolkit for Lakeflow Connect pipelines.
+Automated Load Balancer and DAB (Databricks Asset Bundle) generation toolkit for [Databricks Managed Lakeflow Connectors](https://docs.databricks.com/aws/en/ingestion/lakeflow-connect/) .
 
 ## Problem
 
-Manually creating and maintaining DABs for Lakeflow connectors doesn't scale. Common challenges include:
+DAB is the recommended way for deplying Lakelfow connectors, however, manually creating and maintaining DAB temapltes for Lakeflow connectors doesn't scale. Common challenges include:
 
-- **Manual table management** - Adding hundreds or thousands of tables to DABs by hand is error-prone and time-consuming
+- **Manual table/object management** - Adding hundreds or thousands of tables to DABs by hand is error-prone and time-consuming
 - **Load balancing** - Distributing tables across pipelines based on size, SLAs, or performance metrics is impossible to do manually at scale
 - **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards can be automated
 - **DAB syntax errors** - Minor syntax mistakes (e.g., missing spaces) cause errors and can be difficult to troubleshoot
@@ -14,7 +14,7 @@ Manually creating and maintaining DABs for Lakeflow connectors doesn't scale. Co
 
 ## Solution
 
-Tapworks reads from a simple configuration (CSV, YAML, JSON, Delta table, or any DataFrame source) and automatically generates complete DAB packages with load balancing, validation, and proper syntax.
+Tapworks reads from a simple configuration (CSV, YAML, JSON, Delta table, or any DataFrame source) and automatically generates complete DAB packages with load balancing, validation, and proper syntax while splitting the specified tables across pipelines for performance (load balancing).
 
 
 ## How It Works
@@ -22,63 +22,64 @@ Tapworks reads from a simple configuration (CSV, YAML, JSON, Delta table, or any
 1. **Define your config** - Specify at least source/target mappings or other extra configuration (e.g., schedule, gateway driver type, ...), and target environements. Using target it is possible to specify different workspaces for deployment (e.g., dev, staging, prod)
 
 
-Example of a basic CSV config:
-   ```csv
-   source_schema,source_table,target_catalog,target_schema,target_table,connection_name
-   dbo,customers,bronze,sales,customers,sql_server_conn
-   ```
+    **Example of a basic CSV config**
+      ```csv
+      source_schema,source_table,target_catalog,target_schema,target_table,connection_name
+      dbo,customers,bronze,sales,customers,sql_server_conn
+      ```
 
-Example target environments:
-
+    **Example target environments**
+    ```python
     {
         'dev': {'workspace_host': 'https://dev.cloud.databricks.com'},
         'prod': {'workspace_host': 'https://prod.cloud.databricks.com', "root_path": "/Shared/pipelines/prod"},
     }
+    ```
 
 
 2. **Run the generator** - From CLI or notebook. This will write the DAB templates into the specified output dir.
 
-### Output Structure
+    **Output Structure**
 
-```
-output/<project_name>/
-  databricks.yml
-  resources/
-    gateways.yml    # database connectors only
-    pipelines.yml
-    jobs.yml
-```
+    ```
+    output/<project_name>/
+      databricks.yml
+      resources/
+        gateways.yml    # database connectors only
+        pipelines.yml
+        jobs.yml
+    ```
 
 
 
-   **CLI:**
-   ```bash
-   # List available connectors
-   python cli.py --list
+      **CLI:**
+      ```bash
+      # List available connectors
+      python cli.py --list
 
-   # Show connector requirements
-   python cli.py sql_server --info
+      # Show connector requirements
+      python cli.py sql_server --info
 
-   # Generate DAB files
-   python cli.py sql_server --input-config tables.csv --output-dir output \
-     --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
-   ```
+      # Generate DAB files
+      python cli.py sql_server --input-config tables.csv --output-dir output \
+        --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
+      ```
 
-   **Notebook / Python:**
-   ```python
-   from core import run_pipeline_generation
+      **Notebook / Python:**
+      ```python
+      from core import run_pipeline_generation
 
-   result = run_pipeline_generation(
-       connector_name='sql_server',
-       input_source='tables.csv',  # or Delta table or DataFrame
-       output_dir='output',
-       targets={'dev': {'workspace_host': 'https://your-workspace.databricks.com'}},
-   )
-   ```
+      result = run_pipeline_generation(
+          connector_name='sql_server',
+          input_source='tables.csv',  # or Delta table or DataFrame
+          output_dir='output',
+          targets={'dev': {'workspace_host': 'https://your-workspace.databricks.com'}},
+      )
+      ```
 
 3. **Deploy** - Use the generated DAB files with `databricks bundle deploy`
+[https://docs.databricks.com/aws/en/dev-tools/cli/bundle-commands]
 
-See [USAGE.md](USAGE.md) for detailed examples for all connectors.
 
 ## Load Balancing
 
