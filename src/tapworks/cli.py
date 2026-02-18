@@ -2,22 +2,24 @@
 """
 Unified CLI for Databricks Asset Bundle pipeline generation.
 
-This is the single entry point for all connector types, replacing the
-individual pipeline_generator.py scripts in each connector directory.
+This is the single entry point for all connector types.
+
+Installation:
+    pip install -e .  # from repo root
 
 Usage:
     # List available connectors
-    python cli.py --list
+    tapworks --list
 
     # Show connector info
-    python cli.py salesforce --info
+    tapworks salesforce --info
 
     # Generate pipelines using config file
-    python cli.py salesforce --input-config config.csv --output-dir output --settings config.json
+    tapworks salesforce --input-config config.csv --output-dir output --settings config.json
 
     # Generate pipelines using inline JSON
-    python cli.py sql_server --input-config config.csv --output-dir output \
-        --targets '{"dev": {"workspace_host": "https://..."}}' \
+    tapworks sql_server --input-config config.csv --output-dir output \\
+        --targets '{"dev": {"workspace_host": "https://..."}}' \\
         --default-values '{"project_name": "my_project"}'
 """
 

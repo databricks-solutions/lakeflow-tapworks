@@ -74,15 +74,8 @@ output_config = None  # Set to path like "/Workspace/.../processed_config.csv"
 # COMMAND ----------
 
 import sys
-from databricks.sdk import WorkspaceClient
-
-w = WorkspaceClient()
-username = w.current_user.me().user_name
-
-# Add src directory to path for tapworks imports
-# Adjust this path if you cloned the repo to a different location
-repo_path = f'/Workspace/Users/{username}/lakeflow-tapworks'
-sys.path.insert(0, f'{repo_path}/src')
+import os
+sys.path.append(os.path.abspath('..'))
 
 from tapworks.core.runner import run_pipeline_generation, list_connectors, get_connector_info
 
