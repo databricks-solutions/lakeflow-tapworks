@@ -292,8 +292,8 @@ result = run_pipeline_generation(
 
 ## Documentation
 
-- [USAGE.md](./USAGE.md) (<a href="$./USAGE.md">Databricks</a>) - CLI and notebook usage examples for all connectors
-- [ARCHITECTURE.md](./ARCHITECTURE.md) (<a href="$./ARCHITECTURE.md">Databricks</a>) - Technical architecture and class hierarchy
+- [USAGE.md](./docs/USAGE.md) (<a href="$./docs/USAGE.md">Databricks</a>) - CLI and notebook usage examples for all connectors
+- [ARCHITECTURE.md](./docs/ARCHITECTURE.md) (<a href="$./docs/ARCHITECTURE.md">Databricks</a>) - Technical architecture and class hierarchy
 
 ## License
 

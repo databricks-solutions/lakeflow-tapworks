@@ -86,3 +86,6 @@ resources/pipelines/
 output/
 dab_project/
 **/deployment/
+
+# Local planning docs
+REFACTOR_PLAN.md
