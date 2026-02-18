@@ -1,5 +1,5 @@
 """
-Workday Reports connector implementation using OOP architecture.
+Workday Reports connector implementation.
 
 This module provides the WorkdayReportsConnector class which implements the
 SaaSConnector interface for Workday Reports data sources.

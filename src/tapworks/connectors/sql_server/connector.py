@@ -1,5 +1,5 @@
 """
-SQL Server connector implementation using OOP architecture.
+SQL Server connector implementation.
 
 This module provides the SQLServerConnector class which implements the
 DatabaseConnector interface for SQL Server data sources.

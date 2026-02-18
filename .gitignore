@@ -82,7 +82,7 @@ terraform.rc
 resources/gateways/
 resources/pipelines/
 
-# Generated DAB projects (OOP pipeline generators)
+# Generated DAB projects
 output/
 dab_project/
 **/deployment/

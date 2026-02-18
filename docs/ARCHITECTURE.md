@@ -272,7 +272,7 @@ def _apply_connector_specific_normalization(self, df):
 
 ## Testing
 
-The OOP architecture makes testing easier:
+The architecture makes testing straightforward:
 
 ```python
 import pytest

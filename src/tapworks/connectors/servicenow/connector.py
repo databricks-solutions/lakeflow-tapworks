@@ -1,5 +1,5 @@
 """
-ServiceNow connector implementation using OOP architecture.
+ServiceNow connector implementation.
 
 This module provides the ServiceNowConnector class which implements the
 SaaSConnector interface for ServiceNow data sources.

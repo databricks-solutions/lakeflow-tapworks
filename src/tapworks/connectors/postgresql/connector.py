@@ -1,5 +1,5 @@
 """
-PostgreSQL connector implementation using OOP architecture.
+PostgreSQL connector implementation.
 
 This module provides the PostgreSQLConnector class which implements the
 DatabaseConnector interface for PostgreSQL data sources.

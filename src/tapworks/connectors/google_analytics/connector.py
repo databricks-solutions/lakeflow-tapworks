@@ -1,5 +1,5 @@
 """
-Google Analytics 4 connector implementation using OOP architecture.
+Google Analytics 4 connector implementation.
 
 This module provides the GoogleAnalyticsConnector class which implements the
 SaaSConnector interface for Google Analytics 4 data sources.

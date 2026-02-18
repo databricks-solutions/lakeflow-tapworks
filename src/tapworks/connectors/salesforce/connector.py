@@ -1,5 +1,5 @@
 """
-Salesforce connector implementation using OOP architecture.
+Salesforce connector implementation.
 
 This module provides the SalesforceConnector class which implements the
 SaaSConnector interface for Salesforce data sources.
