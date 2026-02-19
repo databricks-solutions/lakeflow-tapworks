@@ -715,8 +715,8 @@ class BaseConnector(ABC):
             Normalized DataFrame with all required columns and defaults applied
         """
         # Build connector defaults (flat format)
-        built_in_defaults = {'project_name': self.default_project_name}
-        connector_defaults = {**built_in_defaults, **self.default_values}
+        # Note: project_name is required and has no default
+        connector_defaults = dict(self.default_values)
 
         # Merge connector defaults with user-provided defaults
         # Handle both flat and grouped user defaults
@@ -761,6 +761,19 @@ class BaseConnector(ABC):
         Returns:
             DataFrame with connector-specific normalization applied
         """
+        # Validate project_name is provided (required field)
+        if 'project_name' not in df.columns:
+            raise ConfigurationError(
+                "Missing required field: project_name\n"
+                "Provide via: input config column, default_values, or override_config"
+            )
+        missing_project = df['project_name'].isna() | (df['project_name'].astype(str).str.strip() == '')
+        if missing_project.any():
+            raise ConfigurationError(
+                "Missing required field: project_name (some rows have empty values)\n"
+                "Provide via: input config column, default_values, or override_config"
+            )
+
         # Handle prefix defaults (common to all connectors)
         if 'prefix' not in df.columns:
             df['prefix'] = df['project_name']
@@ -823,10 +836,10 @@ class BaseConnector(ABC):
         self._validate_resource_name(job_name, "job")
 
         return {
-            'pipeline_name': f"Ingestion - {pipeline_group}",
+            'pipeline_name': pipeline_group,
             'pipeline_resource_name': pipeline_resource_name,
             'job_name': job_name,
-            'job_display_name': f"Pipeline Scheduler - {pipeline_group}",
+            'job_display_name': f"{pipeline_group}_scheduler",
             'task_key': "run_pipeline"
         }
 

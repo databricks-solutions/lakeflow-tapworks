@@ -422,7 +422,7 @@ class TestSalesforceCreatePipelines:
         result = salesforce_connector._create_pipelines(df, 'project')
 
         pipeline = result['resources']['pipelines']['pipeline_test_01']
-        assert pipeline['name'] == 'Ingestion - test_01'
+        assert pipeline['name'] == 'test_01'
         assert pipeline['catalog'] == 'main'
         assert pipeline['schema'] == 'salesforce'
 

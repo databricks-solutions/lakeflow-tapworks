@@ -451,5 +451,6 @@ class TestErrorHandling:
             salesforce_connector.run_complete_pipeline_generation(
                 df=sample_salesforce_df,
                 output_dir=str(temp_output_dir),
-                targets={}
+                targets={},
+                default_values={'project_name': 'test_project'}
             )
