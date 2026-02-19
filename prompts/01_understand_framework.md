@@ -4,9 +4,9 @@ Before adding a new connector, understand how the existing framework works.
 
 ## Key Files to Read
 
-1. **`ARCHITECTURE.md`** - High-level design and class hierarchy
-2. **`core/connectors.py`** - Source of truth for base classes and shared logic
-3. **`core/registry.py`** - Connector registration system
+1. **`docs/ARCHITECTURE.md`** - High-level design and class hierarchy
+2. **`src/tapworks/core/connectors.py`** - Source of truth for base classes and shared logic
+3. **`src/tapworks/core/registry.py`** - Connector registration system
 
 ## Architecture Overview
 
@@ -20,7 +20,7 @@ BaseConnector (abstract)
 
 **Unified function (recommended):**
 ```python
-from core import run_pipeline_generation
+from tapworks.core import run_pipeline_generation
 
 result = run_pipeline_generation(
     connector_name='salesforce',
@@ -32,7 +32,7 @@ result = run_pipeline_generation(
 
 **CLI:**
 ```bash
-python -m core.cli salesforce --input-config tables.csv --output-dir output \
+tapworks salesforce --input-config tables.csv --output-dir output \
   --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
 ```
 
@@ -68,5 +68,5 @@ Before proceeding, you should be able to answer:
 
 ## Reference Implementations
 
-- **Database:** `sql_server/connector.py`, `postgresql/connector.py`
-- **SaaS:** `salesforce/connector.py`, `google_analytics/connector.py`
+- **Database:** `src/tapworks/connectors/sql_server/connector.py`, `src/tapworks/connectors/postgresql/connector.py`
+- **SaaS:** `src/tapworks/connectors/salesforce/connector.py`, `src/tapworks/connectors/google_analytics/connector.py`

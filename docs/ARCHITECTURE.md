@@ -16,7 +16,7 @@ BaseConnector (abstract)
     └── WorkdayReportsConnector
 ```
 
-**Location:** `core/connectors.py`
+**Location:** `src/tapworks/core/connectors.py`
 
 ## Entry Points
 
@@ -51,7 +51,7 @@ result = run_pipeline_generation(
 ### Direct Connector Usage
 
 ```python
-from sql_server.connector import SQLServerConnector
+from tapworks.connectors.sql_server.connector import SQLServerConnector
 
 connector = SQLServerConnector()
 result = connector.run_complete_pipeline_generation(
@@ -252,12 +252,12 @@ class MyConnector(DatabaseConnector):
 
 ### Step 3: Register the Connector
 
-Add to `core/registry.py`:
+Add to `src/tapworks/core/registry.py`:
 
 ```python
 CONNECTORS = {
     # ... existing connectors ...
-    'myservice': ('myservice.connector', 'MyServiceConnector'),
+    'myservice': ('tapworks.connectors.myservice.connector', 'MyServiceConnector'),
 }
 ```
 
@@ -276,7 +276,7 @@ The architecture makes testing straightforward:
 
 ```python
 import pytest
-from sql_server.connector import SQLServerConnector
+from tapworks.connectors.sql_server.connector import SQLServerConnector
 
 class TestSQLServerConnector:
     def setup_method(self):

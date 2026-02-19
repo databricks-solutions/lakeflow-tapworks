@@ -7,19 +7,19 @@ After creating your connector, test it locally and deploy to Databricks.
 ### 1. Generate DAB Files
 
 ```bash
-# Using CLI
-python -m core.cli myconnector \
-  --input-config myconnector/examples/basic/pipeline_config.csv \
+# Using CLI (requires: pip install -e .)
+tapworks myconnector \
+  --input-config examples/connectors/myconnector/basic/pipeline_config.csv \
   --output-dir output \
-  --workspace-host "https://your-workspace.databricks.com"
+  --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
 
 # Or programmatically
 python -c "
-from core import run_pipeline_generation
+from tapworks.core import run_pipeline_generation
 
 run_pipeline_generation(
     connector_name='myconnector',
-    input_source='myconnector/examples/basic/pipeline_config.csv',
+    input_source='examples/connectors/myconnector/basic/pipeline_config.csv',
     output_dir='output',
     targets={'dev': {'workspace_host': 'https://your-workspace.databricks.com'}},
 )
@@ -105,12 +105,12 @@ pytest tests/ -v
 Test against a real Databricks workspace:
 
 ```python
-from core import run_pipeline_generation
+from tapworks.core import run_pipeline_generation
 
 # Generate with real workspace
 result = run_pipeline_generation(
     connector_name='myconnector',
-    input_source='myconnector/examples/basic/pipeline_config.csv',
+    input_source='examples/connectors/myconnector/basic/pipeline_config.csv',
     output_dir='/Workspace/Users/you@company.com/test_deployment',
     targets={
         'dev': {
@@ -162,7 +162,7 @@ Enable debug logging:
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-from core import run_pipeline_generation
+from tapworks.core import run_pipeline_generation
 # ... run generation
 ```
 
