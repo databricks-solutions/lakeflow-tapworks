@@ -24,20 +24,20 @@ BaseConnector (abstract)
 
 ```bash
 # List available connectors
-python cli.py --list
+tapworks --list
 
 # Show connector info
-python cli.py salesforce --info
+tapworks salesforce --info
 
 # Generate pipelines
-python cli.py salesforce --input-config tables.csv --output-dir output \
+tapworks salesforce --input-config tables.csv --output-dir output \
   --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}' 
 ```
 
 ### Programmatic
 
 ```python
-from core import run_pipeline_generation
+from tapworks.core import run_pipeline_generation
 
 result = run_pipeline_generation(
     connector_name='salesforce',
@@ -206,7 +206,7 @@ Base class for SaaS connectors without gateway support.
 ### Step 2: Create Connector Class
 
 ```python
-from core import DatabaseConnector  # or SaaSConnector
+from tapworks.core import DatabaseConnector  # or SaaSConnector
 
 class MyConnector(DatabaseConnector):
     @property

@@ -4,20 +4,23 @@ This guide shows how to use Lakehouse Tapworks through both command line (CLI) a
 
 ## Quick Start - Unified CLI
 
-The unified CLI (`cli.py`) is the single entry point for all connectors:
+Install the package first, then use the `tapworks` command:
 
 ```bash
+# Install (from repo root)
+pip install -e .
+
 # List available connectors
-python cli.py --list
+tapworks --list
 
 # Show connector info (required columns, defaults)
-python cli.py salesforce --info
+tapworks salesforce --info
 
 # Generate pipelines using settings file
-python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
+tapworks salesforce --input-config tables.csv --output-dir output --settings settings.json
 
 # Generate pipelines using inline JSON
-python cli.py sql_server --input-config tables.csv --output-dir output \
+tapworks sql_server --input-config tables.csv --output-dir output \
   --targets '{"dev": {"workspace_host": "https://..."}}' \
   --default-values '{"project_name": "my_project"}'
 ```
@@ -146,13 +149,13 @@ See [examples/group_based_config](./examples/group_based_config) (<a href="$./ex
 
 ## Connector Reference
 
-Use `python cli.py <connector> --info` to see required columns and defaults for any connector.
+Use `tapworks <connector> --info` to see required columns and defaults for any connector.
 
 ### SaaS Connectors
 
 **Salesforce**:
 ```bash
-python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
+tapworks salesforce --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
@@ -160,19 +163,19 @@ Optional: `include_columns`, `exclude_columns`, `primary_keys` (comma-separated;
 
 **Google Analytics 4**:
 ```bash
-python cli.py google_analytics --input-config tables.csv --output-dir output --settings settings.json
+tapworks google_analytics --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
 **ServiceNow**:
 ```bash
-python cli.py servicenow --input-config tables.csv --output-dir output --settings settings.json
+tapworks servicenow --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
 **Workday Reports**:
 ```bash
-python cli.py workday_reports --input-config tables.csv --output-dir output --settings settings.json
+tapworks workday_reports --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_url`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `primary_keys`
 
@@ -182,7 +185,7 @@ Database connectors support two-level load balancing with gateways.
 
 **SQL Server**:
 ```bash
-python cli.py sql_server --input-config tables.csv --output-dir output --settings settings.json
+tapworks sql_server --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
@@ -190,7 +193,7 @@ Optional: `gateway_catalog`, `gateway_schema`, `gateway_worker_type`, `gateway_d
 
 **PostgreSQL**:
 ```bash
-python cli.py postgresql --input-config tables.csv --output-dir output --settings settings.json
+tapworks postgresql --input-config tables.csv --output-dir output --settings settings.json
 ```
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
 
@@ -203,7 +206,7 @@ Optional: `gateway_catalog`, `gateway_schema`, `gateway_worker_type`, `gateway_d
 You can also use connectors directly in Python:
 
 ```python
-from core import get_connector, run_pipeline_generation
+from tapworks.core import get_connector, run_pipeline_generation
 
 # Option 1: Use the unified runner
 result = run_pipeline_generation(
