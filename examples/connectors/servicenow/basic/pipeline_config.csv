@@ -1,11 +1,11 @@
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,subgroup,connection_name,schedule,include_columns,exclude_columns,scd_type
-SERVICENOW,default,account_subscription_entitlement,main,servicenow,account_subscription_entitlement,business_unit1,01,servicenow_connection,*/15 * * * *,"sys_id,sys_updated_on,_databricks_deleted,instance,sys_updated_by,sys_created_on,sys_mod_count",,SCD_TYPE_2
-SERVICENOW,default,adaptive_auth_event,main,servicenow,adaptive_auth_event,business_unit1,01,servicenow_connection,*/15 * * * *,,,SCD_TYPE_2
-SERVICENOW,default,agent_assist_recommendation,main,servicenow,agent_assist_recommendation,business_unit1,01,servicenow_connection,*/15 * * * *,,,SCD_TYPE_1
-SERVICENOW,default,sys_user,main,servicenow,sys_user,business_unit1,02,servicenow_connection,*/15 * * * *,,"user_password,last_password,phone",SCD_TYPE_2
-SERVICENOW,default,agent_file,main,servicenow,agent_file,business_unit2,01,servicenow_connection,*/30 * * * *,,,SCD_TYPE_2
-SERVICENOW,default,cmdb_ci_server,main,servicenow,cmdb_ci_server,business_unit2,01,servicenow_connection,*/30 * * * *,,,SCD_TYPE_2
-SERVICENOW,default,attachment_extractor,main,servicenow,attachment_extractor,business_unit3,01,servicenow_connection,0 * * * *,,,SCD_TYPE_1
-SERVICENOW,default,incident,main,servicenow,incident,business_unit1,01,servicenow_connection,*/15 * * * *,,,SCD_TYPE_2
-SERVICENOW,default,task,main,servicenow,task,business_unit1,01,servicenow_connection,*/15 * * * *,,,SCD_TYPE_2
-SERVICENOW,default,problem,main,servicenow,problem,business_unit2,01,servicenow_connection,*/30 * * * *,,,SCD_TYPE_2
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,subgroup,connection_name,schedule,include_columns,exclude_columns,scd_type
+snow_ingestion,SERVICENOW,default,account_subscription_entitlement,main,servicenow,account_subscription_entitlement,business_unit1,01,servicenow_connection,*/15 * * * *,"sys_id,sys_updated_on,_databricks_deleted,instance,sys_updated_by,sys_created_on,sys_mod_count",,SCD_TYPE_2
+snow_ingestion,SERVICENOW,default,adaptive_auth_event,main,servicenow,adaptive_auth_event,business_unit1,01,servicenow_connection,*/15 * * * *,,,SCD_TYPE_2
+snow_ingestion,SERVICENOW,default,agent_assist_recommendation,main,servicenow,agent_assist_recommendation,business_unit1,01,servicenow_connection,*/15 * * * *,,,SCD_TYPE_1
+snow_ingestion,SERVICENOW,default,sys_user,main,servicenow,sys_user,business_unit1,02,servicenow_connection,*/15 * * * *,,"user_password,last_password,phone",SCD_TYPE_2
+snow_ingestion,SERVICENOW,default,agent_file,main,servicenow,agent_file,business_unit2,01,servicenow_connection,*/30 * * * *,,,SCD_TYPE_2
+snow_ingestion,SERVICENOW,default,cmdb_ci_server,main,servicenow,cmdb_ci_server,business_unit2,01,servicenow_connection,*/30 * * * *,,,SCD_TYPE_2
+snow_ingestion,SERVICENOW,default,attachment_extractor,main,servicenow,attachment_extractor,business_unit3,01,servicenow_connection,0 * * * *,,,SCD_TYPE_1
+snow_ingestion,SERVICENOW,default,incident,main,servicenow,incident,business_unit1,01,servicenow_connection,*/15 * * * *,,,SCD_TYPE_2
+snow_ingestion,SERVICENOW,default,task,main,servicenow,task,business_unit1,01,servicenow_connection,*/15 * * * *,,,SCD_TYPE_2
+snow_ingestion,SERVICENOW,default,problem,main,servicenow,problem,business_unit2,01,servicenow_connection,*/30 * * * *,,,SCD_TYPE_2
