@@ -5,13 +5,14 @@ This walkthrough shows how to add a new SaaS connector for Jira.
 ## What You'll Build
 
 ```
-jira/
+src/tapworks/connectors/jira/
 ├── __init__.py
-├── connector.py
-├── example_notebook.ipynb
-└── examples/
-    └── basic/
-        └── pipeline_config.csv
+└── connector.py
+
+examples/connectors/jira/
+├── basic/
+│   └── pipeline_config.csv
+└── example_notebook.ipynb
 ```
 
 ## Step 1: Understand Jira-Specific Requirements
@@ -43,17 +44,15 @@ jira_project,cloud,user,main,bronze,users,jira_conn,meta,01,0 */6 * * *,,,
 
 ## Step 3: Implement the Connector
 
-Create `jira/connector.py`:
+Create `src/tapworks/connectors/jira/connector.py`:
 
 ```python
 import pandas as pd
 from pathlib import Path
 from typing import Dict
-import sys
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from core import SaaSConnector
-from core.exceptions import ValidationError
+from tapworks.core import SaaSConnector
+from tapworks.core.exceptions import ValidationError
 
 
 class JiraConnector(SaaSConnector):
@@ -149,25 +148,25 @@ class JiraConnector(SaaSConnector):
 
 ## Step 4: Register the Connector
 
-Add to `core/registry.py`:
+Add to `src/tapworks/core/registry.py`:
 
 ```python
 CONNECTORS = {
     # ... existing ...
-    'jira': ('jira.connector', 'JiraConnector'),
+    'jira': ('tapworks.connectors.jira.connector', 'JiraConnector'),
 }
 ```
 
 ## Step 5: Create Example Files
 
-Create `jira/__init__.py`:
+Create `src/tapworks/connectors/jira/__init__.py`:
 ```python
 from .connector import JiraConnector
 
 __all__ = ['JiraConnector']
 ```
 
-Create `jira/examples/basic/pipeline_config.csv`:
+Create `examples/connectors/jira/basic/pipeline_config.csv`:
 ```csv
 project_name,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix,subgroup,schedule,jql,primary_keys,cursor_field
 jira_ingestion,cloud,issue,main,jira_bronze,issues,jira_connection,issues,01,*/15 * * * *,"project in (PROJ1, PROJ2)",id,updated
@@ -179,14 +178,17 @@ jira_ingestion,cloud,issue_comment,main,jira_bronze,comments,jira_connection,iss
 ## Step 6: Test
 
 ```bash
+# Install the package first
+pip install -e .
+
 # Verify registration
-python -m core.cli --list
+tapworks --list
 
 # Generate DAB
-python -m core.cli jira \
-  --input-config jira/examples/basic/pipeline_config.csv \
+tapworks jira \
+  --input-config examples/connectors/jira/basic/pipeline_config.csv \
   --output-dir output \
-  --workspace-host "https://your-workspace.databricks.com"
+  --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
 
 # Validate
 cd output/jira_ingestion
@@ -195,7 +197,7 @@ databricks bundle validate -t dev
 
 ## Step 7: Create Notebook (Optional)
 
-Create `jira/example_notebook.ipynb` following the standard pattern:
+Create `examples/connectors/jira/example_notebook.ipynb` following the standard pattern:
 
 ```python
 # Cell 1: Setup
@@ -207,21 +209,28 @@ Create `jira/example_notebook.ipynb` following the standard pattern:
 
 # Cell 3: Configure
 from databricks.sdk import WorkspaceClient
+import sys
+import os
 
 w = WorkspaceClient()
 username = w.current_user.me().user_name
 WORKSPACE_HOST = w.config.host
+ROOT_PATH = f'/Users/{username}/.bundle/${{bundle.name}}/${{bundle.target}}'
+
+# Add src to path for imports
+sys.path.append(os.path.abspath('../../../src'))
 
 # Cell 4: Generate
-from core.runner import run_pipeline_generation
+from tapworks.core.runner import run_pipeline_generation
 
 result_df = run_pipeline_generation(
     connector_name="jira",
-    input_csv='examples/basic/pipeline_config.csv',
-    output_dir=f'/Workspace/Users/{username}/lakehouse-tapworks/jira/examples/basic/deployment',
+    input_source='basic/pipeline_config.csv',
+    output_dir='basic/deployment',
     targets={
         'dev': {
             'workspace_host': WORKSPACE_HOST,
+            'root_path': ROOT_PATH,
         }
     },
     max_tables_per_pipeline=100,

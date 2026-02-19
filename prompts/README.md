@@ -23,16 +23,16 @@ These prompts are designed to work with AI coding assistants (Claude, Cursor, et
 
 If you're familiar with the codebase, here's the minimal path:
 
-1. **Create connector class** in `myconnector/connector.py`
+1. **Create connector class** in `src/tapworks/connectors/myconnector/connector.py`
    - Extend `DatabaseConnector` or `SaaSConnector`
    - Implement `connector_type`, `required_columns`, `default_values`
    - Implement `_create_pipelines()` (SaaS) or full YAML generation (Database)
 
-2. **Register** in `core/registry.py`
+2. **Register** in `src/tapworks/core/registry.py`
 
-3. **Add example** CSV in `myconnector/examples/basic/pipeline_config.csv`
+3. **Add example** CSV in `examples/connectors/myconnector/basic/pipeline_config.csv`
 
-4. **Test**: `python -m core.cli myconnector --input-config myconnector/examples/basic/pipeline_config.csv --output-dir output --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'`
+4. **Test**: `tapworks myconnector --input-config examples/connectors/myconnector/basic/pipeline_config.csv --output-dir output --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'`
 
 ## Examples
 
@@ -42,9 +42,9 @@ If you're familiar with the codebase, here's the minimal path:
 
 | Type | Connector | Notes |
 |------|-----------|-------|
-| Database | `sql_server/` | Full gateway support |
-| Database | `postgresql/` | Similar to SQL Server |
-| SaaS | `salesforce/` | Column filtering support |
-| SaaS | `google_analytics/` | GA4 with property config |
-| SaaS | `servicenow/` | Basic SaaS pattern |
-| SaaS | `workday_reports/` | Report-based ingestion |
+| Database | `src/tapworks/connectors/sql_server/` | Full gateway support |
+| Database | `src/tapworks/connectors/postgresql/` | Similar to SQL Server |
+| SaaS | `src/tapworks/connectors/salesforce/` | Column filtering support |
+| SaaS | `src/tapworks/connectors/google_analytics/` | GA4 with property config |
+| SaaS | `src/tapworks/connectors/servicenow/` | Basic SaaS pattern |
+| SaaS | `src/tapworks/connectors/workday_reports/` | Report-based ingestion |

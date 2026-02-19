@@ -12,31 +12,31 @@ This guide covers adding a new connector to the framework.
 ## Files to Create
 
 ```
-myconnector/
+src/tapworks/connectors/myconnector/
 ├── __init__.py
 ├── connector.py          # Connector class implementation
-└── examples/
-    └── basic/
-        └── pipeline_config.csv
+
+examples/connectors/myconnector/
+├── basic/
+│   └── pipeline_config.csv
+└── example_notebook.ipynb
 ```
 
 Plus updates to:
-- `core/registry.py` - Register the connector
+- `src/tapworks/core/registry.py` - Register the connector
 
 ## Implementation Steps
 
 ### 1. Create the Connector Class
 
-Create `myconnector/connector.py`:
+Create `src/tapworks/connectors/myconnector/connector.py`:
 
 ```python
 import pandas as pd
 from pathlib import Path
 from typing import Dict
-import sys
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from core import SaaSConnector  # or DatabaseConnector
+from tapworks.core import SaaSConnector  # or DatabaseConnector
 
 
 class MyConnector(SaaSConnector):
@@ -95,18 +95,18 @@ class MyConnector(SaaSConnector):
 
 ### 2. Register the Connector
 
-Add to `core/registry.py`:
+Add to `src/tapworks/core/registry.py`:
 
 ```python
 CONNECTORS = {
     # ... existing connectors ...
-    'myconnector': ('myconnector.connector', 'MyConnector'),
+    'myconnector': ('tapworks.connectors.myconnector.connector', 'MyConnector'),
 }
 ```
 
 ### 3. Create Example CSV
 
-Create `myconnector/examples/basic/pipeline_config.csv`:
+Create `examples/connectors/myconnector/basic/pipeline_config.csv`:
 
 ```csv
 project_name,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix,subgroup,schedule
@@ -116,7 +116,7 @@ my_project,public,orders,main,bronze,orders,my_connection,data,01,*/15 * * * *
 
 ### 4. Create Example Notebook (Optional)
 
-Create `myconnector/example_notebook.ipynb` following the pattern in existing connectors.
+Create `examples/connectors/myconnector/example_notebook.ipynb` following the pattern in existing connectors.
 
 ## Database Connector Specifics
 
@@ -131,7 +131,7 @@ If extending `DatabaseConnector`, you also need:
 
 3. **Override `generate_yaml_files()`** to include `gateways.yml`
 
-See `sql_server/connector.py` for a complete example.
+See `src/tapworks/connectors/sql_server/connector.py` for a complete example.
 
 ## Connector-Specific Normalization
 
@@ -150,7 +150,7 @@ def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFr
 ## Testing Your Connector
 
 ```python
-from myconnector.connector import MyConnector
+from tapworks.connectors.myconnector.connector import MyConnector
 
 connector = MyConnector()
 
@@ -172,5 +172,5 @@ result = connector.run_complete_pipeline_generation(
 - [ ] Required columns match what your source needs
 - [ ] Default values are sensible for your use case
 - [ ] Generated YAML validates: `databricks bundle validate -t dev`
-- [ ] Connector is registered and `python -m core.cli --list` shows it
+- [ ] Connector is registered and `tapworks --list` shows it
 - [ ] Example CSV demonstrates typical usage
