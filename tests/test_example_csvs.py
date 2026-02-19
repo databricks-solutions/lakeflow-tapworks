@@ -8,7 +8,7 @@ can be successfully processed by their respective connectors.
 import pytest
 from pathlib import Path
 
-from core.runner import run_pipeline_generation
+from tapworks.core.runner import run_pipeline_generation
 
 
 # Project root directory
@@ -103,7 +103,7 @@ class TestExampleCSVs:
     def test_example_csv_has_required_columns(self, connector_name, csv_path):
         """Each example CSV should have all required columns for its connector."""
         import pandas as pd
-        from core.registry import get_connector
+        from tapworks.core.registry import get_connector
 
         connector = get_connector(connector_name)
         df = pd.read_csv(csv_path)

@@ -220,40 +220,40 @@ def temp_csv_file(tmp_path, sample_salesforce_df):
 @pytest.fixture
 def salesforce_connector():
     """SalesforceConnector instance."""
-    from salesforce.connector import SalesforceConnector
+    from tapworks.connectors.salesforce.connector import SalesforceConnector
     return SalesforceConnector()
 
 
 @pytest.fixture
 def sqlserver_connector():
     """SQLServerConnector instance."""
-    from sql_server.connector import SQLServerConnector
+    from tapworks.connectors.sql_server.connector import SQLServerConnector
     return SQLServerConnector()
 
 
 @pytest.fixture
 def postgres_connector():
     """PostgreSQLConnector instance."""
-    from postgresql.connector import PostgreSQLConnector
+    from tapworks.connectors.postgresql.connector import PostgreSQLConnector
     return PostgreSQLConnector()
 
 
 @pytest.fixture
 def ga4_connector():
     """GoogleAnalyticsConnector instance."""
-    from google_analytics.connector import GoogleAnalyticsConnector
+    from tapworks.connectors.google_analytics.connector import GoogleAnalyticsConnector
     return GoogleAnalyticsConnector()
 
 
 @pytest.fixture
 def servicenow_connector():
     """ServiceNowConnector instance."""
-    from servicenow.connector import ServiceNowConnector
+    from tapworks.connectors.servicenow.connector import ServiceNowConnector
     return ServiceNowConnector()
 
 
 @pytest.fixture
 def workday_connector():
     """WorkdayReportsConnector instance."""
-    from workday_reports.connector import WorkdayReportsConnector
+    from tapworks.connectors.workday_reports.connector import WorkdayReportsConnector
     return WorkdayReportsConnector()

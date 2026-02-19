@@ -9,7 +9,7 @@ import pandas as pd
 import yaml
 import os
 from pathlib import Path
-from core import ConfigurationError
+from tapworks.core import ConfigurationError
 
 
 class TestSalesforceEndToEnd:
