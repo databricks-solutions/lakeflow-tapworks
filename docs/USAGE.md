@@ -116,7 +116,7 @@ Config keys are matched in this order (most specific wins):
 | `default_values` | Fill missing/empty values only |
 | `override_config` | Overwrite all values (ignores CSV) |
 
-See [examples/group_based_config](./examples/group_based_config) (<a href="$./examples/group_based_config">Databricks</a>) for detailed examples.
+See [examples/features/group_based_config](./examples/features/group_based_config) (<a href="$./examples/features/group_based_config">Databricks</a>) for detailed examples.
 
 ---
 

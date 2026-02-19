@@ -225,7 +225,7 @@ override_config = {
 3. `project_name` - e.g., `'my_project'`
 4. `'*'` (global)
 
-See [examples/group_based_config](./examples/group_based_config) (<a href="$./examples/group_based_config">Databricks</a>) for detailed examples.
+See [examples/features/group_based_config](./examples/features/group_based_config) (<a href="$./examples/features/group_based_config">Databricks</a>) for detailed examples.
 
 ### CLI Examples
 
