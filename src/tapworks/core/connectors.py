@@ -1259,8 +1259,8 @@ class DatabaseConnector(BaseConnector):
         unique_gateways = df.groupby('gateway').first()
 
         for gateway_id, row in unique_gateways.iterrows():
-            gateway_name = f"{project_name}_gateway_{gateway_id}"
-            pipeline_name = f"{project_name}_pipeline_{gateway_name}"
+            gateway_name = f"gateway_{gateway_id}"
+            gateway_resource_name = f"gateway_{gateway_id}"
 
             gateway_catalog = row['gateway_catalog']
             gateway_schema = row['gateway_schema']
@@ -1297,7 +1297,7 @@ class DatabaseConnector(BaseConnector):
                     cluster_config['driver_node_type_id'] = driver_type
                 gateway_config['clusters'] = [cluster_config]
 
-            gateways[pipeline_name] = gateway_config
+            gateways[gateway_resource_name] = gateway_config
 
         return {'resources': {'pipelines': gateways}}
 
@@ -1346,7 +1346,7 @@ class DatabaseConnector(BaseConnector):
             pipelines[names['pipeline_resource_name']] = {
                 'name': names['pipeline_name'],
                 'ingestion_definition': {
-                    'ingestion_gateway_id': f"${{resources.pipelines.{project_name}_pipeline_{project_name}_gateway_{gateway_id}.id}}",
+                    'ingestion_gateway_id': f"${{resources.pipelines.gateway_{gateway_id}.id}}",
                     'objects': tables
                 },
                 'schema': target_schema,
