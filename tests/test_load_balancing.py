@@ -92,7 +92,7 @@ class TestSaaSConnectorLoadBalancing:
         """Groups smaller than max should not be split."""
         df = salesforce_connector.load_and_normalize_input(
             df=sample_salesforce_df,
-            default_values={'prefix': 'test', 'subgroup': '01'}
+            default_values={'project_name': 'test', 'prefix': 'test', 'subgroup': '01'}
         )
 
         result = salesforce_connector.generate_pipeline_config(
@@ -126,6 +126,7 @@ class TestSaaSConnectorLoadBalancing:
             'target_schema': ['salesforce'],
             'target_table_name': ['table'],
             'connection_name': ['conn'],
+            'project_name': ['test'],
             'prefix': ['test'],
             'subgroup': ['1'],  # Single digit
         })
@@ -269,7 +270,7 @@ class TestDatabaseConnectorLoadBalancing:
         """Small datasets should not be split."""
         df = sqlserver_connector.load_and_normalize_input(
             df=sample_sqlserver_df,
-            default_values={'prefix': 'test', 'subgroup': '01'}
+            default_values={'project_name': 'test', 'prefix': 'test', 'subgroup': '01'}
         )
 
         result = sqlserver_connector.generate_pipeline_config(
@@ -298,10 +299,10 @@ class TestResourceNaming:
         assert 'task_key' in result
 
     def test_pipeline_name_format(self, salesforce_connector):
-        """Pipeline name should be human-readable."""
+        """Pipeline name should match pipeline_group."""
         result = salesforce_connector._generate_resource_names('sales_01')
 
-        assert result['pipeline_name'] == 'Ingestion - sales_01'
+        assert result['pipeline_name'] == 'sales_01'
 
     def test_pipeline_resource_name_format(self, salesforce_connector):
         """Pipeline resource name should be valid identifier."""
@@ -316,10 +317,10 @@ class TestResourceNaming:
         assert result['job_name'] == 'job_sales_01'
 
     def test_job_display_name_format(self, salesforce_connector):
-        """Job display name should be human-readable."""
+        """Job display name should be pipeline_group_scheduler."""
         result = salesforce_connector._generate_resource_names('sales_01')
 
-        assert result['job_display_name'] == 'Pipeline Scheduler - sales_01'
+        assert result['job_display_name'] == 'sales_01_scheduler'
 
 
 class TestSplitGroupsBySize:

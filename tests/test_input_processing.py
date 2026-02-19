@@ -217,14 +217,17 @@ class TestLoadAndNormalizeInput:
 
     def test_applies_connector_defaults(self, salesforce_connector, sample_salesforce_df):
         """Should apply connector's default_values."""
-        result = salesforce_connector.load_and_normalize_input(df=sample_salesforce_df)
+        result = salesforce_connector.load_and_normalize_input(
+            df=sample_salesforce_df,
+            default_values={'project_name': 'test_project'}
+        )
 
         # Connector default for schedule is '*/15 * * * *'
         assert 'schedule' in result.columns
 
     def test_user_defaults_override_connector_defaults(self, salesforce_connector, sample_salesforce_df):
         """User-provided defaults should override connector defaults."""
-        user_defaults = {'schedule': 'user_schedule'}
+        user_defaults = {'project_name': 'test_project', 'schedule': 'user_schedule'}
 
         result = salesforce_connector.load_and_normalize_input(
             df=sample_salesforce_df,
@@ -233,12 +236,20 @@ class TestLoadAndNormalizeInput:
 
         assert all(result['schedule'] == 'user_schedule')
 
-    def test_default_project_name_applied(self, salesforce_connector, sample_salesforce_df):
-        """Should apply default project_name from connector."""
-        result = salesforce_connector.load_and_normalize_input(df=sample_salesforce_df)
+    def test_project_name_required(self, salesforce_connector):
+        """Should raise error when project_name is missing."""
+        df_without_project = pd.DataFrame({
+            'source_database': ['Salesforce'],
+            'source_schema': ['standard'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['account'],
+            'connection_name': ['sfdc_conn'],
+        })
 
-        assert 'project_name' in result.columns
-        assert all(result['project_name'] == salesforce_connector.default_project_name)
+        with pytest.raises(ConfigurationError, match="project_name"):
+            salesforce_connector.load_and_normalize_input(df=df_without_project)
 
     def test_prefix_defaults_to_project_name(self, salesforce_connector, sample_salesforce_df):
         """Prefix should default to project_name if not provided."""
@@ -252,7 +263,10 @@ class TestLoadAndNormalizeInput:
 
     def test_subgroup_defaults_to_01(self, salesforce_connector, sample_salesforce_df):
         """Subgroup should default to '01' if not provided."""
-        result = salesforce_connector.load_and_normalize_input(df=sample_salesforce_df)
+        result = salesforce_connector.load_and_normalize_input(
+            df=sample_salesforce_df,
+            default_values={'project_name': 'test_project'}
+        )
 
         assert 'subgroup' in result.columns
         assert all(result['subgroup'] == '01')
@@ -267,6 +281,7 @@ class TestLoadAndNormalizeInput:
             'target_schema': ['salesforce'],
             'target_table_name': ['account'],
             'connection_name': ['sfdc_conn'],
+            'project_name': ['test_project'],
             'prefix': ['custom_prefix'],
         })
 
@@ -304,7 +319,10 @@ class TestDatabaseConnectorNormalization:
         df = sample_sqlserver_df.copy()
         df['gateway_catalog'] = [np.nan, np.nan, np.nan]
 
-        result = sqlserver_connector.load_and_normalize_input(df=df)
+        result = sqlserver_connector.load_and_normalize_input(
+            df=df,
+            default_values={'project_name': 'test_project'}
+        )
 
         assert all(result['gateway_catalog'] == result['target_catalog'])
 
@@ -313,7 +331,10 @@ class TestDatabaseConnectorNormalization:
         df = sample_sqlserver_df.copy()
         df['gateway_schema'] = [np.nan, np.nan, np.nan]
 
-        result = sqlserver_connector.load_and_normalize_input(df=df)
+        result = sqlserver_connector.load_and_normalize_input(
+            df=df,
+            default_values={'project_name': 'test_project'}
+        )
 
         assert all(result['gateway_schema'] == result['target_schema'])
 
@@ -322,7 +343,10 @@ class TestDatabaseConnectorNormalization:
         df = sample_sqlserver_df.copy()
         df['gateway_catalog'] = ['custom_catalog', np.nan, 'another_catalog']
 
-        result = sqlserver_connector.load_and_normalize_input(df=df)
+        result = sqlserver_connector.load_and_normalize_input(
+            df=df,
+            default_values={'project_name': 'test_project'}
+        )
 
         assert result.loc[0, 'gateway_catalog'] == 'custom_catalog'
         assert result.loc[1, 'gateway_catalog'] == 'main'  # Defaults to target
@@ -392,6 +416,7 @@ class TestSubgroupValidation:
             'connection_name': ['sfdc_conn', 'sfdc_conn'],
             'prefix': ['sales', 'sales'],
             'subgroup': ['', ''],
+            'project_name': ['test_project', 'test_project'],
         })
 
         result = salesforce_connector.load_and_normalize_input(df=df)
@@ -410,6 +435,7 @@ class TestSubgroupValidation:
             'connection_name': ['sfdc_conn', 'sfdc_conn'],
             'prefix': ['sales', 'sales'],
             'subgroup': ['01', '02'],
+            'project_name': ['test_project', 'test_project'],
         })
 
         result = salesforce_connector.load_and_normalize_input(df=df)
@@ -431,6 +457,7 @@ class TestSubgroupValidation:
             'connection_name': ['sfdc_conn', 'sfdc_conn', 'sfdc_conn'],
             'prefix': ['sales', 'sales', 'sales'],
             'subgroup': ['01', '', ''],  # Mixed: one explicit, two empty
+            'project_name': ['test_project', 'test_project', 'test_project'],
         })
 
         with pytest.raises(ValidationError, match="Mixed subgroup usage"):
@@ -448,6 +475,7 @@ class TestSubgroupValidation:
             'connection_name': ['sfdc_conn', 'sfdc_conn', 'sfdc_conn'],
             'prefix': ['sales', 'sales', 'marketing'],  # Different prefixes
             'subgroup': ['01', '02', ''],  # sales: all explicit, marketing: empty
+            'project_name': ['test_project', 'test_project', 'test_project'],
         })
 
         result = salesforce_connector.load_and_normalize_input(df=df)
@@ -472,6 +500,7 @@ class TestSubgroupValidation:
             'connection_name': ['sfdc_conn', 'sfdc_conn'],
             'prefix': ['sales', 'sales'],
             'subgroup': ['01', ''],
+            'project_name': ['test_project', 'test_project'],
         })
 
         with pytest.raises(ValidationError) as exc_info:
@@ -495,6 +524,7 @@ class TestSubgroupValidation:
             'connection_name': ['sfdc_conn', 'sfdc_conn'],
             'prefix': ['sales', 'sales'],
             'subgroup': ['01', '   '],  # Whitespace treated as empty
+            'project_name': ['test_project', 'test_project'],
         })
 
         with pytest.raises(ValidationError, match="Mixed subgroup usage"):

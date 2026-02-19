@@ -184,6 +184,26 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables).
   └───────────────┘       └───────────────┴───────────────┴───────────────┘
 ```
 
+## Resource Naming
+
+Tapworks generates DAB resource names from `project_name`, `prefix`, and `subgroup`:
+
+```
+project_name  →  required, no default
+prefix        →  falls back to project_name if not specified
+subgroup      →  defaults to "01" if not specified
+pipeline_group = {prefix}_{subgroup}
+```
+
+| Resource | Pattern | Example |
+|---|---|---|
+| Pipeline (resource name) | `pipeline_{pipeline_group}` | `pipeline_sales_02` |
+| Pipeline (display name) | `{pipeline_group}` | `sales_02` |
+| Job (resource name) | `job_{pipeline_group}` | `job_sales_02` |
+| Job (display name) | `{pipeline_group}_scheduler` | `sales_02_scheduler` |
+
+> **Important:** Prefixes must be unique per workspace. Using the same prefix across different projects deployed to the same workspace will cause resource name collisions. Use distinct prefixes (or distinct `project_name` values if relying on the prefix fallback) for each project.
+
 ## Defaults and Overrides
 
 Users can define configs individually for objects or pipelines in the config, or they can specify config for a group of pipelines when calling generator, using default_values and override_configs.

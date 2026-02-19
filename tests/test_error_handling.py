@@ -225,7 +225,8 @@ class TestConfigurationErrorInPipeline:
             salesforce_connector.run_complete_pipeline_generation(
                 df=sample_salesforce_df,
                 output_dir=str(temp_output_dir),
-                targets={}
+                targets={},
+                default_values={'project_name': 'test_project'}
             )
 
     def test_missing_required_columns_raises_configuration_error(self, salesforce_connector, temp_output_dir, sample_targets_minimal):
