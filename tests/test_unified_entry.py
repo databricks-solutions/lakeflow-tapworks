@@ -9,7 +9,7 @@ import pandas as pd
 import tempfile
 from pathlib import Path
 
-from core.registry import (
+from tapworks.core.registry import (
     get_connector,
     get_connector_class,
     list_connectors,
@@ -17,8 +17,8 @@ from core.registry import (
     resolve_connector_name,
     CONNECTORS,
 )
-from core.runner import run_pipeline_generation, _load_input
-from core import ConfigurationError
+from tapworks.core.runner import run_pipeline_generation, _load_input
+from tapworks.core import ConfigurationError
 
 
 class TestConnectorRegistry:

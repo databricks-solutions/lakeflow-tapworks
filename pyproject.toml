@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lakeflow-tapworks"
+version = "0.1.0"
+description = "Automated Load Balancer and DAB generation toolkit for Databricks Lakeflow Connectors"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.9"
+dependencies = [
+    "pyyaml>=6.0",
+    "pandas>=1.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.1.0",
+]
+databricks = [
+    "databricks-sdk>=0.18.0",
+    "requests>=2.28.0",
+]
+
+[project.scripts]
+tapworks = "tapworks.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tapworks"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

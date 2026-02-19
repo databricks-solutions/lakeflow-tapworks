@@ -8,7 +8,7 @@ which handle default values, overrides, and validation.
 import pytest
 import pandas as pd
 import numpy as np
-from core import ConfigurationError
+from tapworks.core import ConfigurationError
 
 
 class TestProcessInputConfig:
@@ -419,7 +419,7 @@ class TestSubgroupValidation:
 
     def test_mixed_subgroups_in_same_prefix_raises_error(self, salesforce_connector):
         """Mixed subgroups (some empty, some defined) in same prefix should raise error."""
-        from core import ValidationError
+        from tapworks.core import ValidationError
 
         df = pd.DataFrame({
             'source_database': ['Salesforce', 'Salesforce', 'Salesforce'],
@@ -460,7 +460,7 @@ class TestSubgroupValidation:
 
     def test_error_message_includes_prefix_and_subgroups(self, salesforce_connector):
         """Error message should include the prefix and defined subgroups."""
-        from core import ValidationError
+        from tapworks.core import ValidationError
 
         df = pd.DataFrame({
             'source_database': ['Salesforce', 'Salesforce'],
@@ -483,7 +483,7 @@ class TestSubgroupValidation:
 
     def test_whitespace_subgroup_treated_as_empty(self, salesforce_connector):
         """Whitespace-only subgroups should be treated as empty."""
-        from core import ValidationError
+        from tapworks.core import ValidationError
 
         df = pd.DataFrame({
             'source_database': ['Salesforce', 'Salesforce'],

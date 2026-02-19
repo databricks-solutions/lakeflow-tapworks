@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from unittest.mock import patch, mock_open
 
-from core import (
+from tapworks.core import (
     ConfigurationError,
     ValidationError,
     YAMLGenerationError,

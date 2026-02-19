@@ -65,20 +65,23 @@ Tapworks reads from a simple configuration (e.g., CSV, YAML, JSON, Delta table, 
 
       **CLI:**
       ```bash
+      # Install the package first
+      pip install -e .
+
       # List available connectors
-      python cli.py --list
+      tapworks --list
 
       # Show connector requirements
-      python cli.py sql_server --info
+      tapworks sql_server --info
 
       # Generate DAB files
-      python cli.py sql_server --input-config tables.csv --output-dir output \
+      tapworks sql_server --input-config tables.csv --output-dir output \
         --targets '{"dev": {"workspace_host": "https://your-workspace.databricks.com"}}'
       ```
 
       **Notebook / Python:**
       ```python
-      from core import run_pipeline_generation
+      from tapworks.core import run_pipeline_generation
 
       result = run_pipeline_generation(
           connector_name='sql_server',
@@ -222,13 +225,13 @@ override_config = {
 3. `project_name` - e.g., `'my_project'`
 4. `'*'` (global)
 
-See [examples/group_based_config](./examples/group_based_config) (<a href="$./examples/group_based_config">Databricks</a>) for detailed examples.
+See [examples/features/group_based_config](./examples/features/group_based_config) (<a href="$./examples/features/group_based_config">Databricks</a>) for detailed examples.
 
 ### CLI Examples
 
 **Inline JSON:**
 ```bash
-python cli.py salesforce --input-config tables.csv --output-dir output \
+tapworks salesforce --input-config tables.csv --output-dir output \
   --targets '{"dev": {"workspace_host": "https://dev.cloud.databricks.com"}}' \
   --default-values '{"project_name": "sfdc_prod", "schedule": "0 */6 * * *"}' \
   --override '{"pause_status": "PAUSED"}'
@@ -237,7 +240,7 @@ python cli.py salesforce --input-config tables.csv --output-dir output \
 
 **Using settings file:**
 ```bash
-python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
+tapworks salesforce --input-config tables.csv --output-dir output --settings settings.json
 ```
 
 **Settings file (settings.json):**
@@ -266,7 +269,7 @@ python cli.py salesforce --input-config tables.csv --output-dir output --setting
 ### Notebook Example
 
 ```python
-from core import run_pipeline_generation
+from tapworks.core import run_pipeline_generation
 
 result = run_pipeline_generation(
     connector_name='salesforce',
@@ -292,8 +295,8 @@ result = run_pipeline_generation(
 
 ## Documentation
 
-- [USAGE.md](./USAGE.md) (<a href="$./USAGE.md">Databricks</a>) - CLI and notebook usage examples for all connectors
-- [ARCHITECTURE.md](./ARCHITECTURE.md) (<a href="$./ARCHITECTURE.md">Databricks</a>) - Technical architecture and class hierarchy
+- [USAGE.md](./docs/USAGE.md) (<a href="$./docs/USAGE.md">Databricks</a>) - CLI and notebook usage examples for all connectors
+- [ARCHITECTURE.md](./docs/ARCHITECTURE.md) (<a href="$./docs/ARCHITECTURE.md">Databricks</a>) - Technical architecture and class hierarchy
 
 ## License
 
