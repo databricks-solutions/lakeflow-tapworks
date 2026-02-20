@@ -6,59 +6,6 @@ the connector class hierarchy. All configuration processing, YAML generation,
 and resource naming logic is implemented in the core.BaseConnector class.
 """
 
-import pandas as pd
-from pathlib import Path
-
-
-def load_input_csv(
-    input_csv: str,
-    required_columns_hint: str = None
-) -> pd.DataFrame:
-    """
-    Load and validate input CSV configuration file.
-
-    Args:
-        input_csv (str): Path to input CSV file
-        required_columns_hint (str): Optional hint text for error message
-            describing required columns for the specific connector
-
-    Returns:
-        pd.DataFrame: Loaded configuration dataframe
-
-    Raises:
-        FileNotFoundError: If input file does not exist
-        ValueError: If CSV is empty or cannot be parsed
-
-    Example Usage:
-        >>> df = load_input_csv('config.csv')
-        >>> # With custom hint:
-        >>> df = load_input_csv(
-        ...     'config.csv',
-        ...     required_columns_hint="source_database, source_schema, source_table_name"
-        ... )
-    """
-    input_path = Path(input_csv)
-
-    if not input_path.exists():
-        error_msg = f"Input file not found: {input_csv}\n\n"
-        if required_columns_hint:
-            error_msg += f"Please create an input CSV with required columns:\n{required_columns_hint}"
-        else:
-            error_msg += "Please create an input CSV with the required columns for your connector."
-        raise FileNotFoundError(error_msg)
-
-    try:
-        df = pd.read_csv(input_csv)
-    except Exception as e:
-        raise ValueError(f"Failed to parse CSV file: {e}")
-
-    if df.empty:
-        raise ValueError(f"Input CSV is empty: {input_csv}")
-
-    print(f"✓ Loaded {len(df)} rows from {input_csv}")
-
-    return df
-
 
 def convert_cron_to_quartz(cron_expression: str) -> str:
     """

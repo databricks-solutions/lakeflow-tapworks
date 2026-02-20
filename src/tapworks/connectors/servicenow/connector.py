@@ -6,14 +6,10 @@ SaaSConnector interface for ServiceNow data sources.
 """
 
 import logging
-import sys
 import pandas as pd
-from pathlib import Path
 from typing import Dict
 from collections import defaultdict
 
-# Add parent directory to path to import utilities
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from tapworks.core import SaaSConnector
 
 logger = logging.getLogger(__name__)
@@ -78,11 +74,6 @@ class ServiceNowConnector(SaaSConnector):
         These values are used when columns are missing or empty.
         """
         return {"schedule": "*/15 * * * *"}
-
-    @property
-    def default_project_name(self) -> str:
-        """Return default project name for ServiceNow connector."""
-        return "servicenow_ingestion"
 
     @property
     def supported_scd_types(self) -> list:

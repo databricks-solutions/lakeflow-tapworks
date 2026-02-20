@@ -80,7 +80,6 @@ def print_connector_info(connector_name: str):
     print("=" * 50)
 
     print(f"\nType: {info['type']}")
-    print(f"Default project name: {info['default_project_name']}")
 
     print(f"\nRequired columns:")
     for col in info['required_columns']:

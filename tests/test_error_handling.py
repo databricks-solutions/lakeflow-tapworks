@@ -187,33 +187,14 @@ class TestYAMLWriteRetryLogic:
             loaded = yaml.safe_load(f)
         assert loaded == content
 
-    def test_retry_on_transient_failure(self, salesforce_connector, temp_output_dir):
-        """Should retry on transient IO errors."""
+    def test_raises_on_write_failure(self, salesforce_connector, temp_output_dir):
+        """Should raise YAMLGenerationError when file write fails."""
         test_path = temp_output_dir / "test.yml"
         content = {"key": "value"}
 
-        call_count = [0]
-        original_open = open
-
-        def failing_open(*args, **kwargs):
-            call_count[0] += 1
-            if call_count[0] < 2:
-                raise IOError("Transient error")
-            return original_open(*args, **kwargs)
-
-        with patch("builtins.open", failing_open):
-            salesforce_connector._write_yaml_file(test_path, content, retries=3, retry_delay=0.01)
-
-        assert call_count[0] == 2
-
-    def test_raises_after_max_retries(self, salesforce_connector, temp_output_dir):
-        """Should raise YAMLGenerationError after exhausting retries."""
-        test_path = temp_output_dir / "test.yml"
-        content = {"key": "value"}
-
-        with patch("builtins.open", side_effect=IOError("Persistent error")):
-            with pytest.raises(YAMLGenerationError, match="Failed to write.*after 3 attempts"):
-                salesforce_connector._write_yaml_file(test_path, content, retries=3, retry_delay=0.01)
+        with patch("builtins.open", side_effect=IOError("Write error")):
+            with pytest.raises(YAMLGenerationError, match="Failed to write"):
+                salesforce_connector._write_yaml_file(test_path, content)
 
 
 class TestConfigurationErrorInPipeline:
