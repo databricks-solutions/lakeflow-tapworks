@@ -168,6 +168,13 @@ class SalesforceConnector(SaaSConnector):
                     if primary_keys:
                         table_config['primary_keys'] = primary_keys
 
+                # Optional: SCD type
+                scd_type = self._validate_scd_type(
+                    item.get('scd_type'), item['source_table_name']
+                )
+                if scd_type:
+                    table_config['scd_type'] = scd_type
+
                 if table_config:
                     table_entry["table"]["table_configuration"] = table_config
 
