@@ -422,7 +422,7 @@ class TestSalesforceCreatePipelines:
         result = salesforce_connector._create_pipelines(df, 'project')
 
         pipeline = result['resources']['pipelines']['pipeline_test_01']
-        assert pipeline['name'] == 'Ingestion - test_01'
+        assert pipeline['name'] == 'test_01'
         assert pipeline['catalog'] == 'main'
         assert pipeline['schema'] == 'salesforce'
 
@@ -597,8 +597,8 @@ class TestDatabaseConnectorCreateGateways:
 
         result = sqlserver_connector._create_gateways(df, 'project')
 
-        # Gateway pipeline name format: project_pipeline_project_gateway_<gateway_id>
-        gateway_key = 'project_pipeline_project_gateway_test_01'
+        # Gateway resource name format: gateway_<gateway_id>
+        gateway_key = 'gateway_test_01'
         gateway = result['resources']['pipelines'][gateway_key]
         assert gateway['gateway_definition']['connection_name'] == 'sqlserver_conn'
 
@@ -613,7 +613,7 @@ class TestDatabaseConnectorCreateGateways:
 
         result = sqlserver_connector._create_gateways(df, 'project')
 
-        gateway_key = 'project_pipeline_project_gateway_test_01'
+        gateway_key = 'gateway_test_01'
         gateway = result['resources']['pipelines'][gateway_key]
         assert gateway['gateway_definition']['gateway_storage_catalog'] == 'main'
         assert gateway['gateway_definition']['gateway_storage_schema'] == 'gateway_storage'
@@ -629,7 +629,7 @@ class TestDatabaseConnectorCreateGateways:
 
         result = sqlserver_connector._create_gateways(df, 'project')
 
-        gateway_key = 'project_pipeline_project_gateway_test_01'
+        gateway_key = 'gateway_test_01'
         gateway = result['resources']['pipelines'][gateway_key]
         assert gateway['continuous'] is True
 
@@ -645,7 +645,7 @@ class TestDatabaseConnectorCreateGateways:
 
         result = sqlserver_connector._create_gateways(df, 'project')
 
-        gateway_key = 'project_pipeline_project_gateway_test_01'
+        gateway_key = 'gateway_test_01'
         gateway = result['resources']['pipelines'][gateway_key]
         assert 'clusters' in gateway
         assert gateway['clusters'][0]['node_type_id'] == 'm5d.large'
@@ -663,7 +663,7 @@ class TestDatabaseConnectorCreateGateways:
 
         result = sqlserver_connector._create_gateways(df, 'project')
 
-        gateway_key = 'project_pipeline_project_gateway_test_01'
+        gateway_key = 'gateway_test_01'
         gateway = result['resources']['pipelines'][gateway_key]
         assert gateway['clusters'][0]['driver_node_type_id'] == 'c5a.8xlarge'
 
@@ -680,7 +680,7 @@ class TestDatabaseConnectorCreateGateways:
 
         result = sqlserver_connector._create_gateways(df, 'project')
 
-        gateway_key = 'project_pipeline_project_gateway_test_01'
+        gateway_key = 'gateway_test_01'
         gateway = result['resources']['pipelines'][gateway_key]
         assert 'clusters' not in gateway
 
@@ -696,7 +696,7 @@ class TestDatabaseConnectorCreateGateways:
 
         result = sqlserver_connector._create_gateways(df, 'project')
 
-        gateway_key = 'project_pipeline_project_gateway_test_01'
+        gateway_key = 'gateway_test_01'
         gateway = result['resources']['pipelines'][gateway_key]
         assert gateway['tags'] == {'team': 'field-eng', 'demo': 'true'}
 
@@ -721,7 +721,7 @@ class TestDatabaseConnectorCreatePipelines:
 
         pipeline = result['resources']['pipelines']['pipeline_test_01']
         assert 'ingestion_gateway_id' in pipeline['ingestion_definition']
-        assert 'project_gateway_test_01' in pipeline['ingestion_definition']['ingestion_gateway_id']
+        assert 'gateway_test_01' in pipeline['ingestion_definition']['ingestion_gateway_id']
 
     def test_table_has_source_catalog_as_database(self, sqlserver_connector):
         """source_catalog should be the source_database for SQL Server."""
@@ -977,7 +977,7 @@ class TestGatewayValidation:
         })
 
         result = sqlserver_connector._create_gateways(df, 'project')
-        assert 'project_pipeline_project_gateway_g01' in result['resources']['pipelines']
+        assert 'gateway_g01' in result['resources']['pipelines']
 
 
 class TestGroupBasedConfiguration:

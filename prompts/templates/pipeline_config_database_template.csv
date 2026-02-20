@@ -1,2 +1,0 @@
-source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name,prefix,subgroup,schedule,gateway_catalog,gateway_schema,gateway_worker_type,gateway_driver_type
-mydb,public,customers,main,bronze,customers,my_db_connection,mygroup,01,0 */6 * * *,main,bronze,,

@@ -33,7 +33,7 @@ class TestSaaSConnectorLoadBalancing:
 
         result = salesforce_connector.generate_pipeline_config(df=df)
 
-        assert all(result['pipeline_group'] == 'sales_01')
+        assert all(result['pipeline_group'] == 'sales_01_p01')
 
     def test_respects_max_tables_per_pipeline(self, salesforce_connector):
         """Should split groups that exceed max_tables_per_pipeline."""
@@ -83,16 +83,16 @@ class TestSaaSConnectorLoadBalancing:
         )
 
         unique_groups = sorted(result['pipeline_group'].unique())
-        assert 'test_01_g01' in unique_groups
-        assert 'test_01_g02' in unique_groups
-        assert 'test_01_g03' in unique_groups
-        assert 'test_01_g04' in unique_groups
+        assert 'test_01_p01' in unique_groups
+        assert 'test_01_p02' in unique_groups
+        assert 'test_01_p03' in unique_groups
+        assert 'test_01_p04' in unique_groups
 
     def test_small_group_no_split(self, salesforce_connector, sample_salesforce_df):
-        """Groups smaller than max should not be split."""
+        """Groups smaller than max should still get suffix for stable naming."""
         df = salesforce_connector.load_and_normalize_input(
             df=sample_salesforce_df,
-            default_values={'prefix': 'test', 'subgroup': '01'}
+            default_values={'project_name': 'test', 'prefix': 'test', 'subgroup': '01'}
         )
 
         result = salesforce_connector.generate_pipeline_config(
@@ -102,7 +102,7 @@ class TestSaaSConnectorLoadBalancing:
 
         unique_groups = result['pipeline_group'].unique()
         assert len(unique_groups) == 1
-        assert unique_groups[0] == 'test_01'
+        assert unique_groups[0] == 'test_01_p01'
 
     def test_multiple_groups_handled_separately(self, salesforce_connector, multi_group_df):
         """Each prefix_subgroup combination should be handled independently."""
@@ -126,6 +126,7 @@ class TestSaaSConnectorLoadBalancing:
             'target_schema': ['salesforce'],
             'target_table_name': ['table'],
             'connection_name': ['conn'],
+            'project_name': ['test'],
             'prefix': ['test'],
             'subgroup': ['1'],  # Single digit
         })
@@ -133,7 +134,7 @@ class TestSaaSConnectorLoadBalancing:
         df = salesforce_connector.load_and_normalize_input(df=df)
         result = salesforce_connector.generate_pipeline_config(df=df)
 
-        assert result.loc[0, 'pipeline_group'] == 'test_01'
+        assert result.loc[0, 'pipeline_group'] == 'test_01_p01'
 
 
 class TestDatabaseConnectorLoadBalancing:
@@ -198,10 +199,10 @@ class TestDatabaseConnectorLoadBalancing:
         )
 
         unique_gateways = sorted(result['gateway'].unique())
-        # Should have suffixes like _gw01, _gw02, _gw03
-        assert 'test_01_gw01' in unique_gateways
-        assert 'test_01_gw02' in unique_gateways
-        assert 'test_01_gw03' in unique_gateways
+        # Should have suffixes like _g01, _g02, _g03
+        assert 'test_01_g01' in unique_gateways
+        assert 'test_01_g02' in unique_gateways
+        assert 'test_01_g03' in unique_gateways
 
     def test_pipeline_naming_within_gateway(self, sqlserver_connector):
         """Pipeline names should include gateway and pipeline suffix when split."""
@@ -266,10 +267,10 @@ class TestDatabaseConnectorLoadBalancing:
                 assert pipeline_count <= 75
 
     def test_small_dataset_no_split(self, sqlserver_connector, sample_sqlserver_df):
-        """Small datasets should not be split."""
+        """Small datasets should still get suffixes for stable naming."""
         df = sqlserver_connector.load_and_normalize_input(
             df=sample_sqlserver_df,
-            default_values={'prefix': 'test', 'subgroup': '01'}
+            default_values={'project_name': 'test', 'prefix': 'test', 'subgroup': '01'}
         )
 
         result = sqlserver_connector.generate_pipeline_config(
@@ -280,8 +281,8 @@ class TestDatabaseConnectorLoadBalancing:
 
         assert len(result['gateway'].unique()) == 1
         assert len(result['pipeline_group'].unique()) == 1
-        assert result['gateway'].iloc[0] == 'test_01'
-        assert result['pipeline_group'].iloc[0] == 'test_01'
+        assert result['gateway'].iloc[0] == 'test_01_g01'
+        assert result['pipeline_group'].iloc[0] == 'test_01_g01_p01'
 
 
 class TestResourceNaming:
@@ -298,10 +299,10 @@ class TestResourceNaming:
         assert 'task_key' in result
 
     def test_pipeline_name_format(self, salesforce_connector):
-        """Pipeline name should be human-readable."""
+        """Pipeline name should match pipeline_group."""
         result = salesforce_connector._generate_resource_names('sales_01')
 
-        assert result['pipeline_name'] == 'Ingestion - sales_01'
+        assert result['pipeline_name'] == 'sales_01'
 
     def test_pipeline_resource_name_format(self, salesforce_connector):
         """Pipeline resource name should be valid identifier."""
@@ -316,10 +317,10 @@ class TestResourceNaming:
         assert result['job_name'] == 'job_sales_01'
 
     def test_job_display_name_format(self, salesforce_connector):
-        """Job display name should be human-readable."""
+        """Job display name should match pipeline group."""
         result = salesforce_connector._generate_resource_names('sales_01')
 
-        assert result['job_display_name'] == 'Pipeline Scheduler - sales_01'
+        assert result['job_display_name'] == 'sales_01'
 
 
 class TestSplitGroupsBySize:
@@ -340,8 +341,8 @@ class TestSplitGroupsBySize:
             suffix='g'
         )
 
-        assert list(result[result['group_col'] == 'A']['result'].unique()) == ['A']
-        assert list(result[result['group_col'] == 'B']['result'].unique()) == ['B']
+        assert list(result[result['group_col'] == 'A']['result'].unique()) == ['A_g01']
+        assert list(result[result['group_col'] == 'B']['result'].unique()) == ['B_g01']
 
     def test_split_when_over_limit(self, salesforce_connector):
         """Groups over limit should be split."""
