@@ -29,7 +29,6 @@ Usage:
 import logging
 import json
 import re
-import time
 from abc import ABC, abstractmethod
 import pandas as pd
 import yaml
@@ -38,7 +37,7 @@ from pathlib import Path
 import sys
 
 # Import shared utilities
-from .utilities import load_input_csv, convert_cron_to_quartz
+from .utilities import convert_cron_to_quartz
 
 # Import custom exceptions
 from .exceptions import ConfigurationError, ValidationError, YAMLGenerationError
@@ -119,7 +118,6 @@ class BaseConnector(ABC):
 
     def __init__(self):
         """Initialize the connector with its configuration."""
-        self._validate_configuration()
 
     def _validate_group_consistency(
         self,
@@ -212,16 +210,6 @@ class BaseConnector(ABC):
             }
         """
         pass
-
-    @property
-    def default_project_name(self) -> str:
-        """
-        Return default project name if not provided.
-
-        Uses connector_type as the default project name suffix.
-        Override in subclass if different default is needed.
-        """
-        return f"{self.connector_type}_ingestion"
 
     @property
     def supported_scd_types(self) -> list:
@@ -372,44 +360,23 @@ class BaseConnector(ABC):
 
         return name
 
-    def _write_yaml_file(
-        self,
-        path: Path,
-        content: dict,
-        retries: int = 3,
-        retry_delay: float = 0.5
-    ) -> None:
+    def _write_yaml_file(self, path: Path, content: dict) -> None:
         """
-        Write YAML file with retry logic and error handling.
+        Write YAML file.
 
         Args:
             path: Path to write the YAML file
             content: Dictionary content to serialize as YAML
-            retries: Number of retry attempts (default: 3)
-            retry_delay: Delay between retries in seconds (default: 0.5)
 
         Raises:
-            YAMLGenerationError: If file write fails after all retries
+            YAMLGenerationError: If file write fails
         """
-        last_error = None
-
-        for attempt in range(retries):
-            try:
-                with open(path, 'w') as f:
-                    yaml.dump(content, f, sort_keys=False, default_flow_style=False, indent=2)
-                logger.debug(f"Written: {path}")
-                return
-            except (IOError, OSError, yaml.YAMLError) as e:
-                last_error = e
-                if attempt < retries - 1:
-                    logger.warning(
-                        f"Retry {attempt + 1}/{retries} writing {path}: {e}"
-                    )
-                    time.sleep(retry_delay)
-
-        raise YAMLGenerationError(
-            f"Failed to write {path} after {retries} attempts: {last_error}"
-        )
+        try:
+            with open(path, 'w') as f:
+                yaml.dump(content, f, sort_keys=False, default_flow_style=False, indent=2)
+            logger.debug(f"Written: {path}")
+        except (IOError, OSError, yaml.YAMLError) as e:
+            raise YAMLGenerationError(f"Failed to write {path}: {e}")
 
     def _validate_scd_type(self, scd_type: str, item_name: str) -> str:
         """
@@ -440,23 +407,6 @@ class BaseConnector(ABC):
             return None
 
         return scd_type
-
-    def _validate_configuration(self):
-        """
-        Validate that the connector is properly configured.
-
-        Ensures that all abstract properties have been implemented in the subclass.
-        Raises TypeError if connector is not properly configured.
-        """
-        # This will fail if abstract properties aren't implemented
-        try:
-            _ = self.connector_type
-            _ = self.required_columns
-            _ = self.default_values
-        except NotImplementedError:
-            raise TypeError(
-                f"{self.__class__.__name__} must implement all abstract properties"
-            )
 
     def _process_input_config(
         self,
@@ -1359,6 +1309,56 @@ class DatabaseConnector(BaseConnector):
                 pipelines[names["pipeline_resource_name"]]["tags"] = tags
 
         return {'resources': {'pipelines': pipelines}}
+
+    def generate_yaml_files(
+        self,
+        df: pd.DataFrame,
+        output_dir: str,
+        targets: Dict[str, Dict]
+    ):
+        """
+        Generate YAML files for database connectors with gateways.
+
+        Creates a DAB structure for each project:
+        - databricks.yml (root configuration)
+        - resources/gateways.yml (gateway definitions)
+        - resources/pipelines.yml (pipeline definitions)
+        - resources/jobs.yml (scheduled jobs)
+
+        Args:
+            df: DataFrame with pipeline configuration including 'gateway' column
+            output_dir: Output directory for DAB files
+            targets: Dictionary of target environments
+
+        Raises:
+            YAMLGenerationError: If file writing fails
+        """
+        logger.info(f"Generating DAB YAML for {self.connector_type}")
+
+        for project_name, project_df in df.groupby('project_name'):
+            project_output_dir = Path(output_dir) / str(project_name)
+            logger.info(f"Creating DAB for project: {project_name}")
+            logger.debug(f"  Tables: {len(project_df)}, pipelines: {project_df['pipeline_group'].nunique()}")
+
+            resources_dir = project_output_dir / 'resources'
+            try:
+                resources_dir.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                raise YAMLGenerationError(f"Failed to create directory {resources_dir}: {e}")
+
+            gateways_yaml = self._create_gateways(project_df, str(project_name))
+            pipelines_yaml = self._create_pipelines(project_df, str(project_name))
+            jobs_yaml = self._create_jobs(project_df, str(project_name))
+            databricks_yaml = self._create_databricks_yml(
+                project_name=str(project_name),
+                targets=targets,
+                default_target='dev'
+            )
+
+            self._write_yaml_file(project_output_dir / 'databricks.yml', databricks_yaml)
+            self._write_yaml_file(resources_dir / 'gateways.yml', gateways_yaml)
+            self._write_yaml_file(resources_dir / 'pipelines.yml', pipelines_yaml)
+            self._write_yaml_file(resources_dir / 'jobs.yml', jobs_yaml)
 
 
 class SaaSConnector(BaseConnector):

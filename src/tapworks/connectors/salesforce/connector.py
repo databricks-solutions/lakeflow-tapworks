@@ -6,14 +6,10 @@ SaaSConnector interface for Salesforce data sources.
 """
 
 import logging
-import sys
 import pandas as pd
-from pathlib import Path
 from typing import Dict
 from collections import defaultdict
 
-# Add parent directory to path to import utilities
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from tapworks.core import SaaSConnector
 
 logger = logging.getLogger(__name__)
@@ -79,11 +75,6 @@ class SalesforceConnector(SaaSConnector):
         return {
             'schedule': '*/15 * * * *'
         }
-
-    @property
-    def default_project_name(self) -> str:
-        """Return default project name for Salesforce connector."""
-        return 'sfdc_ingestion'
 
     @property
     def supported_scd_types(self) -> list:

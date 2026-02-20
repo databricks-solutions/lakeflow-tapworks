@@ -111,6 +111,34 @@ def sample_workday_df():
 
 
 @pytest.fixture
+def sample_servicenow_df():
+    """Sample ServiceNow input dataframe with minimal required columns."""
+    return pd.DataFrame({
+        'source_database': ['SERVICENOW', 'SERVICENOW', 'SERVICENOW'],
+        'source_schema': ['default', 'default', 'default'],
+        'source_table_name': ['sys_user', 'incident', 'change_request'],
+        'target_catalog': ['main', 'main', 'main'],
+        'target_schema': ['servicenow', 'servicenow', 'servicenow'],
+        'target_table_name': ['sys_user', 'incident', 'change_request'],
+        'connection_name': ['snow_conn', 'snow_conn', 'snow_conn'],
+    })
+
+
+@pytest.fixture
+def sample_postgresql_df():
+    """Sample PostgreSQL input dataframe with minimal required columns."""
+    return pd.DataFrame({
+        'source_database': ['app_db', 'app_db', 'app_db'],
+        'source_schema': ['public', 'public', 'public'],
+        'source_table_name': ['users', 'orders', 'products'],
+        'target_catalog': ['main', 'main', 'main'],
+        'target_schema': ['bronze', 'bronze', 'bronze'],
+        'target_table_name': ['users', 'orders', 'products'],
+        'connection_name': ['pg_conn', 'pg_conn', 'pg_conn'],
+    })
+
+
+@pytest.fixture
 def large_df_for_load_balancing():
     """Large dataframe for testing load balancing splits."""
     num_rows = 600
