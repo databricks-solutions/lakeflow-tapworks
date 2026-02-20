@@ -75,7 +75,6 @@ class TestConnectorRegistry:
         assert info['type'] == 'salesforce'
         assert 'required_columns' in info
         assert 'default_values' in info
-        assert 'default_project_name' in info
         assert 'supported_scd_types' in info
 
 

@@ -6,15 +6,11 @@ SaaSConnector interface for Workday Reports data sources.
 """
 
 import logging
-import sys
 import pandas as pd
-from pathlib import Path
 from typing import Dict
 from collections import defaultdict
 
-# Add parent directory to path to import utilities
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from tapworks.core import SaaSConnector
+from tapworks.core import SaaSConnector, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -79,11 +75,6 @@ class WorkdayReportsConnector(SaaSConnector):
         return {
             "schedule": "0 */6 * * *",  # Every 6 hours by default
         }
-
-    @property
-    def default_project_name(self) -> str:
-        """Return default project name for Workday Reports connector."""
-        return "workday_reports_ingestion"
 
     @property
     def supported_scd_types(self) -> list:
@@ -165,7 +156,7 @@ class WorkdayReportsConnector(SaaSConnector):
                     ]
                     table_config["primary_keys"] = primary_keys
                 else:
-                    raise ValueError(
+                    raise ValidationError(
                         f"Missing required primary_keys for report '{item['target_table_name']}'. "
                         f"Workday Reports require at least one primary key column. "
                         f"Please specify primary_keys in your CSV (e.g., 'Employee_ID' or 'Worker_ID,Effective_Date')"

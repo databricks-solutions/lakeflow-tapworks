@@ -5,17 +5,10 @@ This module provides the PostgreSQLConnector class which implements the
 DatabaseConnector interface for PostgreSQL data sources.
 """
 
-import sys
-import os
-import yaml
 import logging
-import pandas as pd
-from pathlib import Path
 from typing import Dict
 
-# Add parent directory to path to import core utilities
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from tapworks.core import DatabaseConnector, YAMLGenerationError
+from tapworks.core import DatabaseConnector
 
 # Configure module logger
 logger = logging.getLogger(__name__)
@@ -77,55 +70,8 @@ class PostgreSQLConnector(DatabaseConnector):
         }
 
     @property
-    def default_project_name(self) -> str:
-        return "postgresql_ingestion"
-
-    @property
     def supported_scd_types(self) -> list:
         """Return supported SCD types for PostgreSQL connector."""
         return ["SCD_TYPE_1", "SCD_TYPE_2"]
 
-    def generate_yaml_files(self, df: pd.DataFrame, output_dir: str, targets: Dict[str, Dict]):
-        """
-        Generate YAML files for PostgreSQL connector with gateways.
-
-        Creates a complete DAB structure per project_name:
-        - databricks.yml (root configuration)
-        - resources/gateways.yml (gateway definitions)
-        - resources/pipelines.yml (pipeline definitions)
-        - resources/jobs.yml (scheduled jobs)
-
-        Raises:
-            YAMLGenerationError: If file writing fails
-        """
-        for project, project_df in df.groupby("project_name"):
-            project_output_dir = Path(output_dir) / str(project)
-            resources_dir = project_output_dir / "resources"
-
-            try:
-                resources_dir.mkdir(parents=True, exist_ok=True)
-            except OSError as e:
-                raise YAMLGenerationError(f"Failed to create directory {resources_dir}: {e}")
-
-            gateways_yaml = self._create_gateways(project_df, str(project))
-            pipelines_yaml = self._create_pipelines(project_df, str(project))
-            jobs_yaml = self._create_jobs(project_df, str(project))
-            databricks_yaml = self._create_databricks_yml(
-                project_name=str(project),
-                targets=targets,
-                default_target="dev",
-            )
-
-            # Write YAML files with retry logic
-            databricks_yml_path = project_output_dir / "databricks.yml"
-            gateway_yml_path = resources_dir / "gateways.yml"
-            pipeline_yml_path = resources_dir / "pipelines.yml"
-            jobs_yml_path = resources_dir / "jobs.yml"
-
-            self._write_yaml_file(databricks_yml_path, databricks_yaml)
-            self._write_yaml_file(gateway_yml_path, gateways_yaml)
-            self._write_yaml_file(pipeline_yml_path, pipelines_yaml)
-            self._write_yaml_file(jobs_yml_path, jobs_yaml)
-
-            logger.info(f"Created DAB for project: {project}")
 

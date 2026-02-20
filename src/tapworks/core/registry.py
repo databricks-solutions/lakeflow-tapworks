@@ -123,6 +123,5 @@ def get_connector_info(name: str) -> dict:
         'type': connector.connector_type,
         'required_columns': connector.required_columns,
         'default_values': connector.default_values,
-        'default_project_name': connector.default_project_name,
         'supported_scd_types': connector.supported_scd_types,
     }
