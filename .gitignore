@@ -87,5 +87,8 @@ output/
 dab_project/
 **/deployment/
 
+# Claude Code
+.claude/
+
 # Local planning docs
 REFACTOR_PLAN.md

@@ -715,8 +715,8 @@ class BaseConnector(ABC):
             Normalized DataFrame with all required columns and defaults applied
         """
         # Build connector defaults (flat format)
-        built_in_defaults = {'project_name': self.default_project_name}
-        connector_defaults = {**built_in_defaults, **self.default_values}
+        # Note: project_name is required and has no default
+        connector_defaults = dict(self.default_values)
 
         # Merge connector defaults with user-provided defaults
         # Handle both flat and grouped user defaults
@@ -761,6 +761,19 @@ class BaseConnector(ABC):
         Returns:
             DataFrame with connector-specific normalization applied
         """
+        # Validate project_name is provided (required field)
+        if 'project_name' not in df.columns:
+            raise ConfigurationError(
+                "Missing required field: project_name\n"
+                "Provide via: input config column, default_values, or override_config"
+            )
+        missing_project = df['project_name'].isna() | (df['project_name'].astype(str).str.strip() == '')
+        if missing_project.any():
+            raise ConfigurationError(
+                "Missing required field: project_name (some rows have empty values)\n"
+                "Provide via: input config column, default_values, or override_config"
+            )
+
         # Handle prefix defaults (common to all connectors)
         if 'prefix' not in df.columns:
             df['prefix'] = df['project_name']
@@ -823,10 +836,10 @@ class BaseConnector(ABC):
         self._validate_resource_name(job_name, "job")
 
         return {
-            'pipeline_name': f"Ingestion - {pipeline_group}",
+            'pipeline_name': pipeline_group,
             'pipeline_resource_name': pipeline_resource_name,
             'job_name': job_name,
-            'job_display_name': f"Pipeline Scheduler - {pipeline_group}",
+            'job_display_name': pipeline_group,
             'task_key': "run_pipeline"
         }
 
@@ -849,7 +862,7 @@ class BaseConnector(ABC):
             group_column: Column containing group identifiers to split
             max_size: Maximum rows per group
             output_column: Column name for output group names
-            suffix: Suffix pattern for split groups ('g' for pipelines, 'gw' for gateways)
+            suffix: Suffix pattern for split groups ('p' for pipelines, 'g' for gateways)
 
         Returns:
             DataFrame with output_column populated with split group names
@@ -871,8 +884,8 @@ class BaseConnector(ABC):
                     chunk_name = f"{group_name}_{suffix}{i+1:02d}"
                     df.loc[chunk_indices, output_column] = chunk_name
             else:
-                # No split needed
-                df.loc[group_df.index, output_column] = group_name
+                # No split needed - still add suffix for stable naming
+                df.loc[group_df.index, output_column] = f"{group_name}_{suffix}01"
 
         return df
 
@@ -1204,7 +1217,7 @@ class DatabaseConnector(BaseConnector):
             group_column='base_group',
             max_size=max_tables_per_gateway,
             output_column='gateway',
-            suffix='gw'
+            suffix='g'
         )
 
         # Step 2: Split each gateway by pipeline capacity
@@ -1213,7 +1226,7 @@ class DatabaseConnector(BaseConnector):
             group_column='gateway',
             max_size=max_tables_per_pipeline,
             output_column='pipeline_group',
-            suffix='g'
+            suffix='p'
         )
 
         # Drop temporary base_group column
@@ -1246,8 +1259,8 @@ class DatabaseConnector(BaseConnector):
         unique_gateways = df.groupby('gateway').first()
 
         for gateway_id, row in unique_gateways.iterrows():
-            gateway_name = f"{project_name}_gateway_{gateway_id}"
-            pipeline_name = f"{project_name}_pipeline_{gateway_name}"
+            gateway_name = f"{gateway_id}"
+            gateway_resource_name = f"gateway_{gateway_id}"
 
             gateway_catalog = row['gateway_catalog']
             gateway_schema = row['gateway_schema']
@@ -1284,7 +1297,7 @@ class DatabaseConnector(BaseConnector):
                     cluster_config['driver_node_type_id'] = driver_type
                 gateway_config['clusters'] = [cluster_config]
 
-            gateways[pipeline_name] = gateway_config
+            gateways[gateway_resource_name] = gateway_config
 
         return {'resources': {'pipelines': gateways}}
 
@@ -1333,7 +1346,7 @@ class DatabaseConnector(BaseConnector):
             pipelines[names['pipeline_resource_name']] = {
                 'name': names['pipeline_name'],
                 'ingestion_definition': {
-                    'ingestion_gateway_id': f"${{resources.pipelines.{project_name}_pipeline_{project_name}_gateway_{gateway_id}.id}}",
+                    'ingestion_gateway_id': f"${{resources.pipelines.gateway_{gateway_id}.id}}",
                     'objects': tables
                 },
                 'schema': target_schema,
@@ -1423,7 +1436,7 @@ class SaaSConnector(BaseConnector):
             group_column='base_group',
             max_size=max_tables_per_pipeline,
             output_column='pipeline_group',
-            suffix='g'
+            suffix='p'
         )
 
         # Drop temporary base_group column
