@@ -149,7 +149,7 @@ Tables are automatically split based on configurable limits (default: 250 tables
                     ▼                                   ▼
             ┌───────────────┐                   ┌───────────────┐
             │    Gateway    │                   │    Gateway    │
-            │ sales_01_gw01 │                   │ sales_01_gw02 │
+            │ sales_01_g01  │                   │ sales_01_g02  │
             │ (500 tables)  │                   │ (100 tables)  │
             └───────┬───────┘                   └───────┬───────┘
                     │                                   │
@@ -158,7 +158,7 @@ Tables are automatically split based on configurable limits (default: 250 tables
    ┌───────────────┐   ┌───────────────┐        ┌───────────────┐
    │   Pipeline    │   │   Pipeline    │        │   Pipeline    │
    │  sales_01_    │   │  sales_01_    │        │  sales_01_    │
-   │  gw01_g01     │   │  gw01_g02     │        │  gw02_g01     │
+   │  g01_p01      │   │  g01_p02      │        │  g02_p01      │
    │ (250 tables)  │   │ (250 tables)  │        │ (100 tables)  │
    └───────────────┘   └───────────────┘        └───────────────┘
 ```
@@ -179,28 +179,41 @@ Use subgroups to isolate specific tables (e.g., critical or high-volume tables).
           ▼                               ▼
   ┌───────────────┐       ┌───────────────┬───────────────┬───────────────┐
   │   Pipeline    │       │   Pipeline    │   Pipeline    │   Pipeline    │
-  │ sales_01_g01  │       │ sales_02_g01  │ sales_02_g02  │ sales_02_g03  │
+  │ sales_01_p01  │       │ sales_02_p01  │ sales_02_p02  │ sales_02_p03  │
   │  (5 tables)   │       │ (250 tables)  │ (250 tables)  │  (95 tables)  │
   └───────────────┘       └───────────────┴───────────────┴───────────────┘
 ```
 
 ## Resource Naming
 
-Tapworks generates DAB resource names from `project_name`, `prefix`, and `subgroup`:
+Tapworks generates DAB resource names from `project_name`, `prefix`, and `subgroup`. Suffixes are always present for stable naming — adding more tables never renames existing resources.
 
 ```
 project_name  →  required, no default
 prefix        →  falls back to project_name if not specified
 subgroup      →  defaults to "01" if not specified
-pipeline_group = {prefix}_{subgroup}
+base_group    =  {prefix}_{subgroup}
 ```
+
+**Database connector** (with gateways):
 
 | Resource | Pattern | Example |
 |---|---|---|
-| Pipeline (resource name) | `pipeline_{pipeline_group}` | `pipeline_sales_02` |
-| Pipeline (display name) | `{pipeline_group}` | `sales_02` |
-| Job (resource name) | `job_{pipeline_group}` | `job_sales_02` |
-| Job (display name) | `{pipeline_group}_scheduler` | `sales_02_scheduler` |
+| Gateway (resource key) | `gateway_{base_group}_g{NN}` | `gateway_sales_01_g01` |
+| Gateway (display name) | `{base_group}_g{NN}` | `sales_01_g01` |
+| Pipeline (resource name) | `pipeline_{base_group}_g{NN}_p{NN}` | `pipeline_sales_01_g01_p01` |
+| Pipeline (display name) | `{base_group}_g{NN}_p{NN}` | `sales_01_g01_p01` |
+| Job (resource name) | `job_{base_group}_g{NN}_p{NN}` | `job_sales_01_g01_p01` |
+| Job (display name) | `{base_group}_g{NN}_p{NN}` | `sales_01_g01_p01` |
+
+**SaaS connector** (no gateways):
+
+| Resource | Pattern | Example |
+|---|---|---|
+| Pipeline (resource name) | `pipeline_{base_group}_p{NN}` | `pipeline_sales_01_p01` |
+| Pipeline (display name) | `{base_group}_p{NN}` | `sales_01_p01` |
+| Job (resource name) | `job_{base_group}_p{NN}` | `job_sales_01_p01` |
+| Job (display name) | `{base_group}_p{NN}` | `sales_01_p01` |
 
 > **Important:** Prefixes must be unique per workspace. Using the same prefix across different projects deployed to the same workspace will cause resource name collisions. Use distinct prefixes (or distinct `project_name` values if relying on the prefix fallback) for each project.
 
