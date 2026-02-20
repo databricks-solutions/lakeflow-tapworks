@@ -26,21 +26,34 @@ run_pipeline_generation(
 
 ## Resource Naming
 
-Resource names are derived from `project_name`, `prefix`, and `subgroup`:
+Resource names are derived from `project_name`, `prefix`, and `subgroup`. Suffixes (`g` for gateway groups, `p` for pipelines) are always present for stable naming.
 
 ```
 project_name  →  required, no default
 prefix        →  falls back to project_name if not specified
 subgroup      →  defaults to "01" if not specified
-pipeline_group = {prefix}_{subgroup}
+base_group    =  {prefix}_{subgroup}
 ```
+
+**Database connector:**
 
 | Resource | Pattern | Example |
 |---|---|---|
-| Pipeline (resource name) | `pipeline_{pipeline_group}` | `pipeline_sales_02` |
-| Pipeline (display name) | `{pipeline_group}` | `sales_02` |
-| Job (resource name) | `job_{pipeline_group}` | `job_sales_02` |
-| Job (display name) | `{pipeline_group}_scheduler` | `sales_02_scheduler` |
+| Gateway (resource key) | `gateway_{base_group}_g{NN}` | `gateway_sales_01_g01` |
+| Gateway (display name) | `{base_group}_g{NN}` | `sales_01_g01` |
+| Pipeline (resource name) | `pipeline_{base_group}_g{NN}_p{NN}` | `pipeline_sales_01_g01_p01` |
+| Pipeline (display name) | `{base_group}_g{NN}_p{NN}` | `sales_01_g01_p01` |
+| Job (resource name) | `job_{base_group}_g{NN}_p{NN}` | `job_sales_01_g01_p01` |
+| Job (display name) | `{base_group}_g{NN}_p{NN}` | `sales_01_g01_p01` |
+
+**SaaS connector:**
+
+| Resource | Pattern | Example |
+|---|---|---|
+| Pipeline (resource name) | `pipeline_{base_group}_p{NN}` | `pipeline_sales_01_p01` |
+| Pipeline (display name) | `{base_group}_p{NN}` | `sales_01_p01` |
+| Job (resource name) | `job_{base_group}_p{NN}` | `job_sales_01_p01` |
+| Job (display name) | `{base_group}_p{NN}` | `sales_01_p01` |
 
 Resource names are validated to contain only alphanumeric characters, underscores, and hyphens.
 

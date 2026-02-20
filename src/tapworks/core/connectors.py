@@ -839,7 +839,7 @@ class BaseConnector(ABC):
             'pipeline_name': pipeline_group,
             'pipeline_resource_name': pipeline_resource_name,
             'job_name': job_name,
-            'job_display_name': f"{pipeline_group}_scheduler",
+            'job_display_name': pipeline_group,
             'task_key': "run_pipeline"
         }
 
@@ -862,7 +862,7 @@ class BaseConnector(ABC):
             group_column: Column containing group identifiers to split
             max_size: Maximum rows per group
             output_column: Column name for output group names
-            suffix: Suffix pattern for split groups ('g' for pipelines, 'gw' for gateways)
+            suffix: Suffix pattern for split groups ('p' for pipelines, 'g' for gateways)
 
         Returns:
             DataFrame with output_column populated with split group names
@@ -884,8 +884,8 @@ class BaseConnector(ABC):
                     chunk_name = f"{group_name}_{suffix}{i+1:02d}"
                     df.loc[chunk_indices, output_column] = chunk_name
             else:
-                # No split needed
-                df.loc[group_df.index, output_column] = group_name
+                # No split needed - still add suffix for stable naming
+                df.loc[group_df.index, output_column] = f"{group_name}_{suffix}01"
 
         return df
 
@@ -1217,7 +1217,7 @@ class DatabaseConnector(BaseConnector):
             group_column='base_group',
             max_size=max_tables_per_gateway,
             output_column='gateway',
-            suffix='gw'
+            suffix='g'
         )
 
         # Step 2: Split each gateway by pipeline capacity
@@ -1226,7 +1226,7 @@ class DatabaseConnector(BaseConnector):
             group_column='gateway',
             max_size=max_tables_per_pipeline,
             output_column='pipeline_group',
-            suffix='g'
+            suffix='p'
         )
 
         # Drop temporary base_group column
@@ -1259,7 +1259,7 @@ class DatabaseConnector(BaseConnector):
         unique_gateways = df.groupby('gateway').first()
 
         for gateway_id, row in unique_gateways.iterrows():
-            gateway_name = f"gateway_{gateway_id}"
+            gateway_name = f"{gateway_id}"
             gateway_resource_name = f"gateway_{gateway_id}"
 
             gateway_catalog = row['gateway_catalog']
@@ -1436,7 +1436,7 @@ class SaaSConnector(BaseConnector):
             group_column='base_group',
             max_size=max_tables_per_pipeline,
             output_column='pipeline_group',
-            suffix='g'
+            suffix='p'
         )
 
         # Drop temporary base_group column
