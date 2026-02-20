@@ -135,6 +135,22 @@ class GoogleAnalyticsConnector(SaaSConnector):
                             "destination_table": f"{source_schema}_{table}"
                         }
                     }
+
+                    table_config = {}
+
+                    if 'include_columns' in row and pd.notna(row['include_columns']) and str(row['include_columns']).strip():
+                        table_config['include_columns'] = [c.strip() for c in str(row['include_columns']).split(',')]
+
+                    if 'exclude_columns' in row and pd.notna(row['exclude_columns']) and str(row['exclude_columns']).strip():
+                        table_config['exclude_columns'] = [c.strip() for c in str(row['exclude_columns']).split(',')]
+
+                    scd_type = self._validate_scd_type(row.get('scd_type'), table)
+                    if scd_type:
+                        table_config['scd_type'] = scd_type
+
+                    if table_config:
+                        table_obj['table']['table_configuration'] = table_config
+
                     ingestion_objects.append(table_obj)
 
             pipeline_def = {
