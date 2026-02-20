@@ -66,7 +66,6 @@ class TestProcessInputConfig:
         assert 'source_table_name' in str(exc_info.value)
         assert 'connection_name' in str(exc_info.value)
 
-
 class TestDefaultValues:
     """Tests for default value application."""
 

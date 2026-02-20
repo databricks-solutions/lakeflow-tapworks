@@ -37,7 +37,7 @@ from .registry import (
     CONNECTORS,
 )
 from .runner import run_pipeline_generation
-from .utilities import load_input_csv, convert_cron_to_quartz
+from .utilities import convert_cron_to_quartz
 
 __all__ = [
     # Base classes
@@ -59,6 +59,5 @@ __all__ = [
     # Runner
     'run_pipeline_generation',
     # Utilities
-    'load_input_csv',
     'convert_cron_to_quartz',
 ]
