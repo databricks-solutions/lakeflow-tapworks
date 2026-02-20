@@ -1282,16 +1282,35 @@ class DatabaseConnector(BaseConnector):
             target_catalog = group_df.iloc[0]['target_catalog']
             target_schema = group_df.iloc[0]['target_schema']
 
-            tables = [{
-                'table': {
-                    'source_catalog': row['source_database'],
-                    'source_schema': row['source_schema'],
-                    'source_table': row['source_table_name'],
-                    'destination_catalog': row['target_catalog'],
-                    'destination_schema': row['target_schema'],
-                    'destination_table': row['target_table_name']
+            tables = []
+            for _, row in group_df.iterrows():
+                table_entry = {
+                    'table': {
+                        'source_catalog': row['source_database'],
+                        'source_schema': row['source_schema'],
+                        'source_table': row['source_table_name'],
+                        'destination_catalog': row['target_catalog'],
+                        'destination_schema': row['target_schema'],
+                        'destination_table': row['target_table_name']
+                    }
                 }
-            } for _, row in group_df.iterrows()]
+
+                table_config = {}
+
+                if 'include_columns' in row and pd.notna(row['include_columns']) and str(row['include_columns']).strip():
+                    table_config['include_columns'] = [c.strip() for c in str(row['include_columns']).split(',')]
+
+                if 'exclude_columns' in row and pd.notna(row['exclude_columns']) and str(row['exclude_columns']).strip():
+                    table_config['exclude_columns'] = [c.strip() for c in str(row['exclude_columns']).split(',')]
+
+                scd_type = self._validate_scd_type(row.get('scd_type'), row['source_table_name'])
+                if scd_type:
+                    table_config['scd_type'] = scd_type
+
+                if table_config:
+                    table_entry['table']['table_configuration'] = table_config
+
+                tables.append(table_entry)
 
             pipelines[names['pipeline_resource_name']] = {
                 'name': names['pipeline_name'],
