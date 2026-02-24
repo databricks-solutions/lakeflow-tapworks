@@ -421,7 +421,8 @@ class TestErrorHandling:
             salesforce_connector.run_complete_pipeline_generation(
                 df=incomplete_df,
                 output_dir=str(temp_output_dir),
-                targets=sample_targets_minimal
+                targets=sample_targets_minimal,
+                default_values={'project_name': 'test'}
             )
 
     def test_empty_dataframe_error(
