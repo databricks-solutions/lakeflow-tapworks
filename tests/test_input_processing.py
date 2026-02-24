@@ -45,9 +45,9 @@ class TestProcessInputConfig:
         })
 
         with pytest.raises(ConfigurationError, match="Missing required columns"):
-            salesforce_connector._process_input_config(
+            salesforce_connector.load_and_normalize_input(
                 df=incomplete_df,
-                required_columns=salesforce_connector.required_columns
+                default_values={'project_name': 'test'}
             )
 
     def test_error_message_lists_missing_columns(self, salesforce_connector):
@@ -57,9 +57,9 @@ class TestProcessInputConfig:
         })
 
         with pytest.raises(ConfigurationError) as exc_info:
-            salesforce_connector._process_input_config(
+            salesforce_connector.load_and_normalize_input(
                 df=incomplete_df,
-                required_columns=salesforce_connector.required_columns
+                default_values={'project_name': 'test'}
             )
 
         # Check that missing columns are mentioned
@@ -226,14 +226,14 @@ class TestLoadAndNormalizeInput:
 
     def test_user_defaults_override_connector_defaults(self, salesforce_connector, sample_salesforce_df):
         """User-provided defaults should override connector defaults."""
-        user_defaults = {'project_name': 'test_project', 'schedule': 'user_schedule'}
+        user_defaults = {'project_name': 'test_project', 'schedule': '0 0 * * *'}
 
         result = salesforce_connector.load_and_normalize_input(
             df=sample_salesforce_df,
             default_values=user_defaults
         )
 
-        assert all(result['schedule'] == 'user_schedule')
+        assert all(result['schedule'] == '0 0 * * *')
 
     def test_project_name_required(self, salesforce_connector):
         """Should raise error when project_name is missing."""
@@ -528,3 +528,143 @@ class TestSubgroupValidation:
 
         with pytest.raises(ValidationError, match="Mixed subgroup usage"):
             salesforce_connector.load_and_normalize_input(df=df)
+
+
+class TestValidateConfig:
+    """Tests for the _validate_config method (called via load_and_normalize_input)."""
+
+    def test_required_values_empty_raises_error(self, salesforce_connector):
+        """Should raise ValidationError when required column has empty values."""
+        from tapworks.core import ValidationError
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', ''],  # Empty value in required column
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['sfdc_conn', 'sfdc_conn'],
+            'project_name': ['test', 'test'],
+        })
+
+        with pytest.raises(ValidationError, match="Required columns have empty values"):
+            salesforce_connector.load_and_normalize_input(df=df)
+
+    def test_duplicate_rows_warns(self, salesforce_connector, caplog):
+        """Should log warning for duplicate source rows."""
+        import logging
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Account'],  # Duplicate
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'account_copy'],
+            'connection_name': ['sfdc_conn', 'sfdc_conn'],
+            'project_name': ['test', 'test'],
+        })
+
+        with caplog.at_level(logging.WARNING):
+            salesforce_connector.load_and_normalize_input(df=df)
+
+        assert 'Duplicate source rows detected' in caplog.text
+
+    def test_invalid_chars_in_target_names(self, salesforce_connector):
+        """Should raise ValidationError for invalid characters in target names."""
+        from tapworks.core import ValidationError
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce'],
+            'source_schema': ['standard'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['my table!'],  # Invalid chars (space + !)
+            'connection_name': ['sfdc_conn'],
+            'project_name': ['test'],
+        })
+
+        with pytest.raises(ValidationError, match="Invalid characters"):
+            salesforce_connector.load_and_normalize_input(df=df)
+
+    def test_include_and_exclude_mutually_exclusive(self, salesforce_connector):
+        """Should raise ValidationError when both include and exclude columns are set."""
+        from tapworks.core import ValidationError
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce'],
+            'source_schema': ['standard'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['account'],
+            'connection_name': ['sfdc_conn'],
+            'project_name': ['test'],
+            'include_columns': ['Id,Name'],
+            'exclude_columns': ['SystemModstamp'],
+        })
+
+        with pytest.raises(ValidationError, match="mutually exclusive"):
+            salesforce_connector.load_and_normalize_input(df=df)
+
+    def test_invalid_cron_raises_error(self, salesforce_connector):
+        """Should raise ValidationError for invalid cron expressions."""
+        from tapworks.core import ValidationError
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce'],
+            'source_schema': ['standard'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['account'],
+            'connection_name': ['sfdc_conn'],
+            'project_name': ['test'],
+            'schedule': ['not a cron'],
+        })
+
+        with pytest.raises(ValidationError, match="Invalid.*cron"):
+            salesforce_connector.load_and_normalize_input(df=df)
+
+    def test_scd_type_2_cdc_warning(self, salesforce_connector, caplog):
+        """Should log CDC recommendation for SCD_TYPE_2."""
+        import logging
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce'],
+            'source_schema': ['standard'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['account'],
+            'connection_name': ['sfdc_conn'],
+            'project_name': ['test'],
+            'scd_type': ['SCD_TYPE_2'],
+        })
+
+        with caplog.at_level(logging.INFO):
+            salesforce_connector.load_and_normalize_input(df=df)
+
+        assert 'SCD_TYPE_2' in caplog.text
+        assert 'CDC' in caplog.text
+
+    def test_project_name_via_default_values_works(self, salesforce_connector):
+        """Providing project_name via default_values should not trigger missing column error."""
+        df = pd.DataFrame({
+            'source_database': ['Salesforce'],
+            'source_schema': ['standard'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['account'],
+            'connection_name': ['sfdc_conn'],
+        })
+
+        # Should succeed — project_name comes via default_values
+        result = salesforce_connector.load_and_normalize_input(
+            df=df,
+            default_values={'project_name': 'my_project'}
+        )
+        assert all(result['project_name'] == 'my_project')

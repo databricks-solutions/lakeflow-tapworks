@@ -285,7 +285,7 @@ class TestCreateJobs:
         })
 
         with pytest.raises(ValidationError, match="conflicting schedule"):
-            salesforce_connector._create_jobs(df, 'project')
+            salesforce_connector._validate_generated_names(df)
 
     def test_raises_error_shows_both_solutions(self, salesforce_connector):
         """Error message should mention both solutions: same schedule or different subgroups."""
@@ -295,7 +295,7 @@ class TestCreateJobs:
         })
 
         with pytest.raises(ValidationError) as exc_info:
-            salesforce_connector._create_jobs(df, 'project')
+            salesforce_connector._validate_generated_names(df)
 
         error_msg = str(exc_info.value)
         assert "same schedule" in error_msg
@@ -345,7 +345,7 @@ class TestCreateJobs:
         })
 
         with pytest.raises(ValidationError, match="conflicting pause_status"):
-            salesforce_connector._create_jobs(df, 'project')
+            salesforce_connector._validate_generated_names(df)
 
     def test_pause_status_error_shows_both_solutions(self, salesforce_connector):
         """Pause status error message should mention both solutions."""
@@ -356,7 +356,7 @@ class TestCreateJobs:
         })
 
         with pytest.raises(ValidationError) as exc_info:
-            salesforce_connector._create_jobs(df, 'project')
+            salesforce_connector._validate_generated_names(df)
 
         error_msg = str(exc_info.value)
         assert "same pause_status" in error_msg
@@ -781,7 +781,7 @@ class TestCronToQuartzConversion:
 class TestSaaSPipelineValidation:
     """Tests for SaaS connector pipeline validation (connection_name, tags)."""
 
-    def test_raises_error_conflicting_connection_names(self, salesforce_connector, tmp_path, sample_targets):
+    def test_raises_error_conflicting_connection_names(self, salesforce_connector):
         """Should raise ValidationError when tables in same pipeline_group have different connection_names."""
         df = pd.DataFrame({
             'project_name': ['project', 'project', 'project'],
@@ -794,7 +794,7 @@ class TestSaaSPipelineValidation:
         })
 
         with pytest.raises(ValidationError, match="conflicting connection_name"):
-            salesforce_connector.generate_yaml_files(df, str(tmp_path), sample_targets)
+            salesforce_connector._validate_generated_names(df)
 
     def test_allows_same_connection_name(self, salesforce_connector):
         """Should allow same connection_name for all tables in pipeline_group."""
@@ -810,7 +810,7 @@ class TestSaaSPipelineValidation:
         result = salesforce_connector._create_pipelines(df, 'project')
         assert 'pipeline_group_01' in result['resources']['pipelines']
 
-    def test_raises_error_conflicting_pipeline_tags(self, salesforce_connector, tmp_path, sample_targets):
+    def test_raises_error_conflicting_pipeline_tags(self, salesforce_connector):
         """Should raise ValidationError when tables in same pipeline_group have different tags."""
         df = pd.DataFrame({
             'project_name': ['project', 'project'],
@@ -824,7 +824,7 @@ class TestSaaSPipelineValidation:
         })
 
         with pytest.raises(ValidationError, match="conflicting tags"):
-            salesforce_connector.generate_yaml_files(df, str(tmp_path), sample_targets)
+            salesforce_connector._validate_generated_names(df)
 
     def test_allows_same_tags(self, salesforce_connector):
         """Should allow same tags for all tables in pipeline_group."""
@@ -854,7 +854,7 @@ class TestJobTagsValidation:
         })
 
         with pytest.raises(ValidationError, match="conflicting tags"):
-            salesforce_connector._create_jobs(df, 'project')
+            salesforce_connector._validate_generated_names(df)
 
     def test_allows_same_job_tags(self, salesforce_connector):
         """Should allow same tags for all tables in same pipeline_group."""
@@ -899,7 +899,7 @@ class TestGatewayValidation:
         })
 
         with pytest.raises(ValidationError, match="conflicting gateway_catalog"):
-            sqlserver_connector._create_gateways(df, 'project')
+            sqlserver_connector._validate_generated_names(df)
 
     def test_raises_error_conflicting_gateway_schema(self, sqlserver_connector):
         """Should raise ValidationError when tables in same gateway have different gateway_schema."""
@@ -918,7 +918,7 @@ class TestGatewayValidation:
         })
 
         with pytest.raises(ValidationError, match="conflicting gateway_schema"):
-            sqlserver_connector._create_gateways(df, 'project')
+            sqlserver_connector._validate_generated_names(df)
 
     def test_raises_error_conflicting_gateway_connection_name(self, sqlserver_connector):
         """Should raise ValidationError when tables in same gateway have different connection_name."""
@@ -937,7 +937,7 @@ class TestGatewayValidation:
         })
 
         with pytest.raises(ValidationError, match="conflicting connection_name"):
-            sqlserver_connector._create_gateways(df, 'project')
+            sqlserver_connector._validate_generated_names(df)
 
     def test_raises_error_conflicting_gateway_tags(self, sqlserver_connector):
         """Should raise ValidationError when tables in same gateway have different tags."""
@@ -957,7 +957,7 @@ class TestGatewayValidation:
         })
 
         with pytest.raises(ValidationError, match="conflicting tags"):
-            sqlserver_connector._create_gateways(df, 'project')
+            sqlserver_connector._validate_generated_names(df)
 
     def test_allows_consistent_gateway_fields(self, sqlserver_connector):
         """Should allow same values for all gateway fields in same gateway."""

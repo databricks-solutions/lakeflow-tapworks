@@ -221,7 +221,8 @@ class TestConfigurationErrorInPipeline:
             salesforce_connector.run_complete_pipeline_generation(
                 df=incomplete_df,
                 output_dir=str(temp_output_dir),
-                targets=sample_targets_minimal
+                targets=sample_targets_minimal,
+                default_values={'project_name': 'test'}
             )
 
     def test_empty_dataframe_raises_configuration_error(self, salesforce_connector, temp_output_dir, sample_targets_minimal):

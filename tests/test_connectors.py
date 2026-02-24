@@ -142,7 +142,7 @@ class TestWorkdayReportsConnector:
             'primary_keys': [''],
         })
 
-        with pytest.raises(ValidationError, match="Missing required primary_keys"):
+        with pytest.raises(ValidationError, match="primary_keys.*empty"):
             workday_connector.run_complete_pipeline_generation(
                 df=df,
                 output_dir=str(temp_output_dir),
