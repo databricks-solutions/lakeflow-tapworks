@@ -1,0 +1,4 @@
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,subgroup,connection_name,schedule,primary_keys,include_columns,exclude_columns
+tapworks_sfdc,Salesforce,standard,Account,tapworks_catalog,sfdc_test,Account,bu1,01,sfdc_connection_a,*/15 * * * *,Id,,
+tapworks_sfdc,Salesforce,standard,Contact,tapworks_catalog,sfdc_test,Contact,bu1,01,sfdc_connection_b,*/15 * * * *,Id,,
+tapworks_sfdc,Salesforce,standard,Lead,tapworks_catalog,sfdc_test,Lead,bu1,01,sfdc_connection_a,*/15 * * * *,Id,,
