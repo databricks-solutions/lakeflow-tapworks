@@ -1,0 +1,1 @@
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,subgroup,gateway_catalog,gateway_schema,connection_name,schedule
