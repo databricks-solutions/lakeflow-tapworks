@@ -464,17 +464,32 @@ class BaseConnector(ABC):
                 )
 
         # 4. Invalid characters in target naming columns
+        # Unity Catalog disallows: period (.), space ( ), forward slash (/),
+        # ASCII control characters (00-1F hex), and DELETE (7F hex).
+        # Names cannot exceed 255 characters.
+        # See: https://docs.databricks.com/en/sql/language-manual/sql-ref-names.html
         target_name_cols = [c for c in ['target_table_name', 'target_schema', 'target_catalog'] if c in df.columns]
         for col in target_name_cols:
-            invalid_mask = ~df[col].astype(str).str.match(r'^[a-zA-Z0-9_]*$')
-            # Ignore NaN/empty (already caught above if required)
-            non_empty = df[col].notna() & (df[col].astype(str).str.strip() != '')
-            invalid_mask = invalid_mask & non_empty
-            if invalid_mask.any():
-                bad_values = df.loc[invalid_mask, col].unique()[:5]
+            values = df[col].astype(str)
+            non_empty = df[col].notna() & (values.str.strip() != '')
+
+            # Check for disallowed characters: . space / and control chars
+            invalid_char_mask = values.str.contains(r'[. /\x00-\x1f\x7f]') & non_empty
+            if invalid_char_mask.any():
+                bad_values = df.loc[invalid_char_mask, col].unique()[:5]
                 raise ValidationError(
                     f"Invalid characters in '{col}': {list(bad_values)}. "
-                    f"Only alphanumeric characters and underscores are allowed."
+                    f"Periods (.), spaces, forward slashes (/), and control characters are not allowed "
+                    f"in Unity Catalog names."
+                )
+
+            # Check for name length exceeding 255 characters
+            too_long_mask = (values.str.len() > 255) & non_empty
+            if too_long_mask.any():
+                bad_values = df.loc[too_long_mask, col].unique()[:3]
+                raise ValidationError(
+                    f"Name too long in '{col}': {[v[:50] + '...' for v in bad_values]}. "
+                    f"Unity Catalog names cannot exceed 255 characters."
                 )
 
         # 5. Mutually exclusive include/exclude columns

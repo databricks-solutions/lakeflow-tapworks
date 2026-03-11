@@ -581,7 +581,7 @@ class TestValidateConfig:
             'source_table_name': ['Account'],
             'target_catalog': ['main'],
             'target_schema': ['salesforce'],
-            'target_table_name': ['my table!'],  # Invalid chars (space + !)
+            'target_table_name': ['my table!'],  # Invalid: space is not allowed in UC names
             'connection_name': ['sfdc_conn'],
             'project_name': ['test'],
         })
