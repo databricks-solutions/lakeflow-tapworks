@@ -324,7 +324,6 @@ class BaseConnector(ABC):
         Databricks resource names must:
         - Start with a letter
         - Contain only letters, numbers, underscores, and hyphens
-        - Be no longer than 128 characters
 
         Args:
             name: Resource name to validate
@@ -350,12 +349,6 @@ class BaseConnector(ABC):
             raise ValidationError(
                 f"Invalid {resource_type} name '{name}': "
                 f"can only contain letters, numbers, underscores, and hyphens"
-            )
-
-        if len(name) > 128:
-            raise ValidationError(
-                f"Invalid {resource_type} name '{name}': "
-                f"exceeds maximum length of 128 characters ({len(name)} chars)"
             )
 
         return name
