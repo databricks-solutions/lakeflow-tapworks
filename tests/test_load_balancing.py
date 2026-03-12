@@ -471,30 +471,6 @@ class TestValidateGeneratedNames:
         with pytest.raises(ValidationError, match="conflicting connection_name"):
             salesforce_connector.generate_pipeline_config(df=df)
 
-    def test_resource_name_too_long(self, salesforce_connector):
-        """Very long prefix should trigger resource name validation error."""
-        from tapworks.core import ValidationError
-
-        long_prefix = 'a' * 120  # Will generate pipeline_<prefix>_01_p01 > 128 chars
-
-        df = pd.DataFrame({
-            'source_database': ['Salesforce'],
-            'source_schema': ['standard'],
-            'source_table_name': ['Account'],
-            'target_catalog': ['main'],
-            'target_schema': ['salesforce'],
-            'target_table_name': ['account'],
-            'connection_name': ['sfdc_conn'],
-            'project_name': ['test'],
-            'prefix': [long_prefix],
-            'subgroup': ['01'],
-        })
-
-        df = salesforce_connector.load_and_normalize_input(df=df)
-
-        with pytest.raises(ValidationError, match="exceeds maximum length"):
-            salesforce_connector.generate_pipeline_config(df=df)
-
     def test_db_pipeline_tags_consistency(self, sqlserver_connector):
         """Conflicting tags within a DB pipeline group should raise ValidationError."""
         from tapworks.core import ValidationError

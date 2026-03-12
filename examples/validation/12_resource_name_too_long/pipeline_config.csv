@@ -1,3 +1,0 @@
-project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,prefix,subgroup,gateway_catalog,gateway_schema,connection_name,schedule
-tapworks_sqlserver,db1,dbo,Products,tapworks_catalog,tapworks,products,this_is_an_extremely_long_prefix_name_that_is_designed_to_exceed_the_maximum_allowed_resource_name_length_in_databricks_workspace,01,tapworks_catalog,tapworks,tapworks_sql_connection,*/15 * * * *
-tapworks_sqlserver,db1,dbo,Customers,tapworks_catalog,tapworks,customers,this_is_an_extremely_long_prefix_name_that_is_designed_to_exceed_the_maximum_allowed_resource_name_length_in_databricks_workspace,01,tapworks_catalog,tapworks,tapworks_sql_connection,*/15 * * * *
