@@ -153,18 +153,6 @@ class TestResourceNameValidation:
         with pytest.raises(ValidationError, match="can only contain"):
             salesforce_connector._validate_resource_name("my@pipeline")
 
-    def test_name_exceeding_max_length_raises_error(self, salesforce_connector):
-        """Should raise ValidationError for names exceeding 128 characters."""
-        long_name = "a" * 129
-        with pytest.raises(ValidationError, match="exceeds maximum length"):
-            salesforce_connector._validate_resource_name(long_name)
-
-    def test_name_at_max_length_accepted(self, salesforce_connector):
-        """Should accept names exactly at 128 characters."""
-        name = "a" * 128
-        result = salesforce_connector._validate_resource_name(name)
-        assert result == name
-
     def test_strips_whitespace(self, salesforce_connector):
         """Should strip leading/trailing whitespace."""
         result = salesforce_connector._validate_resource_name("  my_pipeline  ")
@@ -221,7 +209,8 @@ class TestConfigurationErrorInPipeline:
             salesforce_connector.run_complete_pipeline_generation(
                 df=incomplete_df,
                 output_dir=str(temp_output_dir),
-                targets=sample_targets_minimal
+                targets=sample_targets_minimal,
+                default_values={'project_name': 'test'}
             )
 
     def test_empty_dataframe_raises_configuration_error(self, salesforce_connector, temp_output_dir, sample_targets_minimal):

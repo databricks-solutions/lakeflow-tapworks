@@ -421,3 +421,92 @@ class TestSplitGroupsBySize:
         # Second chunk should have rows with data 3, 4
         chunk2 = result[result['result'] == 'A_g02']
         assert list(chunk2['data']) == [3, 4]
+
+
+class TestValidateGeneratedNames:
+    """Tests for _validate_generated_names (called at end of generate_pipeline_config)."""
+
+    def test_group_consistency_schedule_mismatch(self, salesforce_connector):
+        """Conflicting schedules within a pipeline group should raise ValidationError."""
+        from tapworks.core import ValidationError
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['sfdc_conn', 'sfdc_conn'],
+            'project_name': ['test', 'test'],
+            'prefix': ['sales', 'sales'],
+            'subgroup': ['01', '01'],
+            'schedule': ['*/15 * * * *', '*/30 * * * *'],  # Conflicting
+        })
+
+        df = salesforce_connector.load_and_normalize_input(df=df)
+
+        with pytest.raises(ValidationError, match="conflicting schedule"):
+            salesforce_connector.generate_pipeline_config(df=df)
+
+    def test_group_consistency_connection_name_mismatch(self, salesforce_connector):
+        """Conflicting connection_name within a pipeline group should raise ValidationError."""
+        from tapworks.core import ValidationError
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce', 'Salesforce'],
+            'source_schema': ['standard', 'standard'],
+            'source_table_name': ['Account', 'Contact'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['salesforce', 'salesforce'],
+            'target_table_name': ['account', 'contact'],
+            'connection_name': ['conn_a', 'conn_b'],  # Conflicting
+            'project_name': ['test', 'test'],
+            'prefix': ['sales', 'sales'],
+            'subgroup': ['01', '01'],
+        })
+
+        df = salesforce_connector.load_and_normalize_input(df=df)
+
+        with pytest.raises(ValidationError, match="conflicting connection_name"):
+            salesforce_connector.generate_pipeline_config(df=df)
+
+    def test_db_pipeline_tags_consistency(self, sqlserver_connector):
+        """Conflicting tags within a DB pipeline group should raise ValidationError."""
+        from tapworks.core import ValidationError
+
+        df = pd.DataFrame({
+            'gateway': ['g01', 'g01'],
+            'pipeline_group': ['group_01', 'group_01'],
+            'tags': ['env=prod', 'env=dev'],
+            # gateway fields consistent so gateway check passes first
+            'gateway_catalog': ['bronze', 'bronze'],
+            'gateway_schema': ['ingestion', 'ingestion'],
+            'connection_name': ['conn', 'conn'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting tags"):
+            sqlserver_connector._validate_generated_names(df)
+
+    def test_name_collision_across_projects(self, salesforce_connector):
+        """Same pipeline_group in different projects should raise ValidationError."""
+        from tapworks.core import ValidationError
+
+        df = pd.DataFrame({
+            'source_database': ['Salesforce'] * 4,
+            'source_schema': ['standard'] * 4,
+            'source_table_name': ['Account', 'Contact', 'Lead', 'Opportunity'],
+            'target_catalog': ['main'] * 4,
+            'target_schema': ['salesforce'] * 4,
+            'target_table_name': ['account', 'contact', 'lead', 'opportunity'],
+            'connection_name': ['sfdc_conn'] * 4,
+            'project_name': ['proj_a', 'proj_a', 'proj_b', 'proj_b'],
+            'prefix': ['sales', 'sales', 'sales', 'sales'],  # Same prefix
+            'subgroup': ['01', '01', '01', '01'],              # Same subgroup
+        })
+
+        df = salesforce_connector.load_and_normalize_input(df=df)
+
+        with pytest.raises(ValidationError, match="multiple projects"):
+            salesforce_connector.generate_pipeline_config(df=df)

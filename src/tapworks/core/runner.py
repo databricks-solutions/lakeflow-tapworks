@@ -143,7 +143,7 @@ def _load_input(
             path = Path(input_source)
             if not path.exists():
                 raise FileNotFoundError(f"Input CSV file not found: {input_source}")
-            return pd.read_csv(input_source)
+            return pd.read_csv(input_source, dtype=str)
 
         # Delta table (format: catalog.schema.table or just table_name)
         if spark_session is None:
