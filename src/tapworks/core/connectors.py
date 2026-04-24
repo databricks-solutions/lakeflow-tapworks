@@ -324,7 +324,6 @@ class BaseConnector(ABC):
         Databricks resource names must:
         - Start with a letter
         - Contain only letters, numbers, underscores, and hyphens
-        - Be no longer than 128 characters
 
         Args:
             name: Resource name to validate
@@ -350,12 +349,6 @@ class BaseConnector(ABC):
             raise ValidationError(
                 f"Invalid {resource_type} name '{name}': "
                 f"can only contain letters, numbers, underscores, and hyphens"
-            )
-
-        if len(name) > 128:
-            raise ValidationError(
-                f"Invalid {resource_type} name '{name}': "
-                f"exceeds maximum length of 128 characters ({len(name)} chars)"
             )
 
         return name
@@ -408,6 +401,162 @@ class BaseConnector(ABC):
 
         return scd_type
 
+    def _validate_config(self, df: pd.DataFrame, required_columns: list) -> None:
+        """
+        Validate configuration after defaults and overrides have been applied.
+
+        Runs all input-level validation checks in one place:
+        1. Required columns exist
+        2. Required values are non-empty in every row
+        3. Duplicate rows (warn only)
+        4. Invalid characters in target naming columns
+        5. Mutually exclusive include/exclude columns
+        6. Cron format validation
+        7. SCD Type 2 + CDC recommendation
+
+        Args:
+            df: DataFrame after defaults/overrides/normalization
+            required_columns: List of columns that must be present and non-empty
+
+        Raises:
+            ConfigurationError: If required columns are missing
+            ValidationError: If values fail validation checks
+        """
+        # 1. Required columns exist
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise ConfigurationError(
+                f"Missing required columns: {missing_columns}\n"
+                f"Required columns: {', '.join(required_columns)}"
+            )
+
+        # 2. Required values non-empty
+        empty_report = {}
+        for col in required_columns:
+            empty_mask = df[col].isna() | (df[col].astype(str).str.strip() == '')
+            if empty_mask.any():
+                empty_indices = list(df.index[empty_mask])
+                empty_report[col] = empty_indices
+        if empty_report:
+            details = '; '.join(
+                f"'{col}' empty in rows {indices}" for col, indices in empty_report.items()
+            )
+            raise ValidationError(
+                f"Required columns have empty values: {details}"
+            )
+
+        # 3. Duplicate rows (warn, don't error)
+        dup_cols = [c for c in ['source_table_name', 'source_schema', 'connection_name'] if c in df.columns]
+        if dup_cols:
+            duplicates = df.duplicated(subset=dup_cols, keep=False)
+            if duplicates.any():
+                dup_rows = df[duplicates][dup_cols].drop_duplicates()
+                logger.warning(
+                    f"Duplicate source rows detected ({len(dup_rows)} unique combinations): "
+                    f"columns {dup_cols}. This may be intentional for multi-target scenarios."
+                )
+
+        # 4. Invalid characters in target naming columns
+        # Unity Catalog disallows: period (.), space ( ), forward slash (/),
+        # ASCII control characters (00-1F hex), and DELETE (7F hex).
+        # Names cannot exceed 255 characters.
+        # See: https://docs.databricks.com/en/sql/language-manual/sql-ref-names.html
+        target_name_cols = [c for c in ['target_table_name', 'target_schema', 'target_catalog'] if c in df.columns]
+        for col in target_name_cols:
+            values = df[col].astype(str)
+            non_empty = df[col].notna() & (values.str.strip() != '')
+
+            # Check for disallowed characters: . space / and control chars
+            invalid_char_mask = values.str.contains(r'[. /\x00-\x1f\x7f]') & non_empty
+            if invalid_char_mask.any():
+                bad_values = df.loc[invalid_char_mask, col].unique()[:5]
+                raise ValidationError(
+                    f"Invalid characters in '{col}': {list(bad_values)}. "
+                    f"Periods (.), spaces, forward slashes (/), and control characters are not allowed "
+                    f"in Unity Catalog names."
+                )
+
+            # Check for name length exceeding 255 characters
+            too_long_mask = (values.str.len() > 255) & non_empty
+            if too_long_mask.any():
+                bad_values = df.loc[too_long_mask, col].unique()[:3]
+                raise ValidationError(
+                    f"Name too long in '{col}': {[v[:50] + '...' for v in bad_values]}. "
+                    f"Unity Catalog names cannot exceed 255 characters."
+                )
+
+        # 5. Mutually exclusive include/exclude columns
+        if 'include_columns' in df.columns and 'exclude_columns' in df.columns:
+            include_set = df['include_columns'].notna() & (df['include_columns'].astype(str).str.strip() != '')
+            exclude_set = df['exclude_columns'].notna() & (df['exclude_columns'].astype(str).str.strip() != '')
+            both_set = include_set & exclude_set
+            if both_set.any():
+                bad_rows = list(df.index[both_set])
+                raise ValidationError(
+                    f"Rows {bad_rows} have both 'include_columns' and 'exclude_columns' set. "
+                    f"These are mutually exclusive — use one or the other per row."
+                )
+
+        # 6. Cron format validation
+        if 'schedule' in df.columns:
+            for idx, row in df.iterrows():
+                schedule = row['schedule']
+                if self._is_value_set(schedule):
+                    self._validate_cron_expression(schedule, f"schedule for row {idx}")
+
+        # 7. SCD Type 2 + CDC recommendation
+        if 'scd_type' in df.columns:
+            scd2_mask = df['scd_type'].astype(str).str.strip().str.upper() == 'SCD_TYPE_2'
+            if scd2_mask.any():
+                logger.info(
+                    f"{scd2_mask.sum()} row(s) use SCD_TYPE_2. "
+                    f"Consider enabling CDC (Change Data Capture) on the source for optimal performance."
+                )
+
+    def _validate_generated_names(self, df: pd.DataFrame) -> None:
+        """
+        Validate generated resource names and group consistency after load balancing.
+
+        Called at the end of generate_pipeline_config(). Checks:
+        1. Group consistency for job-level fields within each pipeline_group
+        2. Resource name collisions across pipeline groups
+
+        Override in subclass for additional checks (e.g., gateway validation).
+
+        Args:
+            df: DataFrame with pipeline_group column assigned
+
+        Raises:
+            ValidationError: If consistency or naming checks fail
+        """
+        # 1. Group consistency — job-level fields
+        for pipeline_group, group_df in df.groupby('pipeline_group'):
+            self._validate_group_consistency(
+                group_df=group_df,
+                group_name=pipeline_group,
+                fields_to_validate=self.JOB_CONSISTENCY_FIELDS,
+                context='pipeline group'
+            )
+
+        # 2. Resource name validation
+        for pipeline_group in df['pipeline_group'].unique():
+            names = self._generate_resource_names(pipeline_group)
+            # _generate_resource_names already validates via _validate_resource_name
+
+        # 3. Resource name collisions across projects
+        if 'project_name' in df.columns:
+            seen_global = {}  # pipeline_group -> project_name
+            for project_name, project_df in df.groupby('project_name'):
+                for pg in project_df['pipeline_group'].unique():
+                    if pg in seen_global and seen_global[pg] != project_name:
+                        raise ValidationError(
+                            f"Pipeline group '{pg}' appears in multiple projects: "
+                            f"'{seen_global[pg]}' and '{project_name}'. "
+                            f"Use distinct prefix or subgroup values per project to avoid "
+                            f"resource name collisions in the workspace."
+                        )
+                    seen_global[pg] = project_name
+
     def _process_input_config(
         self,
         df: pd.DataFrame,
@@ -447,14 +596,6 @@ class BaseConnector(ABC):
         # Check if dataframe is empty
         if df.empty:
             raise ConfigurationError("Input DataFrame is empty")
-
-        # Validate required columns exist
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            raise ConfigurationError(
-                f"Missing required columns: {missing_columns}\n"
-                f"Required columns: {', '.join(required_columns)}"
-            )
 
         # Normalize configs to grouped format
         grouped_defaults = _normalize_to_grouped_config(default_values)
@@ -696,6 +837,9 @@ class BaseConnector(ABC):
         # Apply connector-specific normalization
         normalized_df = self._apply_connector_specific_normalization(normalized_df)
 
+        # Validate configuration after all defaults/overrides/normalization
+        self._validate_config(normalized_df, self.required_columns)
+
         return normalized_df
 
     def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -858,14 +1002,6 @@ class BaseConnector(ABC):
         jobs = {}
 
         for pipeline_group, group_df in df.groupby('pipeline_group'):
-            # Validate all job-level fields at once
-            self._validate_group_consistency(
-                group_df=group_df,
-                group_name=pipeline_group,
-                fields_to_validate=self.JOB_CONSISTENCY_FIELDS,
-                context='pipeline group'
-            )
-
             schedule = group_df.iloc[0]['schedule']
 
             # Only create job if schedule is defined
@@ -896,11 +1032,11 @@ class BaseConnector(ABC):
                     }]
                 }
 
-                # Add pause_status if specified
+                # Add pause_status if specified (goes inside schedule block)
                 if 'pause_status' in group_df.columns:
                     pause_status = group_df.iloc[0]['pause_status']
                     if pd.notna(pause_status) and pause_status and str(pause_status).strip():
-                        job_config['pause_status'] = str(pause_status).upper()
+                        job_config['schedule']['pause_status'] = str(pause_status).upper()
 
                 # Optional: tags
                 if 'tags' in group_df.columns:
@@ -1123,7 +1259,39 @@ class DatabaseConnector(BaseConnector):
             mask = df['gateway_schema'].isna()
             df.loc[mask, 'gateway_schema'] = df.loc[mask, 'target_schema']
 
+        # Derive target_table_name from source_table_name if empty
+        if 'target_table_name' in df.columns and 'source_table_name' in df.columns:
+            empty = df['target_table_name'].isna() | (df['target_table_name'].astype(str).str.strip() == '')
+            df.loc[empty, 'target_table_name'] = df.loc[empty, 'source_table_name']
+
         return df
+
+    def _validate_generated_names(self, df: pd.DataFrame) -> None:
+        """
+        Validate generated names for database connectors.
+
+        Extends base validation with gateway consistency checks.
+        """
+        # Base validation (job consistency + collision check)
+        super()._validate_generated_names(df)
+
+        # Gateway consistency
+        for gateway_id, gateway_df in df.groupby('gateway'):
+            self._validate_group_consistency(
+                group_df=gateway_df,
+                group_name=gateway_id,
+                fields_to_validate=self.GATEWAY_CONSISTENCY_FIELDS,
+                context='gateway'
+            )
+
+        # Pipeline consistency
+        for pipeline_group, group_df in df.groupby('pipeline_group'):
+            self._validate_group_consistency(
+                group_df=group_df,
+                group_name=pipeline_group,
+                fields_to_validate=self.PIPELINE_CONSISTENCY_FIELDS,
+                context='pipeline group'
+            )
 
     def generate_pipeline_config(
         self,
@@ -1182,6 +1350,9 @@ class DatabaseConnector(BaseConnector):
         # Drop temporary base_group column
         df = df.drop(columns=['base_group'])
 
+        # Validate generated names and group consistency
+        self._validate_generated_names(df)
+
         return df
 
     def _create_gateways(self, df: pd.DataFrame, project_name: str) -> Dict:
@@ -1196,15 +1367,6 @@ class DatabaseConnector(BaseConnector):
             Dictionary with gateway YAML configuration
         """
         gateways = {}
-
-        # Validate gateway consistency before processing
-        for gateway_id, gateway_df in df.groupby('gateway'):
-            self._validate_group_consistency(
-                group_df=gateway_df,
-                group_name=gateway_id,
-                fields_to_validate=self.GATEWAY_CONSISTENCY_FIELDS,
-                context='gateway'
-            )
 
         unique_gateways = df.groupby('gateway').first()
 
@@ -1265,14 +1427,6 @@ class DatabaseConnector(BaseConnector):
         pipelines = {}
 
         for pipeline_group, group_df in df.groupby('pipeline_group'):
-            # Validate pipeline-level fields
-            self._validate_group_consistency(
-                group_df=group_df,
-                group_name=pipeline_group,
-                fields_to_validate=self.PIPELINE_CONSISTENCY_FIELDS,
-                context='pipeline group'
-            )
-
             gateway_id = group_df.iloc[0]['gateway']
 
             # Generate resource names
@@ -1393,23 +1547,16 @@ class SaaSConnector(BaseConnector):
     # Validation configuration - fields that must be consistent within pipeline groups (SaaS-specific)
     PIPELINE_CONSISTENCY_FIELDS = ['connection_name', 'tags']
 
-    def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
+    def _validate_generated_names(self, df: pd.DataFrame) -> None:
         """
-        Validate pipeline consistency and prepare for pipeline creation.
+        Validate generated names for SaaS connectors.
 
-        This method validates that pipeline-level fields are consistent within
-        each pipeline group. Child classes should call super()._create_pipelines()
-        first to get validation, then implement their connector-specific pipeline
-        structure (table mappings, column filters, etc.).
-
-        Args:
-            df: DataFrame with pipeline configuration for a single project
-            project_name: Project name for resource naming
-
-        Returns:
-            None - validation only, children implement the actual pipeline creation
+        Extends base validation with pipeline-level consistency checks.
         """
-        # Validate pipeline-level fields
+        # Base validation (job consistency + collision check)
+        super()._validate_generated_names(df)
+
+        # Pipeline consistency (SaaS-specific fields like connection_name)
         for pipeline_group, group_df in df.groupby('pipeline_group'):
             self._validate_group_consistency(
                 group_df=group_df,
@@ -1460,6 +1607,9 @@ class SaaSConnector(BaseConnector):
 
         # Drop temporary base_group column
         df = df.drop(columns=['base_group'])
+
+        # Validate generated names and group consistency
+        self._validate_generated_names(df)
 
         return df
 
