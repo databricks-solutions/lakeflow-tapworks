@@ -1032,11 +1032,11 @@ class BaseConnector(ABC):
                     }]
                 }
 
-                # Add pause_status if specified
+                # Add pause_status if specified (goes inside schedule block)
                 if 'pause_status' in group_df.columns:
                     pause_status = group_df.iloc[0]['pause_status']
                     if pd.notna(pause_status) and pause_status and str(pause_status).strip():
-                        job_config['pause_status'] = str(pause_status).upper()
+                        job_config['schedule']['pause_status'] = str(pause_status).upper()
 
                 # Optional: tags
                 if 'tags' in group_df.columns:
