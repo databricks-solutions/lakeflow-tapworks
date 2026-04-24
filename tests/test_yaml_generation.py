@@ -249,7 +249,7 @@ class TestCreateJobs:
         result = salesforce_connector._create_jobs(df, 'project')
 
         job = result['resources']['jobs']['job_test_01']
-        assert job['pause_status'] == 'PAUSED'
+        assert job['schedule']['pause_status'] == 'PAUSED'
 
     def test_pause_status_uppercase(self, salesforce_connector):
         """Pause status should be uppercased."""
@@ -262,7 +262,7 @@ class TestCreateJobs:
         result = salesforce_connector._create_jobs(df, 'project')
 
         job = result['resources']['jobs']['job_test_01']
-        assert job['pause_status'] == 'PAUSED'
+        assert job['schedule']['pause_status'] == 'PAUSED'
 
     def test_job_tags_included_when_specified(self, salesforce_connector):
         """Job tags should be included when specified."""
@@ -373,7 +373,7 @@ class TestCreateJobs:
         result = salesforce_connector._create_jobs(df, 'project')
 
         job = result['resources']['jobs']['job_group_01']
-        assert job['pause_status'] == 'PAUSED'
+        assert job['schedule']['pause_status'] == 'PAUSED'
 
     def test_ignores_empty_pause_status_in_conflict_check(self, salesforce_connector):
         """Should ignore empty/NaN pause_status when checking for conflicts."""
@@ -386,7 +386,7 @@ class TestCreateJobs:
         # Should not raise error - empty pause_status values are ignored
         result = salesforce_connector._create_jobs(df, 'project')
         job = result['resources']['jobs']['job_group_01']
-        assert job['pause_status'] == 'PAUSED'
+        assert job['schedule']['pause_status'] == 'PAUSED'
 
 
 class TestSalesforceCreatePipelines:
