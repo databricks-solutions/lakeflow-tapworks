@@ -5,6 +5,7 @@ Tests the _create_databricks_yml, _create_jobs, _create_pipelines, and
 _create_gateways methods that generate DAB YAML structures.
 """
 
+import logging
 import pytest
 import pandas as pd
 import numpy as np
@@ -1261,3 +1262,278 @@ class TestGroupBasedConfiguration:
         # Both should match hr_01 (pipeline_group) not hr (prefix)
         assert result.loc[0, 'schedule'] == '0 0 * * *'
         assert result.loc[1, 'schedule'] == '0 0 * * *'
+
+
+class TestPostgreSQLSourceConfigurations:
+    """Tests for PostgreSQL source_configurations generation."""
+
+    def test_source_configurations_generated_with_slot_name(self, postgres_connector):
+        """Should generate source_configurations when slot_name is provided."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01'],
+            'gateway': ['test_01_g01', 'test_01_g01'],
+            'source_database': ['app_db', 'app_db'],
+            'source_schema': ['public', 'public'],
+            'source_table_name': ['users', 'orders'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['bronze', 'bronze'],
+            'target_table_name': ['users', 'orders'],
+            'slot_name': ['my_slot', 'my_slot'],
+            'publication_name': ['my_pub', 'my_pub'],
+        })
+
+        result = postgres_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
+        assert 'source_configurations' in pipeline['ingestion_definition']
+        configs = pipeline['ingestion_definition']['source_configurations']
+        assert len(configs) == 1
+        assert configs[0]['catalog']['source_catalog'] == 'app_db'
+        assert configs[0]['catalog']['postgres']['slot_config']['slot_name'] == 'my_slot'
+        assert configs[0]['catalog']['postgres']['slot_config']['publication_name'] == 'my_pub'
+
+    def test_default_publication_name_when_not_provided(self, postgres_connector):
+        """Should use 'databricks_publication' when publication_name is not set."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01'],
+            'gateway': ['test_01_g01'],
+            'source_database': ['app_db'],
+            'source_schema': ['public'],
+            'source_table_name': ['users'],
+            'target_catalog': ['main'],
+            'target_schema': ['bronze'],
+            'target_table_name': ['users'],
+            'slot_name': ['my_slot'],
+        })
+
+        result = postgres_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
+        configs = pipeline['ingestion_definition']['source_configurations']
+        assert configs[0]['catalog']['postgres']['slot_config']['publication_name'] == 'databricks_publication'
+
+    def test_multiple_source_databases(self, postgres_connector):
+        """Should generate one source_configuration entry per unique source_database."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01', 'test_01_g01_p01'],
+            'gateway': ['test_01_g01', 'test_01_g01', 'test_01_g01'],
+            'source_database': ['db_one', 'db_one', 'db_two'],
+            'source_schema': ['public', 'public', 'public'],
+            'source_table_name': ['users', 'orders', 'products'],
+            'target_catalog': ['main', 'main', 'main'],
+            'target_schema': ['bronze', 'bronze', 'bronze'],
+            'target_table_name': ['users', 'orders', 'products'],
+            'slot_name': ['slot_one', 'slot_one', 'slot_two'],
+            'publication_name': ['pub_one', 'pub_one', 'pub_two'],
+        })
+
+        result = postgres_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
+        configs = pipeline['ingestion_definition']['source_configurations']
+        assert len(configs) == 2
+
+        catalogs = {c['catalog']['source_catalog'] for c in configs}
+        assert catalogs == {'db_one', 'db_two'}
+
+        for config in configs:
+            if config['catalog']['source_catalog'] == 'db_one':
+                assert config['catalog']['postgres']['slot_config']['slot_name'] == 'slot_one'
+                assert config['catalog']['postgres']['slot_config']['publication_name'] == 'pub_one'
+            else:
+                assert config['catalog']['postgres']['slot_config']['slot_name'] == 'slot_two'
+                assert config['catalog']['postgres']['slot_config']['publication_name'] == 'pub_two'
+
+    def test_no_source_configurations_without_slot_name(self, postgres_connector):
+        """Should not generate source_configurations when no slot_name is provided."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01'],
+            'gateway': ['test_01_g01'],
+            'source_database': ['app_db'],
+            'source_schema': ['public'],
+            'source_table_name': ['users'],
+            'target_catalog': ['main'],
+            'target_schema': ['bronze'],
+            'target_table_name': ['users'],
+        })
+
+        result = postgres_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
+        assert 'source_configurations' not in pipeline['ingestion_definition']
+
+    def test_no_source_configurations_when_slot_name_empty(self, postgres_connector):
+        """Should not generate source_configurations when slot_name is empty."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01'],
+            'gateway': ['test_01_g01'],
+            'source_database': ['app_db'],
+            'source_schema': ['public'],
+            'source_table_name': ['users'],
+            'target_catalog': ['main'],
+            'target_schema': ['bronze'],
+            'target_table_name': ['users'],
+            'slot_name': [''],
+        })
+
+        result = postgres_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
+        assert 'source_configurations' not in pipeline['ingestion_definition']
+
+    def test_objects_still_present_with_source_configurations(self, postgres_connector):
+        """source_configurations should coexist with objects in ingestion_definition."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01'],
+            'gateway': ['test_01_g01'],
+            'source_database': ['app_db'],
+            'source_schema': ['public'],
+            'source_table_name': ['users'],
+            'target_catalog': ['main'],
+            'target_schema': ['bronze'],
+            'target_table_name': ['users'],
+            'slot_name': ['my_slot'],
+            'publication_name': ['my_pub'],
+        })
+
+        result = postgres_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
+        assert 'objects' in pipeline['ingestion_definition']
+        assert 'source_configurations' in pipeline['ingestion_definition']
+        assert len(pipeline['ingestion_definition']['objects']) == 1
+
+
+class TestPostgreSQLSlotValidation:
+    """Tests for PostgreSQL slot configuration validation."""
+
+    def test_conflicting_slot_name_same_source_database(self, postgres_connector):
+        """Should raise ValidationError when same source_database has different slot_names."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01'],
+            'gateway': ['test_01_g01', 'test_01_g01'],
+            'source_database': ['app_db', 'app_db'],
+            'source_schema': ['public', 'public'],
+            'source_table_name': ['users', 'orders'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['bronze', 'bronze'],
+            'target_table_name': ['users', 'orders'],
+            'connection_name': ['pg_conn', 'pg_conn'],
+            'gateway_catalog': ['main', 'main'],
+            'gateway_schema': ['bronze', 'bronze'],
+            'slot_name': ['slot_a', 'slot_b'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting slot_name"):
+            postgres_connector._validate_generated_names(df)
+
+    def test_conflicting_publication_name_same_source_database(self, postgres_connector):
+        """Should raise ValidationError when same source_database has different publication_names."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01'],
+            'gateway': ['test_01_g01', 'test_01_g01'],
+            'source_database': ['app_db', 'app_db'],
+            'source_schema': ['public', 'public'],
+            'source_table_name': ['users', 'orders'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['bronze', 'bronze'],
+            'target_table_name': ['users', 'orders'],
+            'connection_name': ['pg_conn', 'pg_conn'],
+            'gateway_catalog': ['main', 'main'],
+            'gateway_schema': ['bronze', 'bronze'],
+            'slot_name': ['my_slot', 'my_slot'],
+            'publication_name': ['pub_a', 'pub_b'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *'],
+        })
+
+        with pytest.raises(ValidationError, match="conflicting publication_name"):
+            postgres_connector._validate_generated_names(df)
+
+    def test_all_or_none_violation(self, postgres_connector):
+        """Should raise ValidationError when some rows have slot_name and others don't."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01'],
+            'gateway': ['test_01_g01', 'test_01_g01'],
+            'source_database': ['db_one', 'db_two'],
+            'source_schema': ['public', 'public'],
+            'source_table_name': ['users', 'products'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['bronze', 'bronze'],
+            'target_table_name': ['users', 'products'],
+            'connection_name': ['pg_conn', 'pg_conn'],
+            'gateway_catalog': ['main', 'main'],
+            'gateway_schema': ['bronze', 'bronze'],
+            'slot_name': ['my_slot', ''],
+            'schedule': ['*/15 * * * *', '*/15 * * * *'],
+        })
+
+        with pytest.raises(ValidationError, match="slot_name is set for some rows but missing"):
+            postgres_connector._validate_generated_names(df)
+
+    def test_allows_consistent_slot_config(self, postgres_connector):
+        """Should allow consistent slot_name and publication_name per source_database."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01'],
+            'gateway': ['test_01_g01', 'test_01_g01'],
+            'source_database': ['app_db', 'app_db'],
+            'source_schema': ['public', 'public'],
+            'source_table_name': ['users', 'orders'],
+            'target_catalog': ['main', 'main'],
+            'target_schema': ['bronze', 'bronze'],
+            'target_table_name': ['users', 'orders'],
+            'connection_name': ['pg_conn', 'pg_conn'],
+            'gateway_catalog': ['main', 'main'],
+            'gateway_schema': ['bronze', 'bronze'],
+            'slot_name': ['my_slot', 'my_slot'],
+            'publication_name': ['my_pub', 'my_pub'],
+            'schedule': ['*/15 * * * *', '*/15 * * * *'],
+        })
+
+        # Should not raise
+        postgres_connector._validate_generated_names(df)
+
+    def test_warns_when_no_slot_name_column(self, postgres_connector, caplog):
+        """Should warn when slot_name column is missing entirely."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01'],
+            'gateway': ['test_01_g01'],
+            'source_database': ['app_db'],
+            'source_schema': ['public'],
+            'source_table_name': ['users'],
+            'target_catalog': ['main'],
+            'target_schema': ['bronze'],
+            'target_table_name': ['users'],
+            'connection_name': ['pg_conn'],
+            'gateway_catalog': ['main'],
+            'gateway_schema': ['bronze'],
+            'schedule': ['*/15 * * * *'],
+        })
+
+        with caplog.at_level(logging.WARNING):
+            postgres_connector._validate_generated_names(df)
+
+        assert "No 'slot_name' column provided" in caplog.text
+
+    def test_warns_when_slot_name_all_empty(self, postgres_connector, caplog):
+        """Should warn when slot_name column exists but all values are empty."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01_g01_p01'],
+            'gateway': ['test_01_g01'],
+            'source_database': ['app_db'],
+            'source_schema': ['public'],
+            'source_table_name': ['users'],
+            'target_catalog': ['main'],
+            'target_schema': ['bronze'],
+            'target_table_name': ['users'],
+            'connection_name': ['pg_conn'],
+            'gateway_catalog': ['main'],
+            'gateway_schema': ['bronze'],
+            'slot_name': [''],
+            'schedule': ['*/15 * * * *'],
+        })
+
+        with caplog.at_level(logging.WARNING):
+            postgres_connector._validate_generated_names(df)
+
+        assert "No 'slot_name' values provided" in caplog.text
