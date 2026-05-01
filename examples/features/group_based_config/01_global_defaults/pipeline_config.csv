@@ -1,5 +1,5 @@
-project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,target_table_name,connection_name
-sfdc_ingestion,Salesforce,standard,Account,main,salesforce,account,sfdc_connection
-sfdc_ingestion,Salesforce,standard,Contact,main,salesforce,contact,sfdc_connection
-sfdc_ingestion,Salesforce,standard,Opportunity,main,salesforce,opportunity,sfdc_connection
-sfdc_ingestion,Salesforce,standard,Lead,main,salesforce,lead,sfdc_connection
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,pipeline_catalog,pipeline_schema,target_table_name,connection_name
+sfdc_ingestion,Salesforce,standard,Account,main,salesforce,main,salesforce,account,sfdc_connection
+sfdc_ingestion,Salesforce,standard,Contact,main,salesforce,main,salesforce,contact,sfdc_connection
+sfdc_ingestion,Salesforce,standard,Opportunity,main,salesforce,main,salesforce,opportunity,sfdc_connection
+sfdc_ingestion,Salesforce,standard,Lead,main,salesforce,main,salesforce,lead,sfdc_connection

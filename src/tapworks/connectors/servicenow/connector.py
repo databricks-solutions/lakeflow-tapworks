@@ -64,6 +64,8 @@ class ServiceNowConnector(SaaSConnector):
             "target_schema",
             "target_table_name",
             "connection_name",
+            "pipeline_catalog",
+            "pipeline_schema",
         ]
 
     @property
@@ -73,7 +75,11 @@ class ServiceNowConnector(SaaSConnector):
 
         These values are used when columns are missing or empty.
         """
-        return {"schedule": "*/15 * * * *"}
+        return {
+            "schedule": "*/15 * * * *",
+            "pipeline_catalog": None,  # Will fall back to target_catalog
+            "pipeline_schema": None,   # Will fall back to target_schema
+        }
 
     @property
     def supported_scd_types(self) -> list:
@@ -104,18 +110,16 @@ class ServiceNowConnector(SaaSConnector):
             # Generate resource names
             names = self._generate_resource_names(pipeline_group)
 
-            # Get catalog, schema, and connection_name from first table in group
-            target_catalog = group_tables[0]["target_catalog"]
-            target_schema = group_tables[0]["target_schema"]
+            # Get connection_name from first table in group
             connection_name = group_tables[0]["connection_name"]
 
-            logger.debug(f"Pipeline {pipeline_group}: {len(group_tables)} tables -> {target_catalog}.{target_schema}")
+            logger.debug(f"Pipeline {pipeline_group}: {len(group_tables)} tables")
 
             # Create pipeline definition
             pipeline_def = {
                 "name": names["pipeline_name"],
-                "catalog": target_catalog,
-                "schema": target_schema,
+                "catalog": group_tables[0]["pipeline_catalog"],
+                "schema": group_tables[0]["pipeline_schema"],
                 "ingestion_definition": {
                     "connection_name": connection_name,
                     "objects": [],

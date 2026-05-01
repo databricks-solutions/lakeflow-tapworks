@@ -1236,7 +1236,7 @@ class DatabaseConnector(BaseConnector):
 
     # Validation configuration - fields that must be consistent within groups
     GATEWAY_CONSISTENCY_FIELDS = ['gateway_catalog', 'gateway_schema', 'connection_name', 'tags']
-    PIPELINE_CONSISTENCY_FIELDS = ['tags']
+    PIPELINE_CONSISTENCY_FIELDS = ['pipeline_catalog', 'pipeline_schema', 'tags']
 
     def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -1432,10 +1432,6 @@ class DatabaseConnector(BaseConnector):
             # Generate resource names
             names = self._generate_resource_names(pipeline_group)
 
-            # Get target catalog and schema
-            target_catalog = group_df.iloc[0]['target_catalog']
-            target_schema = group_df.iloc[0]['target_schema']
-
             tables = []
             for _, row in group_df.iterrows():
                 table_entry = {
@@ -1466,20 +1462,22 @@ class DatabaseConnector(BaseConnector):
 
                 tables.append(table_entry)
 
-            pipelines[names['pipeline_resource_name']] = {
+            pipeline_def = {
                 'name': names['pipeline_name'],
+                'catalog': group_df.iloc[0]['pipeline_catalog'],
+                'schema': group_df.iloc[0]['pipeline_schema'],
                 'ingestion_definition': {
                     'ingestion_gateway_id': f"${{resources.pipelines.gateway_{gateway_id}.id}}",
                     'objects': tables
                 },
-                'schema': target_schema,
-                'catalog': target_catalog
             }
 
             # Optional: tags (applied to the ingestion pipeline)
             tags = self._parse_tags(group_df.iloc[0].get("tags"))
             if tags:
-                pipelines[names["pipeline_resource_name"]]["tags"] = tags
+                pipeline_def["tags"] = tags
+
+            pipelines[names['pipeline_resource_name']] = pipeline_def
 
         return {'resources': {'pipelines': pipelines}}
 
@@ -1545,7 +1543,7 @@ class SaaSConnector(BaseConnector):
     """
 
     # Validation configuration - fields that must be consistent within pipeline groups (SaaS-specific)
-    PIPELINE_CONSISTENCY_FIELDS = ['connection_name', 'tags']
+    PIPELINE_CONSISTENCY_FIELDS = ['connection_name', 'pipeline_catalog', 'pipeline_schema', 'tags']
 
     def _validate_generated_names(self, df: pd.DataFrame) -> None:
         """

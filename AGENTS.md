@@ -16,6 +16,11 @@ When making major changes, update these files:
 | `examples/connectors/*/basic/pipeline_config.csv` | Required columns, column names, or default values change |
 
 
+## Development Rules
+
+- Do not pick default values for variables or Tapworks configs without confirming with the user first.
+- When adding a new field to the config or defaults, check if any validations need to be added and confirm whether those should be implemented before writing them.
+
 ## Key Paths
 
 - **Package code**: `src/tapworks/`

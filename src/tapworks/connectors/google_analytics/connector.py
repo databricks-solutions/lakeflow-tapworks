@@ -57,7 +57,9 @@ class GoogleAnalyticsConnector(SaaSConnector):
             'tables',
             'target_catalog',
             'target_schema',
-            'connection_name'
+            'connection_name',
+            'pipeline_catalog',
+            'pipeline_schema'
         ]
 
     @property
@@ -68,7 +70,9 @@ class GoogleAnalyticsConnector(SaaSConnector):
         These values are used when columns are missing or empty.
         """
         return {
-            'schedule': '0 */6 * * *'  # Every 6 hours by default
+            'schedule': '0 */6 * * *',  # Every 6 hours by default
+            'pipeline_catalog': None,  # Will fall back to target_catalog
+            'pipeline_schema': None,   # Will fall back to target_schema
         }
 
     @property
@@ -100,12 +104,10 @@ class GoogleAnalyticsConnector(SaaSConnector):
             # Generate resource names
             names = self._generate_resource_names(pipeline_group)
 
-            # Get catalog, schema, and connection_name from first property in group
-            target_catalog = group_properties[0]['target_catalog']
-            target_schema = group_properties[0]['target_schema']
+            # Get connection_name from first property in group
             connection_name = group_properties[0]['connection_name']
 
-            logger.debug(f"Pipeline {pipeline_group}: {len(group_properties)} properties -> {target_catalog}.{target_schema}")
+            logger.debug(f"Pipeline {pipeline_group}: {len(group_properties)} properties")
 
             # Build ingestion objects list
             ingestion_objects = []
@@ -152,8 +154,8 @@ class GoogleAnalyticsConnector(SaaSConnector):
 
             pipeline_def = {
                 "name": names["pipeline_name"],
-                "catalog": target_catalog,
-                "schema": target_schema,
+                "catalog": group_properties[0]['pipeline_catalog'],
+                "schema": group_properties[0]['pipeline_schema'],
                 "ingestion_definition": {
                     "connection_name": connection_name,
                     "objects": ingestion_objects,
