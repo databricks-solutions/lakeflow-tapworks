@@ -456,13 +456,17 @@ class BaseConnector(ABC):
                     f"columns {dup_cols}. This may be intentional for multi-target scenarios."
                 )
 
-        # 4. Invalid characters in target naming columns
+        # 4. Invalid characters in Unity Catalog naming columns
         # Unity Catalog disallows: period (.), space ( ), forward slash (/),
         # ASCII control characters (00-1F hex), and DELETE (7F hex).
         # Names cannot exceed 255 characters.
         # See: https://docs.databricks.com/en/sql/language-manual/sql-ref-names.html
-        target_name_cols = [c for c in ['target_table_name', 'target_schema', 'target_catalog'] if c in df.columns]
-        for col in target_name_cols:
+        uc_name_cols = [c for c in [
+            'target_table_name', 'target_schema', 'target_catalog',
+            'pipeline_catalog', 'pipeline_schema',
+            'gateway_catalog', 'gateway_schema',
+        ] if c in df.columns]
+        for col in uc_name_cols:
             values = df[col].astype(str)
             non_empty = df[col].notna() & (values.str.strip() != '')
 

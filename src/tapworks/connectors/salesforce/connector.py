@@ -76,8 +76,8 @@ class SalesforceConnector(SaaSConnector):
         """
         return {
             'schedule': '*/15 * * * *',
-            'pipeline_catalog': None,  # Will fall back to target_catalog
-            'pipeline_schema': None,   # Will fall back to target_schema
+            'pipeline_catalog': None,
+            'pipeline_schema': None,
         }
 
     @property
