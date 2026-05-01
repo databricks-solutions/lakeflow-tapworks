@@ -78,8 +78,8 @@ class SQLServerConnector(DatabaseConnector):
             'schedule': '*/15 * * * *',
             'gateway_catalog': None,  # Will fall back to target_catalog
             'gateway_schema': None,   # Will fall back to target_schema
-            'pipeline_catalog': None,  # Will fall back to target_catalog
-            'pipeline_schema': None,   # Will fall back to target_schema
+            'pipeline_catalog': None,
+            'pipeline_schema': None,
             'gateway_worker_type': None,
             'gateway_driver_type': None
         }
