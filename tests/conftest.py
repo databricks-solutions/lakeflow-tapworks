@@ -24,6 +24,8 @@ def sample_salesforce_df():
         'source_table_name': ['Account', 'Contact', 'CustomObject__c'],
         'target_catalog': ['main', 'main', 'main'],
         'target_schema': ['salesforce', 'salesforce', 'salesforce'],
+        'pipeline_catalog': ['main', 'main', 'main'],
+        'pipeline_schema': ['salesforce', 'salesforce', 'salesforce'],
         'target_table_name': ['account', 'contact', 'custom_object'],
         'connection_name': ['sfdc_conn', 'sfdc_conn', 'sfdc_conn'],
     })
@@ -38,6 +40,8 @@ def sample_salesforce_df_with_options():
         'source_table_name': ['Account', 'Contact'],
         'target_catalog': ['main', 'main'],
         'target_schema': ['salesforce', 'salesforce'],
+        'pipeline_catalog': ['main', 'main'],
+        'pipeline_schema': ['salesforce', 'salesforce'],
         'target_table_name': ['account', 'contact'],
         'connection_name': ['sfdc_conn', 'sfdc_conn'],
         'project_name': ['my_project', 'my_project'],
@@ -58,6 +62,8 @@ def sample_sqlserver_df():
         'source_table_name': ['Users', 'Orders', 'Products'],
         'target_catalog': ['main', 'main', 'main'],
         'target_schema': ['bronze', 'bronze', 'bronze'],
+        'pipeline_catalog': ['main', 'main', 'main'],
+        'pipeline_schema': ['bronze', 'bronze', 'bronze'],
         'target_table_name': ['users', 'orders', 'products'],
         'connection_name': ['sqlserver_conn', 'sqlserver_conn', 'sqlserver_conn'],
     })
@@ -72,6 +78,8 @@ def sample_sqlserver_df_with_gateway():
         'source_table_name': ['Table1', 'Table2', 'Table3', 'Table4', 'Table5'],
         'target_catalog': ['main'] * 5,
         'target_schema': ['bronze'] * 5,
+        'pipeline_catalog': ['main'] * 5,
+        'pipeline_schema': ['bronze'] * 5,
         'target_table_name': ['table1', 'table2', 'table3', 'table4', 'table5'],
         'connection_name': ['sqlserver_conn'] * 5,
         'gateway_catalog': ['main'] * 5,
@@ -90,6 +98,8 @@ def sample_ga4_df():
         'tables': ['events,users', 'events,events_intraday'],
         'target_catalog': ['main', 'main'],
         'target_schema': ['ga4', 'ga4'],
+        'pipeline_catalog': ['main', 'main'],
+        'pipeline_schema': ['ga4', 'ga4'],
         'connection_name': ['ga4_conn', 'ga4_conn'],
     })
 
@@ -104,6 +114,8 @@ def sample_workday_df():
         ],
         'target_catalog': ['main', 'main'],
         'target_schema': ['workday', 'workday'],
+        'pipeline_catalog': ['main', 'main'],
+        'pipeline_schema': ['workday', 'workday'],
         'target_table_name': ['employees', 'departments'],
         'connection_name': ['workday_conn', 'workday_conn'],
         'primary_keys': ['Employee_ID', 'Department_ID'],
@@ -119,6 +131,8 @@ def sample_servicenow_df():
         'source_table_name': ['sys_user', 'incident', 'change_request'],
         'target_catalog': ['main', 'main', 'main'],
         'target_schema': ['servicenow', 'servicenow', 'servicenow'],
+        'pipeline_catalog': ['main', 'main', 'main'],
+        'pipeline_schema': ['servicenow', 'servicenow', 'servicenow'],
         'target_table_name': ['sys_user', 'incident', 'change_request'],
         'connection_name': ['snow_conn', 'snow_conn', 'snow_conn'],
     })
@@ -133,8 +147,12 @@ def sample_postgresql_df():
         'source_table_name': ['users', 'orders', 'products'],
         'target_catalog': ['main', 'main', 'main'],
         'target_schema': ['bronze', 'bronze', 'bronze'],
+        'pipeline_catalog': ['main', 'main', 'main'],
+        'pipeline_schema': ['bronze', 'bronze', 'bronze'],
         'target_table_name': ['users', 'orders', 'products'],
         'connection_name': ['pg_conn', 'pg_conn', 'pg_conn'],
+        'slot_name': ['pg_slot', 'pg_slot', 'pg_slot'],
+        'publication_name': ['pg_pub', 'pg_pub', 'pg_pub'],
     })
 
 
@@ -148,6 +166,8 @@ def large_df_for_load_balancing():
         'source_table_name': [f'Table_{i}' for i in range(num_rows)],
         'target_catalog': ['main'] * num_rows,
         'target_schema': ['bronze'] * num_rows,
+        'pipeline_catalog': ['main'] * num_rows,
+        'pipeline_schema': ['bronze'] * num_rows,
         'target_table_name': [f'table_{i}' for i in range(num_rows)],
         'connection_name': ['conn'] * num_rows,
         'project_name': ['test_project'] * num_rows,
@@ -165,6 +185,8 @@ def multi_group_df():
         'source_table_name': [f'Table_{i}' for i in range(9)],
         'target_catalog': ['main'] * 9,
         'target_schema': ['bronze'] * 9,
+        'pipeline_catalog': ['main'] * 9,
+        'pipeline_schema': ['bronze'] * 9,
         'target_table_name': [f'table_{i}' for i in range(9)],
         'connection_name': ['conn'] * 9,
         'project_name': ['project'] * 9,

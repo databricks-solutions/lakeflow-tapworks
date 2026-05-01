@@ -5,7 +5,6 @@ Tests the _create_databricks_yml, _create_jobs, _create_pipelines, and
 _create_gateways methods that generate DAB YAML structures.
 """
 
-import logging
 import pytest
 import pandas as pd
 import numpy as np
@@ -400,6 +399,8 @@ class TestSalesforceCreatePipelines:
             'source_table_name': ['Account'],
             'target_catalog': ['main'],
             'target_schema': ['salesforce'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['salesforce'],
             'target_table_name': ['account'],
             'connection_name': ['sfdc_conn'],
         })
@@ -410,12 +411,14 @@ class TestSalesforceCreatePipelines:
         assert 'pipelines' in result['resources']
 
     def test_pipeline_has_name_and_catalog_schema(self, salesforce_connector):
-        """Pipeline should have name, catalog, and schema."""
+        """Pipeline should have name, catalog, and schema from pipeline_catalog/pipeline_schema."""
         df = pd.DataFrame({
             'pipeline_group': ['test_01'],
             'source_table_name': ['Account'],
             'target_catalog': ['main'],
             'target_schema': ['salesforce'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['salesforce'],
             'target_table_name': ['account'],
             'connection_name': ['sfdc_conn'],
         })
@@ -427,6 +430,26 @@ class TestSalesforceCreatePipelines:
         assert pipeline['catalog'] == 'main'
         assert pipeline['schema'] == 'salesforce'
 
+    def test_pipeline_has_catalog_schema_when_explicitly_set(self, salesforce_connector):
+        """Pipeline should have catalog/schema when pipeline_catalog/pipeline_schema are set."""
+        df = pd.DataFrame({
+            'pipeline_group': ['test_01'],
+            'source_table_name': ['Account'],
+            'target_catalog': ['main'],
+            'target_schema': ['salesforce'],
+            'target_table_name': ['account'],
+            'connection_name': ['sfdc_conn'],
+            'pipeline_catalog': ['event_catalog'],
+            'pipeline_schema': ['event_schema'],
+        })
+
+        result = salesforce_connector._create_pipelines(df, 'project')
+
+        pipeline = result['resources']['pipelines']['pipeline_test_01']
+        assert pipeline['name'] == 'test_01'
+        assert pipeline['catalog'] == 'event_catalog'
+        assert pipeline['schema'] == 'event_schema'
+
     def test_pipeline_has_connection_name(self, salesforce_connector):
         """Pipeline should have connection_name in ingestion_definition."""
         df = pd.DataFrame({
@@ -434,6 +457,8 @@ class TestSalesforceCreatePipelines:
             'source_table_name': ['Account'],
             'target_catalog': ['main'],
             'target_schema': ['salesforce'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['salesforce'],
             'target_table_name': ['account'],
             'connection_name': ['sfdc_conn'],
         })
@@ -450,6 +475,8 @@ class TestSalesforceCreatePipelines:
             'source_table_name': ['Account'],
             'target_catalog': ['main'],
             'target_schema': ['salesforce'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['salesforce'],
             'target_table_name': ['account'],
             'connection_name': ['sfdc_conn'],
         })
@@ -467,6 +494,8 @@ class TestSalesforceCreatePipelines:
             'source_table_name': ['Account', 'Contact'],
             'target_catalog': ['main', 'main'],
             'target_schema': ['salesforce', 'salesforce'],
+            'pipeline_catalog': ['main', 'main'],
+            'pipeline_schema': ['salesforce', 'salesforce'],
             'target_table_name': ['account', 'contact'],
             'connection_name': ['sfdc_conn', 'sfdc_conn'],
         })
@@ -484,6 +513,8 @@ class TestSalesforceCreatePipelines:
             'source_table_name': ['Account'],
             'target_catalog': ['main'],
             'target_schema': ['salesforce'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['salesforce'],
             'target_table_name': ['account'],
             'connection_name': ['sfdc_conn'],
             'include_columns': ['Id,Name,Industry'],
@@ -503,6 +534,8 @@ class TestSalesforceCreatePipelines:
             'source_table_name': ['Account'],
             'target_catalog': ['main'],
             'target_schema': ['salesforce'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['salesforce'],
             'target_table_name': ['account'],
             'connection_name': ['sfdc_conn'],
             'exclude_columns': ['SystemModstamp,LastModifiedDate'],
@@ -522,6 +555,8 @@ class TestSalesforceCreatePipelines:
             'source_table_name': ['Account'],
             'target_catalog': ['main'],
             'target_schema': ['salesforce'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['salesforce'],
             'target_table_name': ['account'],
             'connection_name': ['sfdc_conn'],
             'primary_keys': ['Id,AccountId'],
@@ -541,6 +576,8 @@ class TestSalesforceCreatePipelines:
             'source_table_name': ['Account'],
             'target_catalog': ['main'],
             'target_schema': ['salesforce'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['salesforce'],
             'target_table_name': ['account'],
             'connection_name': ['sfdc_conn'],
             'primary_keys': ['   '],
@@ -559,6 +596,8 @@ class TestSalesforceCreatePipelines:
             'source_table_name': ['Account'],
             'target_catalog': ['main'],
             'target_schema': ['salesforce'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['salesforce'],
             'target_table_name': ['account'],
             'connection_name': ['sfdc_conn'],
             'tags': ['team=field-eng,demo=true'],
@@ -715,6 +754,8 @@ class TestDatabaseConnectorCreatePipelines:
             'source_table_name': ['Users'],
             'target_catalog': ['main'],
             'target_schema': ['bronze'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['bronze'],
             'target_table_name': ['users'],
         })
 
@@ -734,6 +775,8 @@ class TestDatabaseConnectorCreatePipelines:
             'source_table_name': ['Users'],
             'target_catalog': ['main'],
             'target_schema': ['bronze'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['bronze'],
             'target_table_name': ['users'],
         })
 
@@ -803,6 +846,8 @@ class TestSaaSPipelineValidation:
             'pipeline_group': ['group_01', 'group_01'],
             'target_catalog': ['bronze', 'bronze'],
             'target_schema': ['sales', 'sales'],
+            'pipeline_catalog': ['bronze', 'bronze'],
+            'pipeline_schema': ['sales', 'sales'],
             'target_table_name': ['table1', 'table2'],
             'source_table_name': ['Account', 'Contact'],
             'connection_name': ['prod_sf', 'prod_sf'],
@@ -833,6 +878,8 @@ class TestSaaSPipelineValidation:
             'pipeline_group': ['group_01', 'group_01'],
             'target_catalog': ['bronze', 'bronze'],
             'target_schema': ['sales', 'sales'],
+            'pipeline_catalog': ['bronze', 'bronze'],
+            'pipeline_schema': ['sales', 'sales'],
             'target_table_name': ['table1', 'table2'],
             'source_table_name': ['Account', 'Contact'],
             'connection_name': ['prod_sf', 'prod_sf'],
@@ -992,6 +1039,8 @@ class TestGroupBasedConfiguration:
             'source_table_name': ['Account', 'Contact'],
             'target_catalog': ['main', 'main'],
             'target_schema': ['salesforce', 'salesforce'],
+            'pipeline_catalog': ['main', 'main'],
+            'pipeline_schema': ['salesforce', 'salesforce'],
             'target_table_name': ['account', 'contact'],
             'connection_name': ['conn', 'conn'],
             'project_name': ['project1', 'project2'],
@@ -1013,6 +1062,8 @@ class TestGroupBasedConfiguration:
             'source_table_name': ['Account', 'Contact', 'Lead'],
             'target_catalog': ['main', 'main', 'main'],
             'target_schema': ['salesforce', 'salesforce', 'salesforce'],
+            'pipeline_catalog': ['main', 'main', 'main'],
+            'pipeline_schema': ['salesforce', 'salesforce', 'salesforce'],
             'target_table_name': ['account', 'contact', 'lead'],
             'connection_name': ['conn', 'conn', 'conn'],
             'project_name': ['sales_project', 'sales_project', 'hr_project'],
@@ -1039,6 +1090,8 @@ class TestGroupBasedConfiguration:
             'source_table_name': ['Account', 'Contact', 'Lead'],
             'target_catalog': ['main', 'main', 'main'],
             'target_schema': ['salesforce', 'salesforce', 'salesforce'],
+            'pipeline_catalog': ['main', 'main', 'main'],
+            'pipeline_schema': ['salesforce', 'salesforce', 'salesforce'],
             'target_table_name': ['account', 'contact', 'lead'],
             'connection_name': ['conn', 'conn', 'conn'],
             'project_name': ['sales_project', 'sales_project', 'hr_project'],
@@ -1066,6 +1119,8 @@ class TestGroupBasedConfiguration:
             'source_table_name': ['Account', 'Contact'],
             'target_catalog': ['main', 'main'],
             'target_schema': ['salesforce', 'salesforce'],
+            'pipeline_catalog': ['main', 'main'],
+            'pipeline_schema': ['salesforce', 'salesforce'],
             'target_table_name': ['account', 'contact'],
             'connection_name': ['conn', 'conn'],
             'project_name': ['my_project', 'my_project'],
@@ -1093,6 +1148,8 @@ class TestGroupBasedConfiguration:
             'source_table_name': ['Account', 'Contact'],
             'target_catalog': ['main', 'main'],
             'target_schema': ['salesforce', 'salesforce'],
+            'pipeline_catalog': ['main', 'main'],
+            'pipeline_schema': ['salesforce', 'salesforce'],
             'target_table_name': ['account', 'contact'],
             'connection_name': ['conn', 'conn'],
             'project_name': ['sales_project', 'sales_project'],
@@ -1118,6 +1175,8 @@ class TestGroupBasedConfiguration:
             'source_table_name': ['Account', 'Contact'],
             'target_catalog': ['main', 'main'],
             'target_schema': ['salesforce', 'salesforce'],
+            'pipeline_catalog': ['main', 'main'],
+            'pipeline_schema': ['salesforce', 'salesforce'],
             'target_table_name': ['account', 'contact'],
             'connection_name': ['conn', 'conn'],
             'project_name': ['sales_project', 'sales_project'],
@@ -1277,6 +1336,8 @@ class TestPostgreSQLSourceConfigurations:
             'source_table_name': ['users', 'orders'],
             'target_catalog': ['main', 'main'],
             'target_schema': ['bronze', 'bronze'],
+            'pipeline_catalog': ['main', 'main'],
+            'pipeline_schema': ['bronze', 'bronze'],
             'target_table_name': ['users', 'orders'],
             'slot_name': ['my_slot', 'my_slot'],
             'publication_name': ['my_pub', 'my_pub'],
@@ -1292,26 +1353,6 @@ class TestPostgreSQLSourceConfigurations:
         assert configs[0]['catalog']['postgres']['slot_config']['slot_name'] == 'my_slot'
         assert configs[0]['catalog']['postgres']['slot_config']['publication_name'] == 'my_pub'
 
-    def test_default_publication_name_when_not_provided(self, postgres_connector):
-        """Should use 'databricks_publication' when publication_name is not set."""
-        df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01'],
-            'gateway': ['test_01_g01'],
-            'source_database': ['app_db'],
-            'source_schema': ['public'],
-            'source_table_name': ['users'],
-            'target_catalog': ['main'],
-            'target_schema': ['bronze'],
-            'target_table_name': ['users'],
-            'slot_name': ['my_slot'],
-        })
-
-        result = postgres_connector._create_pipelines(df, 'project')
-
-        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
-        configs = pipeline['ingestion_definition']['source_configurations']
-        assert configs[0]['catalog']['postgres']['slot_config']['publication_name'] == 'databricks_publication'
-
     def test_multiple_source_databases(self, postgres_connector):
         """Should generate one source_configuration entry per unique source_database."""
         df = pd.DataFrame({
@@ -1322,6 +1363,8 @@ class TestPostgreSQLSourceConfigurations:
             'source_table_name': ['users', 'orders', 'products'],
             'target_catalog': ['main', 'main', 'main'],
             'target_schema': ['bronze', 'bronze', 'bronze'],
+            'pipeline_catalog': ['main', 'main', 'main'],
+            'pipeline_schema': ['bronze', 'bronze', 'bronze'],
             'target_table_name': ['users', 'orders', 'products'],
             'slot_name': ['slot_one', 'slot_one', 'slot_two'],
             'publication_name': ['pub_one', 'pub_one', 'pub_two'],
@@ -1344,43 +1387,6 @@ class TestPostgreSQLSourceConfigurations:
                 assert config['catalog']['postgres']['slot_config']['slot_name'] == 'slot_two'
                 assert config['catalog']['postgres']['slot_config']['publication_name'] == 'pub_two'
 
-    def test_no_source_configurations_without_slot_name(self, postgres_connector):
-        """Should not generate source_configurations when no slot_name is provided."""
-        df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01'],
-            'gateway': ['test_01_g01'],
-            'source_database': ['app_db'],
-            'source_schema': ['public'],
-            'source_table_name': ['users'],
-            'target_catalog': ['main'],
-            'target_schema': ['bronze'],
-            'target_table_name': ['users'],
-        })
-
-        result = postgres_connector._create_pipelines(df, 'project')
-
-        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
-        assert 'source_configurations' not in pipeline['ingestion_definition']
-
-    def test_no_source_configurations_when_slot_name_empty(self, postgres_connector):
-        """Should not generate source_configurations when slot_name is empty."""
-        df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01'],
-            'gateway': ['test_01_g01'],
-            'source_database': ['app_db'],
-            'source_schema': ['public'],
-            'source_table_name': ['users'],
-            'target_catalog': ['main'],
-            'target_schema': ['bronze'],
-            'target_table_name': ['users'],
-            'slot_name': [''],
-        })
-
-        result = postgres_connector._create_pipelines(df, 'project')
-
-        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
-        assert 'source_configurations' not in pipeline['ingestion_definition']
-
     def test_objects_still_present_with_source_configurations(self, postgres_connector):
         """source_configurations should coexist with objects in ingestion_definition."""
         df = pd.DataFrame({
@@ -1391,6 +1397,8 @@ class TestPostgreSQLSourceConfigurations:
             'source_table_name': ['users'],
             'target_catalog': ['main'],
             'target_schema': ['bronze'],
+            'pipeline_catalog': ['main'],
+            'pipeline_schema': ['bronze'],
             'target_table_name': ['users'],
             'slot_name': ['my_slot'],
             'publication_name': ['my_pub'],
@@ -1422,6 +1430,7 @@ class TestPostgreSQLSlotValidation:
             'gateway_catalog': ['main', 'main'],
             'gateway_schema': ['bronze', 'bronze'],
             'slot_name': ['slot_a', 'slot_b'],
+            'publication_name': ['my_pub', 'my_pub'],
             'schedule': ['*/15 * * * *', '*/15 * * * *'],
         })
 
@@ -1450,27 +1459,6 @@ class TestPostgreSQLSlotValidation:
         with pytest.raises(ValidationError, match="conflicting publication_name"):
             postgres_connector._validate_generated_names(df)
 
-    def test_all_or_none_violation(self, postgres_connector):
-        """Should raise ValidationError when some rows have slot_name and others don't."""
-        df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01'],
-            'gateway': ['test_01_g01', 'test_01_g01'],
-            'source_database': ['db_one', 'db_two'],
-            'source_schema': ['public', 'public'],
-            'source_table_name': ['users', 'products'],
-            'target_catalog': ['main', 'main'],
-            'target_schema': ['bronze', 'bronze'],
-            'target_table_name': ['users', 'products'],
-            'connection_name': ['pg_conn', 'pg_conn'],
-            'gateway_catalog': ['main', 'main'],
-            'gateway_schema': ['bronze', 'bronze'],
-            'slot_name': ['my_slot', ''],
-            'schedule': ['*/15 * * * *', '*/15 * * * *'],
-        })
-
-        with pytest.raises(ValidationError, match="slot_name is set for some rows but missing"):
-            postgres_connector._validate_generated_names(df)
-
     def test_allows_consistent_slot_config(self, postgres_connector):
         """Should allow consistent slot_name and publication_name per source_database."""
         df = pd.DataFrame({
@@ -1493,47 +1481,3 @@ class TestPostgreSQLSlotValidation:
         # Should not raise
         postgres_connector._validate_generated_names(df)
 
-    def test_warns_when_no_slot_name_column(self, postgres_connector, caplog):
-        """Should warn when slot_name column is missing entirely."""
-        df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01'],
-            'gateway': ['test_01_g01'],
-            'source_database': ['app_db'],
-            'source_schema': ['public'],
-            'source_table_name': ['users'],
-            'target_catalog': ['main'],
-            'target_schema': ['bronze'],
-            'target_table_name': ['users'],
-            'connection_name': ['pg_conn'],
-            'gateway_catalog': ['main'],
-            'gateway_schema': ['bronze'],
-            'schedule': ['*/15 * * * *'],
-        })
-
-        with caplog.at_level(logging.WARNING):
-            postgres_connector._validate_generated_names(df)
-
-        assert "No 'slot_name' column provided" in caplog.text
-
-    def test_warns_when_slot_name_all_empty(self, postgres_connector, caplog):
-        """Should warn when slot_name column exists but all values are empty."""
-        df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01'],
-            'gateway': ['test_01_g01'],
-            'source_database': ['app_db'],
-            'source_schema': ['public'],
-            'source_table_name': ['users'],
-            'target_catalog': ['main'],
-            'target_schema': ['bronze'],
-            'target_table_name': ['users'],
-            'connection_name': ['pg_conn'],
-            'gateway_catalog': ['main'],
-            'gateway_schema': ['bronze'],
-            'slot_name': [''],
-            'schedule': ['*/15 * * * *'],
-        })
-
-        with caplog.at_level(logging.WARNING):
-            postgres_connector._validate_generated_names(df)
-
-        assert "No 'slot_name' values provided" in caplog.text
