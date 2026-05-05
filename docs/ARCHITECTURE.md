@@ -102,7 +102,7 @@ default_values = {
 }
 ```
 
-**Method:** `_apply_group_based_value()`
+**Method:** `_get_group_mask()`
 
 **Matching precedence** (most specific wins):
 1. `pipeline_group` (prefix_subgroup) - e.g., `'sales_2'`
@@ -119,9 +119,9 @@ default_values = {
 ```
 Tables grouped by prefix_subgroup
     ↓ split by max_tables_per_gateway (default: 250)
-Gateway groups (e.g., sales_01_gw01, sales_01_gw02)
+Gateway groups (e.g., sales_01_g01, sales_01_g02)
     ↓ split by max_tables_per_pipeline (default: 250)
-Pipeline groups (e.g., sales_01_gw01_g01, sales_01_gw01_g02)
+Pipeline groups (e.g., sales_01_g01_p01, sales_01_g01_p02)
 ```
 
 **SaaS connectors** - Single-level splitting:
@@ -129,10 +129,10 @@ Pipeline groups (e.g., sales_01_gw01_g01, sales_01_gw01_g02)
 ```
 Tables grouped by prefix_subgroup
     ↓ split by max_tables_per_pipeline (default: 250)
-Pipeline groups (e.g., sales_01_g01, sales_01_g02)
+Pipeline groups (e.g., sales_01_p01, sales_01_p02)
 ```
 
-**Algorithm:** `_split_groups_by_size()` iterates through each group, splits into chunks if size > max, assigns sequential suffixes (`_gw01`, `_g01`, etc.).
+**Algorithm:** `_split_groups_by_size()` iterates through each group, splits into chunks if size > max, assigns sequential suffixes (`_g01`, `_p01`, etc.).
 
 ### 3. YAML Generation
 
@@ -169,6 +169,9 @@ The root base class that defines the common interface for all connectors.
 - `required_columns` - List of required CSV columns
 - `default_values` - Dictionary of default values for optional columns
 
+**Concrete Properties:**
+- `supported_scd_types` - List of supported SCD types (default: `[]`, override in subclass)
+
 **Concrete Methods:**
 - `load_and_normalize_input()` - Loads and normalizes CSV input
 - `run_complete_pipeline_generation()` - Main entry point for pipeline generation
@@ -184,7 +187,7 @@ Base class for database connectors with gateway support.
 **Features:**
 - Two-level load balancing (gateways + pipelines)
 - Gateway configuration handling
-- Implements `generate_pipeline_config()` using `generate_database_pipeline_config()`
+- Implements `generate_pipeline_config()` directly with two-level splitting
 
 ### SaaSConnector (Abstract)
 
@@ -193,7 +196,7 @@ Base class for SaaS connectors without gateway support.
 **Features:**
 - Single-level load balancing (pipelines only)
 - Simpler YAML structure
-- Implements `generate_pipeline_config()` using `generate_saas_pipeline_config()`
+- Implements `generate_pipeline_config()` directly with single-level splitting
 
 
 ## Adding a New Connector
@@ -239,15 +242,15 @@ class MyConnector(DatabaseConnector):
 
             # Use helper methods from base class
             gateways = self._create_gateways(project_df, project_name)  # DB only
-            pipelines = self._create_pipelines(project_df)
-            jobs = self._create_jobs(project_df)
+            pipelines = self._create_pipelines(project_df, project_name)
+            jobs = self._create_jobs(project_df, project_name)
             databricks_yml = self._create_databricks_yml(project_name, targets)
 
             # Write YAML files
-            self._write_yaml(resources_dir / 'gateways.yml', gateways)
-            self._write_yaml(resources_dir / 'pipelines.yml', pipelines)
-            self._write_yaml(resources_dir / 'jobs.yml', jobs)
-            self._write_yaml(project_dir / 'databricks.yml', databricks_yml)
+            self._write_yaml_file(resources_dir / 'gateways.yml', gateways)
+            self._write_yaml_file(resources_dir / 'pipelines.yml', pipelines)
+            self._write_yaml_file(resources_dir / 'jobs.yml', jobs)
+            self._write_yaml_file(project_dir / 'databricks.yml', databricks_yml)
 ```
 
 ### Step 3: Register the Connector
@@ -257,7 +260,7 @@ Add to `src/tapworks/core/registry.py`:
 ```python
 CONNECTORS = {
     # ... existing connectors ...
-    'myservice': ('tapworks.connectors.myservice.connector', 'MyServiceConnector'),
+    'myservice': 'tapworks.connectors.myservice.connector.MyServiceConnector',
 }
 ```
 
@@ -295,11 +298,11 @@ class TestSQLServerConnector:
 
 **Method:** `_generate_resource_names()`
 
-For `pipeline_group = "sales_01_gw01_g01"`:
+For `pipeline_group = "sales_01_g01_p01"`:
 
 | Resource | Name |
 |----------|------|
-| Pipeline display | `Ingestion - sales_01_gw01_g01` |
-| Pipeline resource ID | `pipeline_sales_01_gw01_g01` |
-| Job resource ID | `job_sales_01_gw01_g01` |
-| Job display | `Pipeline Scheduler - sales_01_gw01_g01` |
+| Pipeline display | `Ingestion - sales_01_g01_p01` |
+| Pipeline resource ID | `pipeline_sales_01_g01_p01` |
+| Job resource ID | `job_sales_01_g01_p01` |
+| Job display | `Pipeline Scheduler - sales_01_g01_p01` |
