@@ -157,7 +157,7 @@ Use `tapworks <connector> --info` to see required columns and defaults for any c
 ```bash
 tapworks salesforce --input-config tables.csv --output-dir output --settings settings.json
 ```
-Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
+Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`
 
 Optional: `include_columns`, `exclude_columns`, `primary_keys` (comma-separated; supports composite keys)
 
@@ -165,19 +165,19 @@ Optional: `include_columns`, `exclude_columns`, `primary_keys` (comma-separated;
 ```bash
 tapworks google_analytics --input-config tables.csv --output-dir output --settings settings.json
 ```
-Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
+Required columns: `source_catalog`, `source_schema`, `tables`, `target_catalog`, `target_schema`, `connection_name`, `pipeline_catalog`, `pipeline_schema`
 
 **ServiceNow**:
 ```bash
 tapworks servicenow --input-config tables.csv --output-dir output --settings settings.json
 ```
-Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
+Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`
 
 **Workday Reports**:
 ```bash
 tapworks workday_reports --input-config tables.csv --output-dir output --settings settings.json
 ```
-Required columns: `source_url`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `primary_keys`
+Required columns: `source_url`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `primary_keys`, `pipeline_catalog`, `pipeline_schema`
 
 ### Database Connectors
 
@@ -187,7 +187,7 @@ Database connectors support two-level load balancing with gateways.
 ```bash
 tapworks sql_server --input-config tables.csv --output-dir output --settings settings.json
 ```
-Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
+Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`
 
 Optional: `gateway_catalog`, `gateway_schema`, `gateway_worker_type`, `gateway_driver_type`
 
@@ -195,7 +195,7 @@ Optional: `gateway_catalog`, `gateway_schema`, `gateway_worker_type`, `gateway_d
 ```bash
 tapworks postgresql --input-config tables.csv --output-dir output --settings settings.json
 ```
-Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`
+Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`, `slot_name`, `publication_name`
 
 Optional: `gateway_catalog`, `gateway_schema`, `gateway_worker_type`, `gateway_driver_type`
 

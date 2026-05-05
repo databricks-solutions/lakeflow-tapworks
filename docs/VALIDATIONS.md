@@ -96,7 +96,7 @@ These checks run at the end of normalization, validating the fully resolved conf
 
 | | |
 |---|---|
-| **What it checks** | Values in `target_table_name`, `target_schema`, and `target_catalog` follow Unity Catalog naming rules. Periods (`.`), spaces, forward slashes (`/`), and control characters are not allowed. |
+| **What it checks** | Values in `target_table_name`, `target_schema`, `target_catalog`, `pipeline_catalog`, `pipeline_schema`, `gateway_catalog`, and `gateway_schema` follow Unity Catalog naming rules. Periods (`.`), spaces, forward slashes (`/`), and control characters are not allowed. |
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Invalid characters in 'target_table_name': ['my.table', 'bad table']. Periods (.), spaces, forward slashes (/), and control characters are not allowed in Unity Catalog names.` |
 | **How to fix** | Replace disallowed characters with underscores or other valid characters. |
@@ -105,7 +105,7 @@ These checks run at the end of normalization, validating the fully resolved conf
 
 | | |
 |---|---|
-| **What it checks** | Values in `target_table_name`, `target_schema`, and `target_catalog` do not exceed 255 characters. |
+| **What it checks** | Values in `target_table_name`, `target_schema`, `target_catalog`, `pipeline_catalog`, `pipeline_schema`, `gateway_catalog`, and `gateway_schema` do not exceed 255 characters. |
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Name too long in 'target_table_name': ['very_long_name_that_exc...']. Unity Catalog names cannot exceed 255 characters.` |
 | **How to fix** | Shorten the name to 255 characters or fewer. |
@@ -156,7 +156,7 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 
 | | |
 |---|---|
-| **What it checks** | Within each `pipeline_group`, the `connection_name` and `tags` values are the same for all rows. SaaS pipelines use a single connection per pipeline. |
+| **What it checks** | Within each `pipeline_group`, the `connection_name`, `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. SaaS pipelines use a single connection per pipeline. |
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Pipeline group 'sfdc_01_p01' has conflicting connection_name values: ['conn_a', 'conn_b']. All tables in the same pipeline group must have the same connection_name. Solutions: (1) Use the same connection_name value for all tables, or (2) Use different 'subgroup' values to separate tables with different connection_name values.` |
 | **How to fix** | Use the same `connection_name` for all tables in the group, or split them into different subgroups. |
@@ -165,7 +165,7 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 
 | | |
 |---|---|
-| **What it checks** | Within each `pipeline_group`, the `tags` values are the same for all rows. |
+| **What it checks** | Within each `pipeline_group`, the `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. |
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Pipeline group 'sql_01_g01_p01' has conflicting tags values: ['{"team":"a"}', '{"team":"b"}']. All tables in the same pipeline group must have the same tags.` |
 | **How to fix** | Use the same `tags` for all tables in the group, or split them into different subgroups. |
@@ -178,6 +178,24 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Gateway 'sql_01_g01' has conflicting connection_name values: ['conn_a', 'conn_b']. All tables in the same gateway must have the same connection_name. Solutions: (1) Use the same connection_name value for all tables, or (2) Use different 'subgroup' values to separate tables with different connection_name values.` |
 | **How to fix** | Use the same connection and gateway settings for all tables in the gateway, or split them into different subgroups. |
+
+### Slot/publication consistency (PostgreSQL only)
+
+| | |
+|---|---|
+| **What it checks** | Within each `pipeline_group`, all tables from the same `source_database` have the same `slot_name` and `publication_name`. PostgreSQL replication requires consistent slot configuration per source database. |
+| **Severity** | Error (`ValidationError`) |
+| **Example message** | `Pipeline group 'pg_01_g01_p01': source database 'mydb' has conflicting slot_name values: ['slot_a', 'slot_b']. All tables from the same source database must use the same slot_name.` |
+| **How to fix** | Use the same `slot_name` and `publication_name` for all tables from the same source database, or split them into different subgroups. |
+
+### Primary keys required (Workday Reports only)
+
+| | |
+|---|---|
+| **What it checks** | Every row has a non-empty `primary_keys` value. Workday Reports require at least one primary key column for each report. |
+| **Severity** | Error (`ValidationError`) |
+| **Example message** | `Missing required primary_keys for report 'my_report'. Workday Reports require at least one primary key column. Please specify primary_keys in your CSV (e.g., 'Employee_ID' or 'Worker_ID,Effective_Date')` |
+| **How to fix** | Add a `primary_keys` column to your input with comma-separated key column names for each report. |
 
 ### Cross-project pipeline_group collision
 
