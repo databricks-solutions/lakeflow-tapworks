@@ -1329,7 +1329,7 @@ class TestPostgreSQLSourceConfigurations:
     def test_source_configurations_generated_with_slot_name(self, postgres_connector):
         """Should generate source_configurations when slot_name is provided."""
         df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01'],
+            'pipeline_group': ['test_01_g01p01', 'test_01_g01p01'],
             'gateway': ['test_01_g01', 'test_01_g01'],
             'source_database': ['app_db', 'app_db'],
             'source_schema': ['public', 'public'],
@@ -1345,7 +1345,7 @@ class TestPostgreSQLSourceConfigurations:
 
         result = postgres_connector._create_pipelines(df, 'project')
 
-        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
+        pipeline = result['resources']['pipelines']['pipeline_test_01_g01p01']
         assert 'source_configurations' in pipeline['ingestion_definition']
         configs = pipeline['ingestion_definition']['source_configurations']
         assert len(configs) == 1
@@ -1356,7 +1356,7 @@ class TestPostgreSQLSourceConfigurations:
     def test_multiple_source_databases(self, postgres_connector):
         """Should generate one source_configuration entry per unique source_database."""
         df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01', 'test_01_g01_p01'],
+            'pipeline_group': ['test_01_g01p01', 'test_01_g01p01', 'test_01_g01p01'],
             'gateway': ['test_01_g01', 'test_01_g01', 'test_01_g01'],
             'source_database': ['db_one', 'db_one', 'db_two'],
             'source_schema': ['public', 'public', 'public'],
@@ -1372,7 +1372,7 @@ class TestPostgreSQLSourceConfigurations:
 
         result = postgres_connector._create_pipelines(df, 'project')
 
-        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
+        pipeline = result['resources']['pipelines']['pipeline_test_01_g01p01']
         configs = pipeline['ingestion_definition']['source_configurations']
         assert len(configs) == 2
 
@@ -1390,7 +1390,7 @@ class TestPostgreSQLSourceConfigurations:
     def test_objects_still_present_with_source_configurations(self, postgres_connector):
         """source_configurations should coexist with objects in ingestion_definition."""
         df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01'],
+            'pipeline_group': ['test_01_g01p01'],
             'gateway': ['test_01_g01'],
             'source_database': ['app_db'],
             'source_schema': ['public'],
@@ -1406,7 +1406,7 @@ class TestPostgreSQLSourceConfigurations:
 
         result = postgres_connector._create_pipelines(df, 'project')
 
-        pipeline = result['resources']['pipelines']['pipeline_test_01_g01_p01']
+        pipeline = result['resources']['pipelines']['pipeline_test_01_g01p01']
         assert 'objects' in pipeline['ingestion_definition']
         assert 'source_configurations' in pipeline['ingestion_definition']
         assert len(pipeline['ingestion_definition']['objects']) == 1
@@ -1418,7 +1418,7 @@ class TestPostgreSQLSlotValidation:
     def test_conflicting_slot_name_same_source_database(self, postgres_connector):
         """Should raise ValidationError when same source_database has different slot_names."""
         df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01'],
+            'pipeline_group': ['test_01_g01p01', 'test_01_g01p01'],
             'gateway': ['test_01_g01', 'test_01_g01'],
             'source_database': ['app_db', 'app_db'],
             'source_schema': ['public', 'public'],
@@ -1440,7 +1440,7 @@ class TestPostgreSQLSlotValidation:
     def test_conflicting_publication_name_same_source_database(self, postgres_connector):
         """Should raise ValidationError when same source_database has different publication_names."""
         df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01'],
+            'pipeline_group': ['test_01_g01p01', 'test_01_g01p01'],
             'gateway': ['test_01_g01', 'test_01_g01'],
             'source_database': ['app_db', 'app_db'],
             'source_schema': ['public', 'public'],
@@ -1462,7 +1462,7 @@ class TestPostgreSQLSlotValidation:
     def test_allows_consistent_slot_config(self, postgres_connector):
         """Should allow consistent slot_name and publication_name per source_database."""
         df = pd.DataFrame({
-            'pipeline_group': ['test_01_g01_p01', 'test_01_g01_p01'],
+            'pipeline_group': ['test_01_g01p01', 'test_01_g01p01'],
             'gateway': ['test_01_g01', 'test_01_g01'],
             'source_database': ['app_db', 'app_db'],
             'source_schema': ['public', 'public'],

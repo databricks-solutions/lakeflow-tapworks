@@ -55,30 +55,30 @@ Groups are split when they exceed capacity limits:
 
 **Database connectors:**
 ```
-prefix_subgroup (e.g., sales_01)
+prefix (or prefix_subgroup if subgroup is explicit, e.g., sales or sales_finance)
     ↓ split by max_tables_per_gateway (default: 250)
-gateway (e.g., sales_01_gw01, sales_01_gw02)
+gateway (e.g., sales_g01, sales_g02)
     ↓ split by max_tables_per_pipeline (default: 250)
-pipeline_group (e.g., sales_01_gw01_g01)
+pipeline_group (e.g., sales_g01p01, sales_g01p02)
 ```
 
 **SaaS connectors:**
 ```
-prefix_subgroup (e.g., sales_01)
+prefix (or prefix_subgroup if subgroup is explicit, e.g., sales or sales_finance)
     ↓ split by max_tables_per_pipeline (default: 250)
-pipeline_group (e.g., sales_01_g01, sales_01_g02)
+pipeline_group (e.g., sales_p01, sales_p02)
 ```
 
 ## Resource Naming Convention
 
-For `pipeline_group = "sales_01_g01"`:
+For `pipeline_group = "sales_g01p01"`:
 
 | Resource | Name |
 |----------|------|
-| Pipeline display | `Ingestion - sales_01_g01` |
-| Pipeline resource ID | `pipeline_sales_01_g01` |
-| Job resource ID | `job_sales_01_g01` |
-| Job display | `Pipeline Scheduler - sales_01_g01` |
+| Pipeline display | `Ingestion - sales_g01p01` |
+| Pipeline resource ID | `pipeline_sales_g01p01` |
+| Job resource ID | `job_sales_g01p01` |
+| Job display | `Pipeline Scheduler - sales_g01p01` |
 
 ## Configuration Priority
 
