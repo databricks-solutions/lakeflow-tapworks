@@ -10,7 +10,7 @@ Quick reference for connector development.
 |--------|----------|---------|-------------|
 | `project_name` | No | `{connector}_ingestion` | DAB project name |
 | `prefix` | No | `project_name` | Grouping prefix |
-| `subgroup` | No | `01` | Sub-grouping within prefix |
+| `subgroup` | No | (empty) | Sub-grouping within prefix |
 | `schedule` | No | Connector-specific | Cron schedule (5-field) |
 | `target_catalog` | Yes | - | Unity Catalog destination |
 | `target_schema` | Yes | - | Schema destination |
@@ -44,9 +44,9 @@ Varies by connector. Common patterns:
 
 ### Grouping
 
-Tables are grouped by `{prefix}_{subgroup}`:
+Tables are grouped by `{prefix}_{subgroup}` (or just `{prefix}` when subgroup is empty):
 - `prefix` defaults to `project_name` if empty
-- `subgroup` defaults to `01` if all empty in a prefix
+- `subgroup` is left empty if not specified (no `_01` infix in names)
 - Mixed subgroups (some explicit, some empty) in same prefix = error
 
 ### Splitting

@@ -86,7 +86,7 @@ Applies configuration in this order (later overrides earlier):
 
 Also sets:
 - `prefix = project_name` if empty
-- `subgroup = '01'` if all empty within a prefix
+- `subgroup` left empty if not specified (no `_01` infix in names)
 
 **Subgroup validation:** If any table in a prefix has an explicit subgroup, all tables in that prefix must have explicit subgroups. This prevents accidental grouping of tables that should be isolated.
 
@@ -229,7 +229,7 @@ class MyConnector(DatabaseConnector):
         return {
             'project_name': 'myservice_ingestion',
             'prefix': '',
-            'subgroup': '01',
+            'subgroup': '',
             'schedule': '*/15 * * * *'
         }
 
