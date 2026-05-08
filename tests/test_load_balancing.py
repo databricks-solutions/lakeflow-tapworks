@@ -292,7 +292,7 @@ class TestDatabaseConnectorLoadBalancing:
         assert len(result['gateway'].unique()) == 1
         assert len(result['pipeline_group'].unique()) == 1
         assert result['gateway'].iloc[0] == 'test_01_g01'
-        assert result['pipeline_group'].iloc[0] == 'test_01_g01_p01'
+        assert result['pipeline_group'].iloc[0] == 'test_01_g01p01'
 
 
 class TestResourceNaming:
@@ -431,6 +431,24 @@ class TestSplitGroupsBySize:
         # Second chunk should have rows with data 3, 4
         chunk2 = result[result['result'] == 'A_g02']
         assert list(chunk2['data']) == [3, 4]
+
+    def test_empty_separator(self, salesforce_connector):
+        """separator='' should join suffix directly to group name (e.g., A_g01p01)."""
+        df = pd.DataFrame({
+            'group_col': ['A_g01', 'A_g01', 'A_g01'],
+            'data': [1, 2, 3]
+        })
+
+        result = salesforce_connector._split_groups_by_size(
+            df=df,
+            group_column='group_col',
+            max_size=10,
+            output_column='result',
+            suffix='p',
+            separator=''
+        )
+
+        assert list(result['result'].unique()) == ['A_g01p01']
 
 
 class TestValidateGeneratedNames:

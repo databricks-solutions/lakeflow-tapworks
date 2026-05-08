@@ -93,3 +93,6 @@ dab_project/
 # Local planning docs
 REFACTOR_PLAN.md
 TODO.md
+
+# E2E test data (contains connection names and workspace details)
+e2e/

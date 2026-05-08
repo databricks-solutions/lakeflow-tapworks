@@ -86,7 +86,7 @@ Applies configuration in this order (later overrides earlier):
 
 Also sets:
 - `prefix = project_name` if empty
-- `subgroup = '01'` if all empty within a prefix
+- `subgroup` left empty if not specified (no `_01` infix in names)
 
 **Subgroup validation:** If any table in a prefix has an explicit subgroup, all tables in that prefix must have explicit subgroups. This prevents accidental grouping of tables that should be isolated.
 
@@ -117,19 +117,19 @@ default_values = {
 **Database connectors** - Two-level splitting:
 
 ```
-Tables grouped by prefix_subgroup
+Tables grouped by prefix (or prefix_subgroup if subgroup is explicit)
     ↓ split by max_tables_per_gateway (default: 250)
-Gateway groups (e.g., sales_01_g01, sales_01_g02)
+Gateway groups (e.g., sales_g01, sales_g02)
     ↓ split by max_tables_per_pipeline (default: 250)
-Pipeline groups (e.g., sales_01_g01_p01, sales_01_g01_p02)
+Pipeline groups (e.g., sales_g01p01, sales_g01p02)
 ```
 
 **SaaS connectors** - Single-level splitting:
 
 ```
-Tables grouped by prefix_subgroup
+Tables grouped by prefix (or prefix_subgroup if subgroup is explicit)
     ↓ split by max_tables_per_pipeline (default: 250)
-Pipeline groups (e.g., sales_01_p01, sales_01_p02)
+Pipeline groups (e.g., sales_p01, sales_p02)
 ```
 
 **Algorithm:** `_split_groups_by_size()` iterates through each group, splits into chunks if size > max, assigns sequential suffixes (`_g01`, `_p01`, etc.).
@@ -229,7 +229,7 @@ class MyConnector(DatabaseConnector):
         return {
             'project_name': 'myservice_ingestion',
             'prefix': '',
-            'subgroup': '01',
+            'subgroup': '',
             'schedule': '*/15 * * * *'
         }
 
@@ -298,11 +298,11 @@ class TestSQLServerConnector:
 
 **Method:** `_generate_resource_names()`
 
-For `pipeline_group = "sales_01_g01_p01"`:
+For `pipeline_group = "sales_g01p01"`:
 
 | Resource | Name |
 |----------|------|
-| Pipeline display | `Ingestion - sales_01_g01_p01` |
-| Pipeline resource ID | `pipeline_sales_01_g01_p01` |
-| Job resource ID | `job_sales_01_g01_p01` |
-| Job display | `Pipeline Scheduler - sales_01_g01_p01` |
+| Pipeline display | `Ingestion - sales_g01p01` |
+| Pipeline resource ID | `pipeline_sales_g01p01` |
+| Job resource ID | `job_sales_g01p01` |
+| Job display | `Pipeline Scheduler - sales_g01p01` |

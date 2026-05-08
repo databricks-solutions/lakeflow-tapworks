@@ -260,15 +260,15 @@ class TestLoadAndNormalizeInput:
         assert 'prefix' in result.columns
         assert all(result['prefix'] == 'my_project')
 
-    def test_subgroup_defaults_to_01(self, salesforce_connector, sample_salesforce_df):
-        """Subgroup should default to '01' if not provided."""
+    def test_subgroup_defaults_to_empty(self, salesforce_connector, sample_salesforce_df):
+        """Subgroup should default to '' if not provided."""
         result = salesforce_connector.load_and_normalize_input(
             df=sample_salesforce_df,
             default_values={'project_name': 'test_project'}
         )
 
         assert 'subgroup' in result.columns
-        assert all(result['subgroup'] == '01')
+        assert all(result['subgroup'] == '')
 
     def test_existing_prefix_preserved(self, salesforce_connector):
         """Should preserve existing prefix values."""
@@ -407,8 +407,8 @@ class TestScdTypeValidation:
 class TestSubgroupValidation:
     """Tests for subgroup validation - mixed usage within a prefix."""
 
-    def test_all_empty_subgroups_default_to_01(self, salesforce_connector):
-        """All empty subgroups should default to '01'."""
+    def test_all_empty_subgroups_default_to_empty(self, salesforce_connector):
+        """All empty subgroups should default to ''."""
         df = pd.DataFrame({
             'source_database': ['Salesforce', 'Salesforce'],
             'source_schema': ['standard', 'standard'],
@@ -426,7 +426,7 @@ class TestSubgroupValidation:
 
         result = salesforce_connector.load_and_normalize_input(df=df)
 
-        assert all(result['subgroup'] == '01')
+        assert all(result['subgroup'] == '')
 
     def test_all_explicit_subgroups_preserved(self, salesforce_connector):
         """All explicit subgroups should be preserved."""
@@ -492,8 +492,8 @@ class TestSubgroupValidation:
         # sales prefix: explicit subgroups preserved
         assert result.loc[0, 'subgroup'] == '01'
         assert result.loc[1, 'subgroup'] == '02'
-        # marketing prefix: empty defaults to '01'
-        assert result.loc[2, 'subgroup'] == '01'
+        # marketing prefix: empty defaults to ''
+        assert result.loc[2, 'subgroup'] == ''
 
     def test_error_message_includes_prefix_and_subgroups(self, salesforce_connector):
         """Error message should include the prefix and defined subgroups."""

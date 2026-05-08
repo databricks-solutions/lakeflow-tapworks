@@ -683,10 +683,9 @@ class BaseConnector(ABC):
         """
         # Try pipeline_group match (prefix_subgroup)
         if 'prefix' in df.columns and 'subgroup' in df.columns:
-            pipeline_group = (
-                df['prefix'].astype(str).str.strip() + '_' +
-                df['subgroup'].astype(str).str.strip()
-            )
+            prefix_str = df['prefix'].astype(str).str.strip()
+            subgroup_str = df['subgroup'].astype(str).str.strip()
+            pipeline_group = prefix_str.where(subgroup_str == '', prefix_str + '_' + subgroup_str)
             pg_match = pipeline_group == group_key
             if pg_match.any():
                 return pg_match
@@ -881,7 +880,7 @@ class BaseConnector(ABC):
 
         # Handle subgroup - validate no mixed usage within a prefix
         if 'subgroup' not in df.columns:
-            df['subgroup'] = '01'
+            df['subgroup'] = ''
         else:
             df['_subgroup_empty'] = df['subgroup'].isna() | (df['subgroup'].astype(str).str.strip() == '')
 
@@ -902,8 +901,8 @@ class BaseConnector(ABC):
                         f"When using subgroups, all tables in a prefix must have explicit subgroups."
                     )
 
-            # All subgroups empty for this prefix - default to '01'
-            df.loc[df['_subgroup_empty'], 'subgroup'] = '01'
+            # All subgroups empty for this prefix - default to ''
+            df.loc[df['_subgroup_empty'], 'subgroup'] = ''
             df.drop(columns=['_subgroup_empty'], inplace=True)
 
         return df
@@ -947,7 +946,8 @@ class BaseConnector(ABC):
         group_column: str,
         max_size: int,
         output_column: str,
-        suffix: str
+        suffix: str,
+        separator: str = '_'
     ) -> pd.DataFrame:
         """
         Split groups that exceed max_size into smaller chunks with sequential suffixes.
@@ -979,11 +979,11 @@ class BaseConnector(ABC):
                     start_idx = i * max_size
                     end_idx = min((i + 1) * max_size, len(group_df))
                     chunk_indices = group_df.iloc[start_idx:end_idx].index
-                    chunk_name = f"{group_name}_{suffix}{i+1:02d}"
+                    chunk_name = f"{group_name}{separator}{suffix}{i+1:02d}"
                     df.loc[chunk_indices, output_column] = chunk_name
             else:
                 # No split needed - still add suffix for stable naming
-                df.loc[group_df.index, output_column] = f"{group_name}_{suffix}01"
+                df.loc[group_df.index, output_column] = f"{group_name}{separator}{suffix}01"
 
         return df
 
@@ -1328,10 +1328,13 @@ class DatabaseConnector(BaseConnector):
 
         # Ensure consistent string formatting
         df['prefix'] = df['prefix'].astype(str)
-        df['subgroup'] = df['subgroup'].astype(str).str.zfill(2)
+        df['subgroup'] = df['subgroup'].astype(str).apply(lambda x: x.zfill(2) if x.strip() else x)
 
         # Generate base group from prefix + subgroup
-        df['base_group'] = df['prefix'] + '_' + df['subgroup']
+        df['base_group'] = df.apply(
+            lambda r: r['prefix'] + '_' + r['subgroup'] if r['subgroup'].strip() else r['prefix'],
+            axis=1
+        )
 
         # Step 1: Split by gateway capacity
         df = self._split_groups_by_size(
@@ -1348,7 +1351,8 @@ class DatabaseConnector(BaseConnector):
             group_column='gateway',
             max_size=max_tables_per_pipeline,
             output_column='pipeline_group',
-            suffix='p'
+            suffix='p',
+            separator=''
         )
 
         # Drop temporary base_group column
@@ -1593,10 +1597,13 @@ class SaaSConnector(BaseConnector):
 
         # Ensure consistent string formatting
         df['prefix'] = df['prefix'].astype(str)
-        df['subgroup'] = df['subgroup'].astype(str).str.zfill(2)
+        df['subgroup'] = df['subgroup'].astype(str).apply(lambda x: x.zfill(2) if x.strip() else x)
 
         # Generate base group from prefix + subgroup
-        df['base_group'] = df['prefix'] + '_' + df['subgroup']
+        df['base_group'] = df.apply(
+            lambda r: r['prefix'] + '_' + r['subgroup'] if r['subgroup'].strip() else r['prefix'],
+            axis=1
+        )
 
         # Split groups by capacity
         df = self._split_groups_by_size(

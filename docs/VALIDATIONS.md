@@ -149,7 +149,7 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 |---|---|
 | **What it checks** | Within each `pipeline_group`, the `schedule`, `pause_status`, and `tags` values are the same for all rows. A single job is created per pipeline group, so these values cannot differ. |
 | **Severity** | Error (`ValidationError`) |
-| **Example message** | `Pipeline group 'sales_01_p01' has conflicting schedule values: ['*/15 * * * *', '*/30 * * * *']. All tables in the same pipeline group must have the same schedule. Solutions: (1) Use the same schedule value for all tables, or (2) Use different 'subgroup' values to separate tables with different schedule values.` |
+| **Example message** | `Pipeline group 'sales_p01' has conflicting schedule values: ['*/15 * * * *', '*/30 * * * *']. All tables in the same pipeline group must have the same schedule. Solutions: (1) Use the same schedule value for all tables, or (2) Use different 'subgroup' values to separate tables with different schedule values.` |
 | **How to fix** | Either set the same value for all tables in the group, or use different `subgroup` values to separate tables that need different settings. |
 
 ### Pipeline consistency (SaaS connectors)
@@ -158,7 +158,7 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 |---|---|
 | **What it checks** | Within each `pipeline_group`, the `connection_name`, `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. SaaS pipelines use a single connection per pipeline. |
 | **Severity** | Error (`ValidationError`) |
-| **Example message** | `Pipeline group 'sfdc_01_p01' has conflicting connection_name values: ['conn_a', 'conn_b']. All tables in the same pipeline group must have the same connection_name. Solutions: (1) Use the same connection_name value for all tables, or (2) Use different 'subgroup' values to separate tables with different connection_name values.` |
+| **Example message** | `Pipeline group 'sfdc_p01' has conflicting connection_name values: ['conn_a', 'conn_b']. All tables in the same pipeline group must have the same connection_name. Solutions: (1) Use the same connection_name value for all tables, or (2) Use different 'subgroup' values to separate tables with different connection_name values.` |
 | **How to fix** | Use the same `connection_name` for all tables in the group, or split them into different subgroups. |
 
 ### Pipeline consistency (database connectors)
@@ -167,7 +167,7 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 |---|---|
 | **What it checks** | Within each `pipeline_group`, the `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. |
 | **Severity** | Error (`ValidationError`) |
-| **Example message** | `Pipeline group 'sql_01_g01_p01' has conflicting tags values: ['{"team":"a"}', '{"team":"b"}']. All tables in the same pipeline group must have the same tags.` |
+| **Example message** | `Pipeline group 'sql_g01p01' has conflicting tags values: ['{"team":"a"}', '{"team":"b"}']. All tables in the same pipeline group must have the same tags.` |
 | **How to fix** | Use the same `tags` for all tables in the group, or split them into different subgroups. |
 
 ### Gateway consistency (database connectors only)
@@ -176,7 +176,7 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 |---|---|
 | **What it checks** | Within each `gateway`, the `gateway_catalog`, `gateway_schema`, `connection_name`, and `tags` values are the same for all rows. A gateway connects to one source via one connection. |
 | **Severity** | Error (`ValidationError`) |
-| **Example message** | `Gateway 'sql_01_g01' has conflicting connection_name values: ['conn_a', 'conn_b']. All tables in the same gateway must have the same connection_name. Solutions: (1) Use the same connection_name value for all tables, or (2) Use different 'subgroup' values to separate tables with different connection_name values.` |
+| **Example message** | `Gateway 'sql_g01' has conflicting connection_name values: ['conn_a', 'conn_b']. All tables in the same gateway must have the same connection_name. Solutions: (1) Use the same connection_name value for all tables, or (2) Use different 'subgroup' values to separate tables with different connection_name values.` |
 | **How to fix** | Use the same connection and gateway settings for all tables in the gateway, or split them into different subgroups. |
 
 ### Slot/publication consistency (PostgreSQL only)
@@ -185,7 +185,7 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 |---|---|
 | **What it checks** | Within each `pipeline_group`, all tables from the same `source_database` have the same `slot_name` and `publication_name`. PostgreSQL replication requires consistent slot configuration per source database. |
 | **Severity** | Error (`ValidationError`) |
-| **Example message** | `Pipeline group 'pg_01_g01_p01': source database 'mydb' has conflicting slot_name values: ['slot_a', 'slot_b']. All tables from the same source database must use the same slot_name.` |
+| **Example message** | `Pipeline group 'pg_g01p01': source database 'mydb' has conflicting slot_name values: ['slot_a', 'slot_b']. All tables from the same source database must use the same slot_name.` |
 | **How to fix** | Use the same `slot_name` and `publication_name` for all tables from the same source database, or split them into different subgroups. |
 
 ### Primary keys required (Workday Reports only)
@@ -203,14 +203,14 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 |---|---|
 | **What it checks** | The same `pipeline_group` value does not appear in multiple projects. Identical pipeline group names across projects would create resources with conflicting names in the workspace. |
 | **Severity** | Error (`ValidationError`) |
-| **Example message** | `Pipeline group 'shared_01_p01' appears in multiple projects: 'project_a' and 'project_b'. Use distinct prefix or subgroup values per project to avoid resource name collisions in the workspace.` |
+| **Example message** | `Pipeline group 'shared_p01' appears in multiple projects: 'project_a' and 'project_b'. Use distinct prefix or subgroup values per project to avoid resource name collisions in the workspace.` |
 | **How to fix** | Use different `prefix` or `subgroup` values in each project so pipeline groups are unique. |
 
 ### Resource name format
 
 | | |
 |---|---|
-| **What it checks** | Generated resource names (e.g., `pipeline_sales_01_p01`, `job_sales_01_p01`) start with a letter and contain only letters, numbers, underscores, and hyphens. |
+| **What it checks** | Generated resource names (e.g., `pipeline_sales_p01`, `job_sales_p01`) start with a letter and contain only letters, numbers, underscores, and hyphens. |
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Invalid pipeline name 'pipeline_123_invalid': must start with a letter` |
 | **How to fix** | Ensure your `prefix` and `subgroup` values start with a letter and use only valid characters (letters, numbers, underscores, hyphens). |
