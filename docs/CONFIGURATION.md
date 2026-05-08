@@ -80,6 +80,46 @@ run_pipeline_generation(
 
 ---
 
+## Minimum Required Fields
+
+Every connector has a list of required columns (see [Column Reference](#column-reference) below), but they don't all need to be in the config file. Validation runs *after* defaults and overrides are applied, so any column with a uniform value across all rows can be pushed to `default_values` or `override_input_config` instead.
+
+The only columns that must be in the config file are those that vary per row. In practice, this is typically just source and target table names.
+
+**Example:** SQL Server requires 9 columns, but if everything except the table names is the same across rows, your CSV can be as small as:
+
+```csv
+source_table_name,target_table_name
+customers,customers
+orders,orders
+products,products
+```
+
+With the rest provided at generation time:
+
+```python
+run_pipeline_generation(
+    connector_name='sql_server',
+    input_source='tables.csv',
+    output_dir='output',
+    targets={'dev': {'workspace_host': 'https://...'}},
+    default_values={
+        'project_name': 'my_project',
+        'source_database': 'db1',
+        'source_schema': 'dbo',
+        'target_catalog': 'bronze',
+        'target_schema': 'sales',
+        'connection_name': 'sql_conn',
+        'pipeline_catalog': 'bronze',
+        'pipeline_schema': 'sales',
+    },
+)
+```
+
+This also works with DataFrames — if you're generating configs programmatically, you only need to produce the columns that actually differ per row and let defaults handle the rest.
+
+---
+
 ## Value Priority
 
 When the same column has values from multiple sources, the last one wins:
