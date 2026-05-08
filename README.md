@@ -130,26 +130,26 @@ Tables are automatically split based on configurable limits (default: 250 tables
 
 **SaaS connector example** (600 tables):
 ```
-              Input: 600 tables, prefix="sales", subgroup="01"
+              Input: 600 tables, prefix="sales"
                                       │
                     ┌─────────────────┼─────────────────┐
                     ▼                 ▼                 ▼
             ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
             │   Pipeline    │ │   Pipeline    │ │   Pipeline    │
-            │ sales_01_g01  │ │ sales_01_g02  │ │ sales_01_g03  │
+            │  sales_p01    │ │  sales_p02    │ │  sales_p03    │
             │ (250 tables)  │ │ (250 tables)  │ │ (100 tables)  │
             └───────────────┘ └───────────────┘ └───────────────┘
 ```
 
 **Database connector example** (600 tables):
 ```
-              Input: 600 tables, prefix="sales", subgroup="01"
+              Input: 600 tables, prefix="sales"
                                       │
                     ┌─────────────────┴─────────────────┐
                     ▼                                   ▼
             ┌───────────────┐                   ┌───────────────┐
             │    Gateway    │                   │    Gateway    │
-            │ sales_01_g01  │                   │ sales_01_g02  │
+            │  sales_g01    │                   │  sales_g02    │
             │ (500 tables)  │                   │ (100 tables)  │
             └───────┬───────┘                   └───────┬───────┘
                     │                                   │
@@ -157,8 +157,7 @@ Tables are automatically split based on configurable limits (default: 250 tables
           ▼                   ▼                         ▼
    ┌───────────────┐   ┌───────────────┐        ┌───────────────┐
    │   Pipeline    │   │   Pipeline    │        │   Pipeline    │
-   │  sales_01_    │   │  sales_01_    │        │  sales_01_    │
-   │  g01_p01      │   │  g01_p02      │        │  g02_p01      │
+   │ sales_g01p01  │   │ sales_g01p02  │        │ sales_g02p01  │
    │ (250 tables)  │   │ (250 tables)  │        │ (100 tables)  │
    └───────────────┘   └───────────────┘        └───────────────┘
 ```
@@ -191,29 +190,29 @@ Tapworks generates DAB resource names from `project_name`, `prefix`, and `subgro
 ```
 project_name  →  required, no default
 prefix        →  falls back to project_name if not specified
-subgroup      →  defaults to "01" if not specified
-base_group    =  {prefix}_{subgroup}
+subgroup      →  omitted by default; only present when explicitly specified
+base_group    =  {prefix}_{subgroup}  (or just {prefix} when no subgroup)
 ```
 
 **Database connector** (with gateways):
 
-| Resource | Pattern | Example |
-|---|---|---|
-| Gateway (resource key) | `gateway_{base_group}_g{NN}` | `gateway_sales_01_g01` |
-| Gateway (display name) | `{base_group}_g{NN}` | `sales_01_g01` |
-| Pipeline (resource name) | `pipeline_{base_group}_g{NN}_p{NN}` | `pipeline_sales_01_g01_p01` |
-| Pipeline (display name) | `{base_group}_g{NN}_p{NN}` | `sales_01_g01_p01` |
-| Job (resource name) | `job_{base_group}_g{NN}_p{NN}` | `job_sales_01_g01_p01` |
-| Job (display name) | `{base_group}_g{NN}_p{NN}` | `sales_01_g01_p01` |
+| Resource | Pattern | Example (no subgroup) | Example (subgroup="finance") |
+|---|---|---|---|
+| Gateway (resource key) | `gateway_{base_group}_g{NN}` | `gateway_sales_g01` | `gateway_sales_finance_g01` |
+| Gateway (display name) | `{base_group}_g{NN}` | `sales_g01` | `sales_finance_g01` |
+| Pipeline (resource name) | `pipeline_{base_group}_g{NN}p{NN}` | `pipeline_sales_g01p01` | `pipeline_sales_finance_g01p01` |
+| Pipeline (display name) | `{base_group}_g{NN}p{NN}` | `sales_g01p01` | `sales_finance_g01p01` |
+| Job (resource name) | `job_{base_group}_g{NN}p{NN}` | `job_sales_g01p01` | `job_sales_finance_g01p01` |
+| Job (display name) | `{base_group}_g{NN}p{NN}` | `sales_g01p01` | `sales_finance_g01p01` |
 
 **SaaS connector** (no gateways):
 
-| Resource | Pattern | Example |
-|---|---|---|
-| Pipeline (resource name) | `pipeline_{base_group}_p{NN}` | `pipeline_sales_01_p01` |
-| Pipeline (display name) | `{base_group}_p{NN}` | `sales_01_p01` |
-| Job (resource name) | `job_{base_group}_p{NN}` | `job_sales_01_p01` |
-| Job (display name) | `{base_group}_p{NN}` | `sales_01_p01` |
+| Resource | Pattern | Example (no subgroup) | Example (subgroup="finance") |
+|---|---|---|---|
+| Pipeline (resource name) | `pipeline_{base_group}_p{NN}` | `pipeline_sales_p01` | `pipeline_sales_finance_p01` |
+| Pipeline (display name) | `{base_group}_p{NN}` | `sales_p01` | `sales_finance_p01` |
+| Job (resource name) | `job_{base_group}_p{NN}` | `job_sales_p01` | `job_sales_finance_p01` |
+| Job (display name) | `{base_group}_p{NN}` | `sales_p01` | `sales_finance_p01` |
 
 > **Important:** Prefixes must be unique per workspace. Using the same prefix across different projects deployed to the same workspace will cause resource name collisions. Use distinct prefixes (or distinct `project_name` values if relying on the prefix fallback) for each project.
 
