@@ -30,7 +30,7 @@ Tapworks reads from a simple configuration (e.g., CSV, YAML, JSON, Delta table, 
 
 ## How It Works
 
-1. **Define your config** - Specify at least source/target mappings or other extra configuration (e.g., schedule, SCD type, gateway driver type, ...), and target environements. Using target, it is possible to specify different workspaces for deployment (e.g., dev, staging, prod)
+1. **[Define your config](./docs/CONFIGURATION.md)** - Specify at least source/target mappings or other extra configuration (e.g., schedule, SCD type, gateway driver type, ...), and target environements. Using target, it is possible to specify different workspaces for deployment (e.g., dev, staging, prod)
 
 
     **Example of a basic CSV config**

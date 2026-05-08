@@ -1,6 +1,6 @@
 # Configuration Reference
 
-This guide covers the input configuration format for Tapworks — what input types are supported, what columns are available, and how to provide them.
+This guide covers the input configuration format for Tapworks — what input types are supported, how values are resolved, and what columns are available per connector.
 
 ---
 
@@ -80,20 +80,72 @@ run_pipeline_generation(
 
 ---
 
-## Columns
+## Value Priority
+
+When the same column has values from multiple sources, the last one wins:
+
+```
+1. Built-in connector defaults (hardcoded in connector code)
+2. Input config values (CSV / Delta / DataFrame — per row)
+3. default_values parameter (fills empty values only)
+4. override_input_config parameter (overwrites everything)
+```
+
+For example, if a row has `schedule = '0 * * * *'` in the CSV but you pass `override_input_config = {'schedule': '*/30 * * * *'}`, the override wins.
+
+Both `default_values` and `override_input_config` support [group-based configuration](./USAGE.md#group-based-format-per-pipeline-group) for applying different values to different pipeline groups.
+
+---
+
+## Default Schedules
+
+Each connector has a built-in default schedule used when no `schedule` column or `default_values` override is provided.
+
+| Connector | Default Schedule |
+|-----------|-----------------|
+| **SaaS connectors** | |
+| Salesforce | `0 */6 * * *` (every 6 hours) |
+| Google Analytics 4 | `0 */6 * * *` (every 6 hours) |
+| ServiceNow | `0 */6 * * *` (every 6 hours) |
+| Workday Reports | `0 */6 * * *` (every 6 hours) |
+| **Database connectors** | |
+| SQL Server | `*/15 * * * *` (every 15 minutes) |
+| PostgreSQL | `*/15 * * * *` (every 15 minutes) |
+
+---
+
+## Naming Constraints
+
+Column values used in Unity Catalog names (`target_catalog`, `target_schema`, `target_table_name`, `pipeline_catalog`, `pipeline_schema`, `gateway_catalog`, `gateway_schema`) must follow these rules:
+
+- No periods (`.`), spaces, forward slashes (`/`), or control characters
+- Maximum 255 characters
+- Generated resource names (pipeline, job, gateway) must start with a letter and contain only letters, numbers, underscores, and hyphens
+
+See [VALIDATIONS.md](./VALIDATIONS.md) for the full list of validation rules and error messages.
+
+---
+
+## Row Order
+
+When load balancing splits a group into multiple pipelines or gateways, tables are assigned to chunks based on their row position in the input. See the [Row Order and Load Balancing](./USAGE.md#row-order-and-load-balancing) section in USAGE.md.
+
+---
+
+## Column Reference
 
 Every connector requires a specific set of columns and supports additional optional ones. Columns can come from the input config directly, or be filled via `default_values` / `override_input_config` at generation time.
 
-### Common Columns (All Connectors)
+Use `tapworks <connector> --info` from the CLI to see required columns and defaults for any connector.
 
-These columns are available across every connector.
+### Common Columns (All Connectors)
 
 | Column | Required | Default | Description |
 |--------|----------|---------|-------------|
 | `project_name` | Yes* | — | DAB project/bundle name. Must be provided via input, `default_values`, or `override_input_config`. |
 | `prefix` | No | Falls back to `project_name` | Grouping key for load balancing. Tables with the same prefix are grouped together before splitting. |
 | `subgroup` | No | Empty (omitted from names) | Sub-grouping within a prefix. When used, all tables in a prefix must have explicit subgroups. |
-| `schedule` | No | Connector-specific (see below) | Cron expression for the pipeline job. Standard 5-field or Quartz 6-7 field format. |
+| `schedule` | No | Connector-specific (see above) | Cron expression for the pipeline job. Standard 5-field or Quartz 6-7 field format. |
 | `pause_status` | No | — | Job pause state: `PAUSED` or `UNPAUSED`. |
 | `tags` | No | — | Databricks resource tags. JSON string or key=value format. |
 | `scd_type` | No | — | Slowly Changing Dimension type: `SCD_TYPE_1` or `SCD_TYPE_2`. Supported by all connectors. |
@@ -187,53 +239,3 @@ Used by **SQL Server** and **PostgreSQL**.
 | `pipeline_schema` | Yes | — | Schema for the pipeline event log |
 | `include_columns` | No | — | Comma-separated list of columns to include |
 | `exclude_columns` | No | — | Comma-separated list of columns to exclude |
-
----
-
-## Default Schedules
-
-Each connector has a built-in default schedule used when no `schedule` column or `default_values` override is provided.
-
-| Connector | Default Schedule |
-|-----------|-----------------|
-| Salesforce | `*/15 * * * *` (every 15 minutes) |
-| SQL Server | `*/15 * * * *` (every 15 minutes) |
-| PostgreSQL | `*/15 * * * *` (every 15 minutes) |
-| ServiceNow | `*/15 * * * *` (every 15 minutes) |
-| Google Analytics 4 | `0 */6 * * *` (every 6 hours) |
-| Workday Reports | `0 */6 * * *` (every 6 hours) |
-
----
-
-## Value Priority
-
-When the same column has values from multiple sources, the last one wins:
-
-```
-1. Built-in connector defaults (hardcoded)
-2. Input config values (CSV / Delta / DataFrame — per row)
-3. default_values parameter (fills empty values only)
-4. override_input_config parameter (overwrites everything)
-```
-
-For example, if a row has `schedule = '0 * * * *'` in the CSV but you pass `override_input_config = {'schedule': '*/30 * * * *'}`, the override wins.
-
-Both `default_values` and `override_input_config` support [group-based configuration](./USAGE.md#group-based-format-per-pipeline-group) for applying different values to different pipeline groups.
-
----
-
-## Naming Constraints
-
-Column values used in Unity Catalog names (`target_catalog`, `target_schema`, `target_table_name`, `pipeline_catalog`, `pipeline_schema`, `gateway_catalog`, `gateway_schema`) must follow these rules:
-
-- No periods (`.`), spaces, forward slashes (`/`), or control characters
-- Maximum 255 characters
-- Generated resource names (pipeline, job, gateway) must start with a letter and contain only letters, numbers, underscores, and hyphens
-
-See [VALIDATIONS.md](./VALIDATIONS.md) for the full list of validation rules and error messages.
-
----
-
-## Row Order
-
-When load balancing splits a group into multiple pipelines or gateways, tables are assigned to chunks based on their row position in the input. See the [Row Order and Load Balancing](./USAGE.md#row-order-and-load-balancing) section in USAGE.md.

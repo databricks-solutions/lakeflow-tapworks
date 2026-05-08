@@ -75,7 +75,7 @@ class SalesforceConnector(SaaSConnector):
         These values are used when columns are missing or empty.
         """
         return {
-            'schedule': '*/15 * * * *',
+            'schedule': '0 */6 * * *',
             'pipeline_catalog': None,
             'pipeline_schema': None,
         }

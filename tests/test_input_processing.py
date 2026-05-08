@@ -221,7 +221,7 @@ class TestLoadAndNormalizeInput:
             default_values={'project_name': 'test_project'}
         )
 
-        # Connector default for schedule is '*/15 * * * *'
+        # Connector default for schedule is '0 */6 * * *'
         assert 'schedule' in result.columns
 
     def test_user_defaults_override_connector_defaults(self, salesforce_connector, sample_salesforce_df):
