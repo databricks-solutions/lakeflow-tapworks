@@ -70,6 +70,14 @@ display(result_df)
 | `max_tables_per_pipeline` | Maximum tables per pipeline (default: 250) |
 | `max_tables_per_gateway` | Maximum tables per gateway - database connectors only (default: 250) |
 
+### Row Order and Load Balancing
+
+When a prefix has more tables than `max_tables_per_pipeline` (or `max_tables_per_gateway`), Tapworks splits them into chunks based on their row position in the input config. This has important implications:
+
+- **Row order determines chunk assignment.** The first 250 rows for a prefix go to the first pipeline, the next 250 to the second, etc.
+- **Rows don't need to be contiguous.** Tables for the same prefix can be scattered throughout the config — Tapworks collects them by prefix, but preserves their relative order when splitting.
+- **Append new tables to the end of their prefix.** Inserting rows in the middle shifts which tables belong to which pipeline. In DABs, a table moving to a different pipeline means the old pipeline is removed and recreated — **this causes data loss**. Always add new tables after the existing rows for that prefix.
+
 ---
 
 ## Defaults and Overrides

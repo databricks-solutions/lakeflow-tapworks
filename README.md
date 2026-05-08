@@ -30,7 +30,7 @@ Tapworks reads from a simple configuration (e.g., CSV, YAML, JSON, Delta table, 
 
 ## How It Works
 
-1. **Define your config** - Specify at least source/target mappings or other extra configuration (e.g., schedule, SCD type, gateway driver type, ...), and target environements. Using target, it is possible to specify different workspaces for deployment (e.g., dev, staging, prod)
+1. **[Define your config](./docs/CONFIGURATION.md)** - Specify at least source/target mappings or other extra configuration (e.g., schedule, SCD type, gateway driver type, ...), and target environements. Using target, it is possible to specify different workspaces for deployment (e.g., dev, staging, prod)
 
 
     **Example of a basic CSV config**
@@ -123,6 +123,13 @@ Project (DAB Package)
     └── Gateway(s) - auto-split if > 250 tables
         └── Pipeline(s) - auto-split if > 250 tables per gateway
 ```
+
+### Row Order Matters
+
+When load balancing splits a group into multiple pipelines or gateways, tables are assigned to chunks based on their row position in the input config. The first 250 rows for a prefix go to the first pipeline, the next 250 to the second, and so on.
+
+- **Rows don't need to be contiguous.** Tables for the same prefix can appear anywhere in the config — Tapworks collects them by prefix, but their relative order determines chunk assignment.
+- **Always append new tables to the end of their prefix.** Inserting rows in the middle shifts which tables belong to which pipeline. In DABs, a table moving to a different pipeline means the old pipeline is removed and recreated — **this causes data loss**.
 
 ### Auto-Distribution
 
@@ -327,6 +334,7 @@ result = run_pipeline_generation(
 
 ## Documentation
 
+- [CONFIGURATION.md](./docs/CONFIGURATION.md) (<a href="$./docs/CONFIGURATION.md">Databricks</a>) - Input formats, column reference, defaults, and naming constraints
 - [USAGE.md](./docs/USAGE.md) (<a href="$./docs/USAGE.md">Databricks</a>) - CLI and notebook usage examples for all connectors
 - [ARCHITECTURE.md](./docs/ARCHITECTURE.md) (<a href="$./docs/ARCHITECTURE.md">Databricks</a>) - Technical architecture and class hierarchy
 

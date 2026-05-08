@@ -8,6 +8,8 @@ When making major changes, update these files:
 
 | File | Update when... |
 |------|----------------|
+| `README.md` | Features, high-level workflow, load balancing behavior, or documentation links change |
+| `docs/CONFIGURATION.md` | Input formats, column definitions, default values, or naming constraints change |
 | `docs/ARCHITECTURE.md` | Class hierarchy, core flow, or method signatures change |
 | `docs/USAGE.md` | CLI commands, API parameters, or configuration options change |
 | `docs/VALIDATIONS.md` | Validation rules, required fields, or naming conventions change |
