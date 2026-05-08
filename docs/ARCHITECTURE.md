@@ -134,6 +134,12 @@ Pipeline groups (e.g., sales_p01, sales_p02)
 
 **Algorithm:** `_split_groups_by_size()` iterates through each group, splits into chunks if size > max, assigns sequential suffixes (`_g01`, `_p01`, etc.).
 
+**Row order matters for load balancing.** When a group exceeds the max size and gets split into chunks, tables are assigned to chunks based on their row position in the input (using positional indexing). This means:
+- The first 250 rows (by input order) go to chunk 1, the next 250 to chunk 2, etc.
+- Rows for the same prefix do **not** need to be contiguous — they are collected regardless of position, but their relative order determines chunk assignment.
+- **Adding new tables in the middle of existing rows can shift tables between chunks**, which changes which pipeline they belong to. In DABs, a pipeline name change causes the old pipeline to be removed and recreated — resulting in data loss.
+- **Always append new tables to the end** of their prefix group in the config to avoid shifting existing table assignments.
+
 ### 3. YAML Generation
 
 **Method:** `generate_yaml_files()`
