@@ -7,10 +7,13 @@ Automated Load Balancer and DAB (Databricks Asset Bundle) generation toolkit for
 DAB is the recommended way for deploying Lakeflow connectors, however, manually creating and maintaining DAB templates for Lakeflow connectors doesn't scale. Common challenges include:
 
 - **Manual table/object management** - Adding hundreds or thousands of tables to DAB templates by hand is error-prone and time-consuming
-- **Load balancing** - Distributing tables across pipelines based on size, SLAs, or performance metrics is impossible to do manually at scale
-- **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards can be automated
+- **Load balancing** - Distributing tables across pipelines based on size, SLAs, or performance metrics is difficult to do manually at scale
 - **DAB syntax errors** - Minor syntax mistakes (e.g., missing spaces) cause errors and can be difficult to troubleshoot
+
+Some extra features can facilitate setting up and migration, including:
+
 - **Config re-use** - Existing table configurations from other tools can't be reused as input for migration
+- **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards can be automated
 
 ## Solution
 
