@@ -12,8 +12,8 @@ DAB is the recommended way for deploying Lakeflow connectors, however, manually 
 
 Some extra features can facilitate setting up and migration, including:
 
-- **Config re-use** - Existing table configurations from other tools can't be reused as input for migration
-- **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards can be automated
+- **Config re-use** - Reuse of existing table configurations from other tools for migration
+- **Naming conventions** - Table mapping for sources with unsupported characters (e.g., SAP tables with "/") or enforcing naming standards can be done programatically
 
 ## Solution
 
