@@ -90,6 +90,12 @@ dab_project/
 # Claude Code
 .claude/
 
+# Isaac
+.isaac/
+
+# macOS
+.DS_Store
+
 # Local planning docs
 REFACTOR_PLAN.md
 TODO.md
