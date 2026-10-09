@@ -31,6 +31,7 @@ class TestConnectorRegistry:
         assert 'sql_server_standard' in connectors
         assert 'postgresql_standard' in connectors
         assert 'oracle_integrated' in connectors
+        assert 'oracle_query_based' in connectors
         assert 'google_analytics' in connectors
         assert 'servicenow' in connectors
         assert 'workday_reports' in connectors

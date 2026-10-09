@@ -130,7 +130,7 @@ Project (DAB Package)
         └── Pipeline(s) - auto-split if > 250 tables per gateway
 ```
 
-**Integrated CDC database connectors** (e.g., Oracle), which have no gateway:
+**Integrated CDC and query-based database connectors** (e.g., Oracle), which have no gateway:
 ```
 Project (DAB Package)
 └── Prefix + Subgroup (logical grouping)

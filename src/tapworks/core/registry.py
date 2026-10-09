@@ -14,6 +14,7 @@ CONNECTORS: Dict[str, str] = {
     'sql_server_standard': 'tapworks.connectors.sql_server.standard.SQLServerStandardConnector',
     'postgresql_standard': 'tapworks.connectors.postgresql.standard.PostgreSQLStandardConnector',
     'oracle_integrated': 'tapworks.connectors.oracle.integrated.OracleIntegratedConnector',
+    'oracle_query_based': 'tapworks.connectors.oracle.query_based.OracleQueryBasedConnector',
     'google_analytics': 'tapworks.connectors.google_analytics.connector.GoogleAnalyticsConnector',
     'servicenow': 'tapworks.connectors.servicenow.connector.ServiceNowConnector',
     'workday_reports': 'tapworks.connectors.workday_reports.connector.WorkdayReportsConnector',

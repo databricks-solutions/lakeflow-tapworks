@@ -10,8 +10,10 @@ Architecture:
     ├── DatabaseConnector (ABC) - Shared logic for database sources
     │   ├── StandardConnector (ABC) - Ingestion through a separate gateway
     │   │   └── SQLServerStandardConnector
-    │   └── IntegratedCDCConnector (ABC) - CDC without a gateway
-    │       └── OracleIntegratedConnector
+    │   ├── IntegratedCDCConnector (ABC) - CDC without a gateway
+    │   │   └── OracleIntegratedConnector
+    │   └── QueryBasedConnector (ABC) - Query-based ingestion with cursor columns
+    │       └── OracleQueryBasedConnector
     └── SaaSConnector (ABC) - For SaaS sources without gateways
         ├── SalesforceConnector
         └── GoogleAnalyticsConnector
@@ -1762,6 +1764,42 @@ class IntegratedCDCConnector(DatabaseConnector):
         pipeline_def['channel'] = 'PREVIEW'
         return pipeline_def
 
+
+class QueryBasedConnector(DatabaseConnector):
+    """
+    Abstract base class for query-based database connectors.
+
+    Each pipeline queries the source tables through its Unity Catalog connection,
+    using cursor columns to read new and updated rows. No gateway or staging.
+    Uses single-level load balancing.
+
+    Examples: Oracle
+    """
+
+    def _ingestion_source(self, group_df: pd.DataFrame) -> Dict:
+        """Pipelines connect to the source directly and use query-based ingestion."""
+        return {
+            'connection_name': group_df.iloc[0]['connection_name'],
+            'connector_type': 'QUERY_BASED',
+        }
+
+    def _build_table_configuration(self, row: pd.Series) -> Dict:
+        """Add primary keys and the query-based configuration (cursor columns, deletion condition)."""
+        table_config = super()._build_table_configuration(row)
+
+        if 'primary_keys' in row and pd.notna(row['primary_keys']) and str(row['primary_keys']).strip():
+            table_config['primary_keys'] = [c.strip() for c in str(row['primary_keys']).split(',')]
+
+        query_based_config = {
+            'cursor_columns': [c.strip() for c in str(row['cursor_columns']).split(',')]
+        }
+
+        if 'deletion_condition' in row and pd.notna(row['deletion_condition']) and str(row['deletion_condition']).strip():
+            query_based_config['deletion_condition'] = str(row['deletion_condition']).strip()
+
+        table_config['query_based_connector_config'] = query_based_config
+
+        return table_config
 
 class SaaSConnector(BaseConnector):
     """

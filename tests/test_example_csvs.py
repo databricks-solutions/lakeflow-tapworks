@@ -20,6 +20,7 @@ CONNECTOR_DIR_MAP = {
     'sql_server': 'sql_server',
     'postgresql': 'postgresql',
     'oracle_integrated': 'oracle_integrated',
+    'oracle_query_based': 'oracle_query_based',
     'google_analytics': 'google_analytics',
     'servicenow': 'servicenow',
     'workday_reports': 'workday_reports',

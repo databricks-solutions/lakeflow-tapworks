@@ -10,8 +10,10 @@ BaseConnector (abstract)
 │   ├── StandardConnector (abstract)
 │   │   ├── SQLServerStandardConnector      (+ SQLServerSource)
 │   │   └── PostgreSQLStandardConnector     (+ PostgreSQLSource)
-│   └── IntegratedCDCConnector (abstract)
-│       └── OracleIntegratedConnector       (+ OracleSource)
+│   ├── IntegratedCDCConnector (abstract)
+│   │   └── OracleIntegratedConnector       (+ OracleSource)
+│   └── QueryBasedConnector (abstract)
+│       └── OracleQueryBasedConnector       (+ OracleSource)
 └── SaaSConnector (abstract)
     ├── SalesforceConnector
     ├── GoogleAnalyticsConnector
@@ -37,9 +39,10 @@ connectors/postgresql/source.py      PostgreSQLSource
 connectors/postgresql/standard.py    PostgreSQLStandardConnector(PostgreSQLSource, StandardConnector)
 connectors/oracle/source.py          OracleSource
 connectors/oracle/integrated.py      OracleIntegratedConnector(OracleSource, IntegratedCDCConnector)
+connectors/oracle/query_based.py     OracleQueryBasedConnector(OracleSource, QueryBasedConnector)
 ```
 
-Registry names are `<database>_<mode>` (`sql_server_standard`, `postgresql_standard`, `oracle_integrated`). The bare names `sql_server` and `postgresql` are aliases for the standard connectors, and `connectors/<database>/connector.py` still exports the previous class names (`SQLServerConnector`, `PostgreSQLConnector`).
+Registry names are `<database>_<mode>` (`sql_server_standard`, `postgresql_standard`, `oracle_integrated`, `oracle_query_based`). The bare names `sql_server` and `postgresql` are aliases for the standard connectors, and `connectors/<database>/connector.py` still exports the previous class names (`SQLServerConnector`, `PostgreSQLConnector`).
 
 ## Entry Points
 
@@ -247,6 +250,15 @@ Base class for database connectors that use integrated CDC: each pipeline reads 
 - Pipelines set `connection_name` and `connector_type: CDC`, on the `PREVIEW` channel
 - Staging location (`data_staging_options`) from `staging_catalog`/`staging_schema`, which fall back to the target catalog/schema
 
+### QueryBasedConnector (Abstract)
+
+Base class for query-based database connectors: each pipeline queries the source tables through its `connection_name`, reading new and updated rows with cursor columns. No gateway or staging.
+
+**Features:**
+- Single-level load balancing (inherited from `DatabaseConnector`)
+- Pipelines set `connection_name` and `connector_type: QUERY_BASED`
+- `_build_table_configuration()` adds `primary_keys` and `query_based_connector_config` (`cursor_columns`, `deletion_condition`)
+
 ### SaaSConnector (Abstract)
 
 Base class for SaaS connectors without gateway support.
@@ -263,6 +275,7 @@ Base class for SaaS connectors without gateway support.
 
 - `StandardConnector` - database source ingested through a separate gateway
 - `IntegratedCDCConnector` - database source ingested with integrated CDC (no gateway)
+- `QueryBasedConnector` - database source ingested with query-based ingestion (cursor columns, no gateway)
 
 For a database, also create (or reuse) its source class in `connectors/<database>/source.py` and list it first: `class MyDbStandardConnector(MyDbSource, StandardConnector)`.
 - `SaaSConnector` - no gateways needed (cloud-to-cloud)

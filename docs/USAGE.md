@@ -192,7 +192,7 @@ Required columns: `source_url`, `target_catalog`, `target_schema`, `target_table
 
 ### Database Connectors
 
-Database connectors are named `<database>_<mode>`: `sql_server_standard` and `postgresql_standard` (standard: through a separate gateway, two-level load balancing) and `oracle_integrated` (integrated CDC, no gateway). `sql_server` and `postgresql` are aliases for the standard connectors.
+Database connectors are named `<database>_<mode>`: `sql_server_standard` and `postgresql_standard` (standard: through a separate gateway, two-level load balancing) `oracle_integrated` (integrated CDC, no gateway), and `oracle_query_based` (query-based, no gateway). `sql_server` and `postgresql` are aliases for the standard connectors.
 
 **SQL Server**:
 ```bash
@@ -219,6 +219,16 @@ Required columns: `source_database` (Oracle service name), `source_schema`, `sou
 Optional: `staging_catalog`, `staging_schema` (default to the target catalog/schema), `scd_type`, `include_columns`, `exclude_columns`
 
 Integrated CDC is in Beta and must be enabled for the workspace. `--max-tables-per-gateway` does not apply.
+
+**Oracle query-based** (no gateway; single-level load balancing; no Oracle log setup needed):
+```bash
+tapworks oracle_query_based --input-config tables.csv --output-dir output --settings settings.json
+```
+Required columns: `source_database` (Oracle service name), `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`, `cursor_columns`
+
+Optional: `primary_keys`, `deletion_condition`, `scd_type` (`SCD_TYPE_1`, `SCD_TYPE_2`, `APPEND_ONLY`), `include_columns`, `exclude_columns`
+
+Query-based ingestion reads the latest state of each row at each run; it does not capture intermediate changes between runs. `--max-tables-per-gateway` does not apply.
 
 ---
 
@@ -255,6 +265,7 @@ Each connector folder contains an `example_notebook.ipynb`:
 - `examples/connectors/sql_server/example_notebook.ipynb`
 - `examples/connectors/postgresql/example_notebook.ipynb`
 - `examples/connectors/oracle_integrated/example_notebook.ipynb`
+- `examples/connectors/oracle_query_based/example_notebook.ipynb`
 - `examples/connectors/google_analytics/example_notebook.ipynb`
 - `examples/connectors/servicenow/example_notebook.ipynb`
 - `examples/connectors/workday_reports/example_notebook.ipynb`

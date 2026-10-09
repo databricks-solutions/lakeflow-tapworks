@@ -1,0 +1,4 @@
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,pipeline_catalog,pipeline_schema,target_table_name,prefix,subgroup,connection_name,schedule,cursor_columns,primary_keys,deletion_condition,scd_type
+tapworks_oracle_qb,ORCLPDB1,SALES,ORDERS,tapworks_catalog,tapworks_oracle_qb,tapworks_catalog,tapworks_oracle_qb,orders,sales,01,tapworks_oracle_connection,0 * * * *,UPDATED_AT,ORDER_ID,,SCD_TYPE_1
+tapworks_oracle_qb,ORCLPDB1,SALES,CUSTOMERS,tapworks_catalog,tapworks_oracle_qb,tapworks_catalog,tapworks_oracle_qb,customers,sales,01,tapworks_oracle_connection,0 * * * *,LAST_MODIFIED,CUSTOMER_ID,IS_DELETED = 1,SCD_TYPE_2
+tapworks_oracle_qb,ORCLPDB1,SALES,ORDER_EVENTS,tapworks_catalog,tapworks_oracle_qb,tapworks_catalog,tapworks_oracle_qb,order_events,sales,02,tapworks_oracle_connection,0 */6 * * *,EVENT_ID,,,APPEND_ONLY

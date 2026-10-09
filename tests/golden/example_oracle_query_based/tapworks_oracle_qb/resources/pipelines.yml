@@ -1,0 +1,59 @@
+resources:
+  pipelines:
+    pipeline_sales_01_p01:
+      name: sales_01_p01
+      catalog: tapworks_catalog
+      schema: tapworks_oracle_qb
+      ingestion_definition:
+        connection_name: tapworks_oracle_connection
+        connector_type: QUERY_BASED
+        objects:
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: SALES
+            source_table: ORDERS
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks_oracle_qb
+            destination_table: orders
+            table_configuration:
+              scd_type: SCD_TYPE_1
+              primary_keys:
+              - ORDER_ID
+              query_based_connector_config:
+                cursor_columns:
+                - UPDATED_AT
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: SALES
+            source_table: CUSTOMERS
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks_oracle_qb
+            destination_table: customers
+            table_configuration:
+              scd_type: SCD_TYPE_2
+              primary_keys:
+              - CUSTOMER_ID
+              query_based_connector_config:
+                cursor_columns:
+                - LAST_MODIFIED
+                deletion_condition: IS_DELETED = 1
+    pipeline_sales_02_p01:
+      name: sales_02_p01
+      catalog: tapworks_catalog
+      schema: tapworks_oracle_qb
+      ingestion_definition:
+        connection_name: tapworks_oracle_connection
+        connector_type: QUERY_BASED
+        objects:
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: SALES
+            source_table: ORDER_EVENTS
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks_oracle_qb
+            destination_table: order_events
+            table_configuration:
+              scd_type: APPEND_ONLY
+              query_based_connector_config:
+                cursor_columns:
+                - EVENT_ID

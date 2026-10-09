@@ -69,7 +69,7 @@ BaseConnector                      (defaults/overrides, validation, jobs, databr
     ├── IntegratedCDCConnector (abstract)  + connection_name, connector_type: CDC, channel: PREVIEW,
     │                                        staging (staging_catalog/staging_schema)
     └── QueryBasedConnector (abstract)     + connection_name, connector_type: QUERY_BASED,
-                                             cursor_columns, deletion_condition, APPEND_ONLY (step 6)
+                                             cursor_columns, deletion_condition, APPEND_ONLY
 
 Source classes (one per database, in connectors/<database>/source.py):
     SQLServerSource, PostgreSQLSource, OracleSource
@@ -78,7 +78,7 @@ Concrete connectors (source class first, then mode class):
     SQLServerStandardConnector(SQLServerSource, StandardConnector)          'sql_server_standard'
     PostgreSQLStandardConnector(PostgreSQLSource, StandardConnector)        'postgresql_standard'
     OracleIntegratedConnector(OracleSource, IntegratedCDCConnector)         'oracle_integrated'
-    OracleQueryBasedConnector(OracleSource, QueryBasedConnector)            'oracle_query_based' (step 6)
+    OracleQueryBasedConnector(OracleSource, QueryBasedConnector)            'oracle_query_based'
     later: SQLServerIntegratedConnector, PostgreSQLIntegratedConnector, *QueryBasedConnector, ...
 ```
 
@@ -120,13 +120,13 @@ Database connectors are named `<database>_<mode>`. The bare names of the existin
 
 ```
 src/tapworks/core/connectors.py          BaseConnector, DatabaseConnector, StandardConnector,
-                                         IntegratedCDCConnector, (QueryBasedConnector), SaaSConnector
+                                         IntegratedCDCConnector, QueryBasedConnector, SaaSConnector
 src/tapworks/core/registry.py            CONNECTORS + ALIASES
 src/tapworks/connectors/sql_server/      source.py, standard.py, connector.py (compat re-export)
 src/tapworks/connectors/postgresql/      source.py, standard.py, connector.py (compat re-export)
-src/tapworks/connectors/oracle/          source.py, integrated.py, (query_based.py)
+src/tapworks/connectors/oracle/          source.py, integrated.py, query_based.py
 examples/connectors/oracle_integrated/   basic/pipeline_config.csv, example_notebook.ipynb
-examples/connectors/oracle_query_based/  (step 6)
+examples/connectors/oracle_query_based/  basic/pipeline_config.csv, example_notebook.ipynb
 ```
 
 ## Backward compatibility
@@ -147,7 +147,7 @@ Each step is its own commit; steps 2 and 3 can be one PR.
 4. [x] **Gateway limit fix** (separate commit and changelog entry under "Changes to generated output"): `runner.py` inspects `generate_pipeline_config` instead of `run_complete_pipeline_generation`. See [RELEASING.md](./RELEASING.md#example-the-gateway-limit-fix).
 5. [x] **Oracle integrated CDC**: single-level split and `connection_name` pipeline consistency in `DatabaseConnector` (`StandardConnector` keeps two levels and gateway-level `connection_name`); `IntegratedCDCConnector` and `OracleIntegratedConnector`, registry entry, example CSV and notebook, unit tests, golden files.
 5b. [x] **Mode × database structure**: source classes (`connectors/<database>/source.py`), connectors renamed `<Database><Mode>Connector` in one module per mode, registry names `<database>_<mode>` with aliases for `sql_server`/`postgresql`, compat re-exports in `connector.py`. No output change.
-6. [ ] **Oracle query-based**: `QueryBasedConnector` and `OracleQueryBasedConnector`, registry entry, example CSV and notebook, unit tests, golden files.
+6. [x] **Oracle query-based**: `QueryBasedConnector` and `OracleQueryBasedConnector`, registry entry, example CSV and notebook, unit tests, golden files.
 7. [ ] **Docs**, per `AGENTS.md`: `README.md`, `docs/ARCHITECTURE.md`, `docs/CONFIGURATION.md`, `docs/USAGE.md`, `docs/VALIDATIONS.md`, `prompts/` (01, 02, 04, README).
 8. [ ] **E2E in dogfood** (below).
 9. [ ] **Release** `v0.3.0` with changelog. (`v0.2.0` shipped the gateway limit fix and golden-file tests.)
@@ -182,14 +182,19 @@ Decisions made for the Oracle integrated CDC connector (step 5). They can be rev
 
 Verified against the bundle schema from Databricks CLI v1.20.0 (`databricks bundle schema`): `connector_type` (`CDC`, `QUERY_BASED`), `channel`, `data_staging_options` (`catalog_name`, `schema_name`, `volume_name`), `table_configuration` (`include_columns`, `exclude_columns`, `primary_keys`, `sequence_by`, `scd_type`, `query_based_connector_config`).
 
+### Query-based decisions (step 6)
+
+| # | Decision | Rationale |
+|---|---|---|
+| Q1 | **`cursor_columns` required**, comma-separated | The documented incremental path. Snapshot mode for tables without a cursor is not supported yet. |
+| Q2 | **`primary_keys` optional**, comma-separated | Emitted in `table_configuration` when set. |
+| Q3 | **`deletion_condition` optional** | Soft deletes; emitted in `query_based_connector_config` when set. Hard-delete tracking (Beta) not supported yet. |
+| Q4 | **`connector_type: QUERY_BASED` always set** | Explicit, though the bundle schema says it is the default for database pipelines with `connection_name`. |
+| Q5 | **SCD types: `SCD_TYPE_1`, `SCD_TYPE_2`, `APPEND_ONLY`** | As documented; `APPEND_ONLY` is in the bundle schema enum. |
+| Q6 | **No staging, no channel** | Query-based needs no staging volume and no preview channel. |
+| Q7 | **Default schedule: hourly (`0 * * * *`)** | Matches the docs' job example and the integrated CDC connector. |
+| Q8 | **Oracle only for now** | SQL Server, PostgreSQL, MySQL, ... query-based connectors are a source class plus a ~15-line module each. |
+
 ## Open decisions
 
-1. **Query-based**:
-   - default schedule,
-   - `cursor_columns` and `primary_keys` as comma-separated strings (like `include_columns`),
-   - support `deletion_condition` now,
-   - `cursor_columns` as a required column,
-   - sources in the first change: Oracle only, or also SQL Server and PostgreSQL.
-
-   Per the bundle schema, query-based pipelines should set `connector_type: QUERY_BASED` explicitly.
-2. **Oracle test source**: is an Oracle database reachable from dogfood with a UC connection? For CDC it also needs archive and supplemental logging.
+1. **Oracle test source**: integrated CDC is being tested against `airnz_oracle_demo` in dogfood; query-based not yet tested end to end.

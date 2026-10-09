@@ -173,6 +173,14 @@ def sample_oracle_df():
 
 
 @pytest.fixture
+def sample_oracle_query_based_df(sample_oracle_df):
+    """Sample Oracle query-based input dataframe (Oracle columns + cursor_columns)."""
+    df = sample_oracle_df.copy()
+    df['cursor_columns'] = ['UPDATED_AT', 'UPDATED_AT', 'UPDATED_AT']
+    return df
+
+
+@pytest.fixture
 def large_df_for_load_balancing():
     """Large dataframe for testing load balancing splits."""
     num_rows = 600
@@ -302,6 +310,13 @@ def oracle_connector():
     """OracleIntegratedConnector instance."""
     from tapworks.connectors.oracle.integrated import OracleIntegratedConnector
     return OracleIntegratedConnector()
+
+
+@pytest.fixture
+def oracle_query_based_connector():
+    """OracleQueryBasedConnector instance."""
+    from tapworks.connectors.oracle.query_based import OracleQueryBasedConnector
+    return OracleQueryBasedConnector()
 
 
 @pytest.fixture

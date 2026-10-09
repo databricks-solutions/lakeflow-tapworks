@@ -9,6 +9,7 @@ Base Classes:
 - DatabaseConnector: Base class for database sources
 - StandardConnector: Base class for database sources ingested through a gateway
 - IntegratedCDCConnector: Base class for database sources with CDC without a gateway
+- QueryBasedConnector: Base class for database sources with query-based ingestion
 - SaaSConnector: Base class for SaaS sources without gateway support
 
 Exceptions:
@@ -28,6 +29,7 @@ from .connectors import (
     DatabaseConnector,
     StandardConnector,
     IntegratedCDCConnector,
+    QueryBasedConnector,
     SaaSConnector,
 )
 from .exceptions import (
@@ -53,6 +55,7 @@ __all__ = [
     'DatabaseConnector',
     'StandardConnector',
     'IntegratedCDCConnector',
+    'QueryBasedConnector',
     'SaaSConnector',
     # Exceptions
     'LakehouseTapworksError',

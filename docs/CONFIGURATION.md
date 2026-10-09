@@ -151,7 +151,8 @@ Each connector has a built-in default schedule used when no `schedule` column or
 | **Database connectors** | |
 | SQL Server | `*/15 * * * *` (every 15 minutes) |
 | PostgreSQL | `*/15 * * * *` (every 15 minutes) |
-| Oracle | `0 * * * *` (hourly; each integrated CDC update runs for about 30 minutes) |
+| Oracle integrated CDC | `0 * * * *` (hourly; each integrated CDC update runs for about 30 minutes) |
+| Oracle query-based | `0 * * * *` (hourly) |
 
 ---
 
@@ -223,14 +224,25 @@ Used by **SQL Server**, **PostgreSQL**, and **Oracle**. Gateway columns apply on
 
 ### Oracle-Specific Notes
 
-Oracle uses integrated CDC: each pipeline reads changes directly through `connection_name`, with no gateway. Integrated CDC is in Beta and must be enabled for the workspace.
+Oracle has two connectors, both without a gateway: `oracle_integrated` (integrated CDC, Beta, must be enabled for the workspace) and `oracle_query_based` (query-based). The notes below apply to both unless marked.
 
 | Column | Notes |
 |--------|-------|
 | `source_database` | Oracle **service name**. For multitenant databases, use the `CDB$ROOT` service name. |
 | `source_schema`, `source_table_name` | Case must match how Oracle stores the identifier, usually uppercase. Tapworks logs a warning for lowercase values. |
-| `staging_catalog` | Optional. Catalog where change data is staged. Falls back to `target_catalog` (like `gateway_catalog` for standard connectors). |
-| `staging_schema` | Optional. Schema where change data is staged. Falls back to `target_schema` (like `gateway_schema` for standard connectors). |
+| `staging_catalog` | Integrated CDC only. Optional. Catalog where change data is staged. Falls back to `target_catalog` (like `gateway_catalog` for standard connectors). |
+| `staging_schema` | Integrated CDC only. Optional. Schema where change data is staged. Falls back to `target_schema` (like `gateway_schema` for standard connectors). |
+
+### Query-Based Columns
+
+Used by **Oracle query-based** (`oracle_query_based`).
+
+| Column | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `cursor_columns` | Yes | — | Comma-separated monotonically increasing columns used to read new and updated rows (e.g., `UPDATED_AT`) |
+| `primary_keys` | No | — | Comma-separated primary key columns |
+| `deletion_condition` | No | — | SQL condition marking soft-deleted rows (e.g., `IS_DELETED = 1`) |
+| `scd_type` | No | — | `SCD_TYPE_1`, `SCD_TYPE_2`, or `APPEND_ONLY` |
 
 ### Salesforce Columns
 

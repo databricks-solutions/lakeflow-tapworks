@@ -8,7 +8,8 @@ Each release lists **Changes to generated output** separately. Those entries cha
 
 ### Added
 - **Oracle integrated CDC connector** (`oracle_integrated`), using Lakeflow Connect integrated CDC (Beta; requires workspace enablement). Pipelines connect directly through `connection_name` with `connector_type: CDC` on the `PREVIEW` channel; no gateway. Single-level load balancing (250 tables per pipeline), default schedule hourly. Optional `staging_catalog`/`staging_schema` columns set the staging location (`data_staging_options`) and default to the target catalog/schema, like the gateway columns. Logs a warning for lowercase Oracle identifiers. Example in `examples/connectors/oracle_integrated/`.
-- `IntegratedCDCConnector` base class, ready for integrated CDC versions of other databases.
+- **Oracle query-based connector** (`oracle_query_based`). Pipelines connect directly through `connection_name` with `connector_type: QUERY_BASED`; no gateway or staging. Required `cursor_columns`; optional `primary_keys`, `deletion_condition`, and `scd_type` (`SCD_TYPE_1`, `SCD_TYPE_2`, `APPEND_ONLY`). Default schedule hourly. Example in `examples/connectors/oracle_query_based/`.
+- `IntegratedCDCConnector` and `QueryBasedConnector` base classes, ready for integrated CDC and query-based versions of other databases.
 
 ### Changed
 - Database connectors restructured so each database can have standard, integrated CDC, and query-based connectors (see `docs/DATABASE_CONNECTORS_PLAN.md`). `DatabaseConnector` is now the shared base for all database connectors; the gateway logic moved to the new `StandardConnector`. Each database has a source class (`connectors/<database>/source.py`) for rules that apply in every mode.

@@ -160,6 +160,10 @@ Adds two-level load balancing and gateway handling (`gateways.yml`, `ingestion_g
 
 Pipelines connect directly (`connection_name`, `connector_type: CDC`, `channel: PREVIEW`); single-level load balancing.
 
+### QueryBasedConnector (extends DatabaseConnector)
+
+Pipelines connect directly (`connection_name`, `connector_type: QUERY_BASED`); per-table `query_based_connector_config` (`cursor_columns`, `deletion_condition`) and `primary_keys`; single-level load balancing.
+
 ### SaaSConnector (extends BaseConnector)
 
 | Method | Description |
