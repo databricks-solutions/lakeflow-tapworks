@@ -197,7 +197,7 @@ Each step is its own commit; steps 2 and 3 can be one PR.
 6. [ ] **Oracle query-based**: `QueryBasedConnector` and `OracleQueryBasedConnector`, registry entry, example CSV and notebook, unit tests, golden files.
 7. [ ] **Docs**, per `AGENTS.md`: `README.md`, `docs/ARCHITECTURE.md`, `docs/CONFIGURATION.md`, `docs/USAGE.md`, `docs/VALIDATIONS.md`, `prompts/` (01, 02, 04, README).
 8. [ ] **E2E in dogfood** (below).
-9. [ ] **Release** `v0.2.0` with changelog.
+9. [ ] **Release** `v0.3.0` with changelog. (`v0.2.0` shipped the gateway limit fix and golden-file tests.)
 
 ## E2E testing in dogfood
 

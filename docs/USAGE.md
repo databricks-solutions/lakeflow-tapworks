@@ -8,7 +8,7 @@ Install the package first, then use the `tapworks` command:
 
 ```bash
 # Install a pinned release (recommended; see CHANGELOG.md before upgrading)
-pip install "git+https://github.com/databricks-solutions/lakeflow-tapworks.git@v0.1.0"
+pip install "git+https://github.com/databricks-solutions/lakeflow-tapworks.git@v0.2.0"
 
 # Or, for development, from the repo root
 pip install -e .
