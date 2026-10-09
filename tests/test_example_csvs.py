@@ -29,7 +29,7 @@ def discover_example_csvs():
     """Discover all example CSV files in the project."""
     examples = []
     for connector_dir, connector_name in CONNECTOR_DIR_MAP.items():
-        examples_path = PROJECT_ROOT / connector_dir / 'examples'
+        examples_path = PROJECT_ROOT / 'examples' / 'connectors' / connector_dir
         if examples_path.exists():
             for csv_file in examples_path.rglob('*.csv'):
                 examples.append((connector_name, csv_file))
