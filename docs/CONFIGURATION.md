@@ -239,7 +239,7 @@ Used by **Oracle query-based** (`oracle_query_based`).
 
 | Column | Required | Default | Description |
 |--------|----------|---------|-------------|
-| `cursor_columns` | Yes | — | Comma-separated monotonically increasing columns used to read new and updated rows (e.g., `UPDATED_AT`) |
+| `cursor_columns` | No | — | Comma-separated monotonically increasing columns used to read new and updated rows incrementally (e.g., `UPDATED_AT`). Without one, the table is read as a full snapshot on each run. |
 | `primary_keys` | No | — | Comma-separated primary key columns |
 | `deletion_condition` | No | — | SQL condition marking soft-deleted rows (e.g., `IS_DELETED = 1`) |
 | `scd_type` | No | — | `SCD_TYPE_1`, `SCD_TYPE_2`, or `APPEND_ONLY` |

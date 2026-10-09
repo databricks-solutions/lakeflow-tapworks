@@ -17,7 +17,8 @@ class OracleQueryBasedConnector(OracleSource, QueryBasedConnector):
     Implements query-based pattern with:
     - Single-level load balancing (pipelines only, no gateways)
     - Connection management per pipeline
-    - connector_type QUERY_BASED; rows are read incrementally using cursor columns
+    - connector_type QUERY_BASED; tables with cursor columns are read incrementally,
+      tables without one are read as full snapshots
     - No Oracle log configuration needed; does not capture intermediate row states
 
     Required CSV columns:
@@ -30,9 +31,10 @@ class OracleQueryBasedConnector(OracleSource, QueryBasedConnector):
     - connection_name: Databricks connection name for Oracle
     - pipeline_catalog: Pipeline-level catalog for event log location
     - pipeline_schema: Pipeline-level schema for event log location
-    - cursor_columns: Comma-separated monotonically increasing columns (e.g., 'UPDATED_AT')
 
     Optional CSV columns:
+    - cursor_columns: Comma-separated monotonically increasing columns (e.g., 'UPDATED_AT');
+      without one, the table is read as a full snapshot
     - project_name: Project identifier
     - prefix: Grouping prefix (default: project_name)
     - subgroup: Subgroup identifier (default: none)
@@ -64,8 +66,7 @@ class OracleQueryBasedConnector(OracleSource, QueryBasedConnector):
             'target_table_name',
             'connection_name',
             'pipeline_catalog',
-            'pipeline_schema',
-            'cursor_columns'
+            'pipeline_schema'
         ]
 
     @property

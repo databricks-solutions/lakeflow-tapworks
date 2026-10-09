@@ -186,7 +186,7 @@ Verified against the bundle schema from Databricks CLI v1.20.0 (`databricks bund
 
 | # | Decision | Rationale |
 |---|---|---|
-| Q1 | **`cursor_columns` required**, comma-separated | The documented incremental path. Snapshot mode for tables without a cursor is not supported yet. |
+| Q1 | **`cursor_columns` optional**, comma-separated; `query_based_connector_config` always emitted (empty without a cursor) | Tables without a cursor are read as full snapshots. Matches the UI-created reference pipeline `yas_qbc_oracle` in dogfood, which ingests `TABLE_WITH_NO_PK` with an empty `query_based_connector_config`. |
 | Q2 | **`primary_keys` optional**, comma-separated | Emitted in `table_configuration` when set. |
 | Q3 | **`deletion_condition` optional** | Soft deletes; emitted in `query_based_connector_config` when set. Hard-delete tracking (Beta) not supported yet. |
 | Q4 | **`connector_type: QUERY_BASED` always set** | Explicit, though the bundle schema says it is the default for database pipelines with `connection_name`. |

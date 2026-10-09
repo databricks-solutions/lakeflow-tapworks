@@ -224,9 +224,9 @@ Integrated CDC is in Beta and must be enabled for the workspace. `--max-tables-p
 ```bash
 tapworks oracle_query_based --input-config tables.csv --output-dir output --settings settings.json
 ```
-Required columns: `source_database` (Oracle service name), `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`, `cursor_columns`
+Required columns: `source_database` (Oracle service name), `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`
 
-Optional: `primary_keys`, `deletion_condition`, `scd_type` (`SCD_TYPE_1`, `SCD_TYPE_2`, `APPEND_ONLY`), `include_columns`, `exclude_columns`
+Optional: `cursor_columns` (without one, the table is read as a full snapshot), `primary_keys`, `deletion_condition`, `scd_type` (`SCD_TYPE_1`, `SCD_TYPE_2`, `APPEND_ONLY`), `include_columns`, `exclude_columns`
 
 Query-based ingestion reads the latest state of each row at each run; it does not capture intermediate changes between runs. `--max-tables-per-gateway` does not apply.
 

@@ -449,9 +449,13 @@ class TestOracleQueryBasedConnector:
             'deletion_condition': 'IS_DELETED = 1',
         }
 
-    def test_cursor_columns_required(self, oracle_query_based_connector, sample_oracle_df):
-        with pytest.raises(ValidationError, match='cursor_columns'):
-            oracle_query_based_connector.load_and_normalize_input(sample_oracle_df, default_values={'project_name': 'oracle_qb_test'})
+    def test_table_without_cursor_is_snapshot(self, oracle_query_based_connector, sample_oracle_df, sample_targets_minimal, temp_output_dir):
+        df = sample_oracle_df.copy()
+        df['scd_type'] = 'SCD_TYPE_1'
+        pipelines = self._generate(oracle_query_based_connector, df, sample_targets_minimal, temp_output_dir)
+
+        table_config = pipelines['pipeline_oracle_qb_test_p01']['ingestion_definition']['objects'][0]['table']['table_configuration']
+        assert table_config == {'scd_type': 'SCD_TYPE_1', 'query_based_connector_config': {}}
 
     def test_splits_into_pipelines_only(self, oracle_query_based_connector, large_df_for_load_balancing):
         df = large_df_for_load_balancing.copy()

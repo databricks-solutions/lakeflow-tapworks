@@ -8,7 +8,7 @@ This guide covers adding a new connector to the framework.
 |-------------|------------|----------|
 | Database (standard, through a gateway) | `StandardConnector` | Gateways + pipelines, two-level load balancing |
 | Database (integrated CDC) | `IntegratedCDCConnector` | Pipelines only, single-level load balancing |
-| Database (query-based) | `QueryBasedConnector` | Pipelines only, single-level load balancing; requires `cursor_columns` |
+| Database (query-based) | `QueryBasedConnector` | Pipelines only, single-level load balancing; optional `cursor_columns` |
 | SaaS (cloud-to-cloud) | `SaaSConnector` | Pipelines only, single-level load balancing |
 
 ## Files to Create

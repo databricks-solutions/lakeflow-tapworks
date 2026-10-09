@@ -252,12 +252,12 @@ Base class for database connectors that use integrated CDC: each pipeline reads 
 
 ### QueryBasedConnector (Abstract)
 
-Base class for query-based database connectors: each pipeline queries the source tables through its `connection_name`, reading new and updated rows with cursor columns. No gateway or staging.
+Base class for query-based database connectors: each pipeline queries the source tables through its `connection_name`. Tables with cursor columns are read incrementally; tables without one are read as full snapshots. No gateway or staging.
 
 **Features:**
 - Single-level load balancing (inherited from `DatabaseConnector`)
 - Pipelines set `connection_name` and `connector_type: QUERY_BASED`
-- `_build_table_configuration()` adds `primary_keys` and `query_based_connector_config` (`cursor_columns`, `deletion_condition`)
+- `_build_table_configuration()` adds `primary_keys` and `query_based_connector_config` (`cursor_columns`, `deletion_condition`; always emitted, empty when neither is set)
 
 ### SaaSConnector (Abstract)
 

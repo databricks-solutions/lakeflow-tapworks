@@ -1769,9 +1769,9 @@ class QueryBasedConnector(DatabaseConnector):
     """
     Abstract base class for query-based database connectors.
 
-    Each pipeline queries the source tables through its Unity Catalog connection,
-    using cursor columns to read new and updated rows. No gateway or staging.
-    Uses single-level load balancing.
+    Each pipeline queries the source tables through its Unity Catalog connection.
+    Tables with cursor columns are read incrementally; tables without one are read
+    as full snapshots. No gateway or staging. Uses single-level load balancing.
 
     Examples: Oracle
     """
@@ -1790,9 +1790,10 @@ class QueryBasedConnector(DatabaseConnector):
         if 'primary_keys' in row and pd.notna(row['primary_keys']) and str(row['primary_keys']).strip():
             table_config['primary_keys'] = [c.strip() for c in str(row['primary_keys']).split(',')]
 
-        query_based_config = {
-            'cursor_columns': [c.strip() for c in str(row['cursor_columns']).split(',')]
-        }
+        query_based_config = {}
+
+        if 'cursor_columns' in row and pd.notna(row['cursor_columns']) and str(row['cursor_columns']).strip():
+            query_based_config['cursor_columns'] = [c.strip() for c in str(row['cursor_columns']).split(',')]
 
         if 'deletion_condition' in row and pd.notna(row['deletion_condition']) and str(row['deletion_condition']).strip():
             query_based_config['deletion_condition'] = str(row['deletion_condition']).strip()
