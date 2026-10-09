@@ -68,7 +68,10 @@ Tapworks reads from a simple configuration (e.g., CSV, YAML, JSON, Delta table, 
 
       **CLI:**
       ```bash
-      # Install the package first
+      # Install a pinned release (recommended; see CHANGELOG.md before upgrading)
+      pip install "git+https://github.com/databricks-solutions/lakeflow-tapworks.git@v0.1.0"
+
+      # Or, for development, from a clone of the repo
       pip install -e .
 
       # List available connectors
@@ -339,6 +342,8 @@ result = run_pipeline_generation(
 - [CONFIGURATION.md](./docs/CONFIGURATION.md) (<a href="$./docs/CONFIGURATION.md">Databricks</a>) - Input formats, column reference, defaults, and naming constraints
 - [USAGE.md](./docs/USAGE.md) (<a href="$./docs/USAGE.md">Databricks</a>) - CLI and notebook usage examples for all connectors
 - [ARCHITECTURE.md](./docs/ARCHITECTURE.md) (<a href="$./docs/ARCHITECTURE.md">Databricks</a>) - Technical architecture and class hierarchy
+- [RELEASING.md](./docs/RELEASING.md) (<a href="$./docs/RELEASING.md">Databricks</a>) - Versioning, pinning a release, and backward compatibility
+- [CHANGELOG.md](./CHANGELOG.md) (<a href="$./CHANGELOG.md">Databricks</a>) - Release notes, including changes to generated output
 
 ## License
 

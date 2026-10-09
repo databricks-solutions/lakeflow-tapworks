@@ -1,0 +1,32 @@
+resources:
+  pipelines:
+    gateway_sales_g01:
+      name: sales_g01
+      gateway_definition:
+        connection_name: conn
+        gateway_storage_catalog: main
+        gateway_storage_schema: bronze
+        gateway_storage_name: sales_g01
+      schema: bronze
+      continuous: true
+      catalog: main
+    gateway_sales_g02:
+      name: sales_g02
+      gateway_definition:
+        connection_name: conn
+        gateway_storage_catalog: main
+        gateway_storage_schema: bronze
+        gateway_storage_name: sales_g02
+      schema: bronze
+      continuous: true
+      catalog: main
+    gateway_sales_g03:
+      name: sales_g03
+      gateway_definition:
+        connection_name: conn
+        gateway_storage_catalog: main
+        gateway_storage_schema: bronze
+        gateway_storage_name: sales_g03
+      schema: bronze
+      continuous: true
+      catalog: main

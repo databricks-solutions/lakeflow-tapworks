@@ -189,8 +189,8 @@ Both produce `jobs.yml` and `databricks.yml` the same way existing connectors do
 
 Each step is its own commit; steps 2 and 3 can be one PR.
 
-1. [ ] **Release baseline**: tag current `main` as `v0.1.0` and create the GitHub Release (maintainer).
-2. [ ] **Safety net**: golden-file tests for all existing example CSVs and load-balancing cases; `CHANGELOG.md`.
+1. [x] **Release baseline**: tag current `main` as `v0.1.0` and create the GitHub Release (maintainer).
+2. [x] **Safety net**: golden-file tests for all existing example CSVs and load-balancing cases; `CHANGELOG.md`.
 3. [ ] **Refactor, no output change**: `core/database.py` with the new hierarchy; SQL Server and PostgreSQL moved onto `GatewayConnector`; PostgreSQL slot config via `_build_pipeline`. All existing tests and golden files must be unchanged.
 4. [ ] **Gateway limit fix** (separate commit and changelog entry under "Changes to generated output"): `runner.py` inspects `generate_pipeline_config` instead of `run_complete_pipeline_generation`. See [RELEASING.md](./RELEASING.md#known-pending-output-change).
 5. [ ] **Oracle integrated CDC**: `IntegratedCDCConnector` and `OracleConnector`, registry entry, example CSV and notebook, unit tests, golden files.

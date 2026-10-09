@@ -7,7 +7,10 @@ This guide shows how to use Lakehouse Tapworks through both command line (CLI) a
 Install the package first, then use the `tapworks` command:
 
 ```bash
-# Install (from repo root)
+# Install a pinned release (recommended; see CHANGELOG.md before upgrading)
+pip install "git+https://github.com/databricks-solutions/lakeflow-tapworks.git@v0.1.0"
+
+# Or, for development, from the repo root
 pip install -e .
 
 # List available connectors

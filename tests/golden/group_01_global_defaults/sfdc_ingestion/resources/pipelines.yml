@@ -1,0 +1,33 @@
+resources:
+  pipelines:
+    pipeline_sfdc_ingestion_p01:
+      name: sfdc_ingestion_p01
+      catalog: main
+      schema: salesforce
+      ingestion_definition:
+        connection_name: sfdc_connection
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Account
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: account
+        - table:
+            source_schema: objects
+            source_table: Contact
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: contact
+        - table:
+            source_schema: objects
+            source_table: Opportunity
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: opportunity
+        - table:
+            source_schema: objects
+            source_table: Lead
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: lead

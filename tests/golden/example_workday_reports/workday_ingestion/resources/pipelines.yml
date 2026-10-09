@@ -1,0 +1,152 @@
+resources:
+  pipelines:
+    pipeline_finance_01_p01:
+      name: finance_01_p01
+      catalog: main
+      schema: workday
+      ingestion_definition:
+        connection_name: workday_connection
+        objects:
+        - report:
+            source_url: https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/Organization_Hierarchy?format=json
+            destination_catalog: main
+            destination_schema: workday
+            destination_table: organization_hierarchy
+            table_configuration:
+              primary_keys:
+              - Organization_ID
+              scd_type: SCD_TYPE_1
+        - report:
+            source_url: https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/Cost_Center_Data?format=json
+            destination_catalog: main
+            destination_schema: workday
+            destination_table: cost_centers
+            table_configuration:
+              primary_keys:
+              - Cost_Center_ID
+              include_columns:
+              - Cost_Center_ID
+              - Cost_Center_Name
+              - Manager_ID
+              - Active_Status
+              scd_type: SCD_TYPE_1
+    pipeline_hr_01_p01:
+      name: hr_01_p01
+      catalog: main
+      schema: workday
+      ingestion_definition:
+        connection_name: workday_connection
+        objects:
+        - report:
+            source_url: https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/All_Active_Employees_Data?format=json
+            destination_catalog: main
+            destination_schema: workday
+            destination_table: all_active_employees
+            table_configuration:
+              primary_keys:
+              - Employee_ID
+              include_columns:
+              - Employee_ID
+              - Worker_ID
+              - Legal_Name
+              - Hire_Date
+              - Termination_Date
+              - Status
+              scd_type: SCD_TYPE_2
+        - report:
+            source_url: https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/Worker_Profile_Data?format=json
+            destination_catalog: main
+            destination_schema: workday
+            destination_table: worker_profile
+            table_configuration:
+              primary_keys:
+              - Worker_ID
+              scd_type: SCD_TYPE_1
+        - report:
+            source_url: https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/Employee_Compensation_Data?format=json
+            destination_catalog: main
+            destination_schema: workday
+            destination_table: employee_compensation
+            table_configuration:
+              primary_keys:
+              - Employee_ID
+              - Effective_Date
+              exclude_columns:
+              - Salary_Amount
+              - Bonus_Amount
+              - Stock_Options
+              scd_type: SCD_TYPE_1
+    pipeline_hr_02_p01:
+      name: hr_02_p01
+      catalog: main
+      schema: workday
+      ingestion_definition:
+        connection_name: workday_connection
+        objects:
+        - report:
+            source_url: https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/Worker_Time_Off_Data?format=json
+            destination_catalog: main
+            destination_schema: workday
+            destination_table: worker_time_off
+            table_configuration:
+              primary_keys:
+              - Worker_ID
+              - Time_Off_Date
+              scd_type: SCD_TYPE_2
+        - report:
+            source_url: https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/Performance_Review_Data?format=json
+            destination_catalog: main
+            destination_schema: workday
+            destination_table: performance_reviews
+            table_configuration:
+              primary_keys:
+              - Worker_ID
+              - Review_Period
+              scd_type: SCD_TYPE_2
+        - report:
+            source_url: https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/Benefits_Enrollment_Data?format=json
+            destination_catalog: main
+            destination_schema: workday
+            destination_table: benefits_enrollment
+            table_configuration:
+              primary_keys:
+              - Employee_ID
+              - Benefit_Plan_ID
+              exclude_columns:
+              - SSN
+              - Dependent_SSN
+              - Medical_History
+              scd_type: SCD_TYPE_2
+    pipeline_recruiting_01_p01:
+      name: recruiting_01_p01
+      catalog: main
+      schema: workday
+      ingestion_definition:
+        connection_name: workday_connection
+        objects:
+        - report:
+            source_url: https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/Job_Requisition_Data?format=json
+            destination_catalog: main
+            destination_schema: workday
+            destination_table: job_requisitions
+            table_configuration:
+              primary_keys:
+              - Requisition_ID
+              scd_type: SCD_TYPE_2
+        - report:
+            source_url: https://wd2-impl-services1.workday.com/ccx/service/customreport2/acme/Candidate_Data?format=json
+            destination_catalog: main
+            destination_schema: workday
+            destination_table: candidates
+            table_configuration:
+              primary_keys:
+              - Candidate_ID
+              include_columns:
+              - Candidate_ID
+              - First_Name
+              - Last_Name
+              - Email
+              - Phone
+              - Applied_Date
+              - Status
+              scd_type: SCD_TYPE_2

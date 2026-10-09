@@ -1,0 +1,29 @@
+resources:
+  jobs:
+    job_sales_p01:
+      name: sales_p01
+      schedule:
+        quartz_cron_expression: 0 0 */6 * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_sales_p01.id}
+    job_sales_p02:
+      name: sales_p02
+      schedule:
+        quartz_cron_expression: 0 0 */6 * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_sales_p02.id}
+    job_sales_p03:
+      name: sales_p03
+      schedule:
+        quartz_cron_expression: 0 0 */6 * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_sales_p03.id}

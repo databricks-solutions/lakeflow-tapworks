@@ -1,0 +1,122 @@
+resources:
+  pipelines:
+    pipeline_business_unit1_01_p01:
+      name: business_unit1_01_p01
+      catalog: main
+      schema: servicenow
+      ingestion_definition:
+        connection_name: servicenow_connection
+        objects:
+        - table:
+            source_schema: default
+            source_table: account_subscription_entitlement
+            destination_catalog: main
+            destination_schema: servicenow
+            destination_table: account_subscription_entitlement
+            table_configuration:
+              include_columns:
+              - sys_id
+              - sys_updated_on
+              - _databricks_deleted
+              - instance
+              - sys_updated_by
+              - sys_created_on
+              - sys_mod_count
+              scd_type: SCD_TYPE_2
+        - table:
+            source_schema: default
+            source_table: adaptive_auth_event
+            destination_catalog: main
+            destination_schema: servicenow
+            destination_table: adaptive_auth_event
+            table_configuration:
+              scd_type: SCD_TYPE_2
+        - table:
+            source_schema: default
+            source_table: agent_assist_recommendation
+            destination_catalog: main
+            destination_schema: servicenow
+            destination_table: agent_assist_recommendation
+            table_configuration:
+              scd_type: SCD_TYPE_1
+        - table:
+            source_schema: default
+            source_table: incident
+            destination_catalog: main
+            destination_schema: servicenow
+            destination_table: incident
+            table_configuration:
+              scd_type: SCD_TYPE_2
+        - table:
+            source_schema: default
+            source_table: task
+            destination_catalog: main
+            destination_schema: servicenow
+            destination_table: task
+            table_configuration:
+              scd_type: SCD_TYPE_2
+    pipeline_business_unit1_02_p01:
+      name: business_unit1_02_p01
+      catalog: main
+      schema: servicenow
+      ingestion_definition:
+        connection_name: servicenow_connection
+        objects:
+        - table:
+            source_schema: default
+            source_table: sys_user
+            destination_catalog: main
+            destination_schema: servicenow
+            destination_table: sys_user
+            table_configuration:
+              exclude_columns:
+              - user_password
+              - last_password
+              - phone
+              scd_type: SCD_TYPE_2
+    pipeline_business_unit2_01_p01:
+      name: business_unit2_01_p01
+      catalog: main
+      schema: servicenow
+      ingestion_definition:
+        connection_name: servicenow_connection
+        objects:
+        - table:
+            source_schema: default
+            source_table: agent_file
+            destination_catalog: main
+            destination_schema: servicenow
+            destination_table: agent_file
+            table_configuration:
+              scd_type: SCD_TYPE_2
+        - table:
+            source_schema: default
+            source_table: cmdb_ci_server
+            destination_catalog: main
+            destination_schema: servicenow
+            destination_table: cmdb_ci_server
+            table_configuration:
+              scd_type: SCD_TYPE_2
+        - table:
+            source_schema: default
+            source_table: problem
+            destination_catalog: main
+            destination_schema: servicenow
+            destination_table: problem
+            table_configuration:
+              scd_type: SCD_TYPE_2
+    pipeline_business_unit3_01_p01:
+      name: business_unit3_01_p01
+      catalog: main
+      schema: servicenow
+      ingestion_definition:
+        connection_name: servicenow_connection
+        objects:
+        - table:
+            source_schema: default
+            source_table: attachment_extractor
+            destination_catalog: main
+            destination_schema: servicenow
+            destination_table: attachment_extractor
+            table_configuration:
+              scd_type: SCD_TYPE_1

@@ -1,0 +1,86 @@
+resources:
+  pipelines:
+    pipeline_finance_01_g01p01:
+      name: finance_01_g01p01
+      catalog: main
+      schema: bronze
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.gateway_finance_01_g01.id}
+        objects:
+        - table:
+            source_catalog: FinanceDB
+            source_schema: dbo
+            source_table: Invoices
+            destination_catalog: main
+            destination_schema: bronze
+            destination_table: invoices
+        - table:
+            source_catalog: FinanceDB
+            source_schema: dbo
+            source_table: Payments
+            destination_catalog: main
+            destination_schema: bronze
+            destination_table: payments
+    pipeline_hr_01_g01p01:
+      name: hr_01_g01p01
+      catalog: main
+      schema: bronze
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.gateway_hr_01_g01.id}
+        objects:
+        - table:
+            source_catalog: HRDB
+            source_schema: dbo
+            source_table: Employees
+            destination_catalog: main
+            destination_schema: bronze
+            destination_table: employees
+        - table:
+            source_catalog: HRDB
+            source_schema: dbo
+            source_table: Departments
+            destination_catalog: main
+            destination_schema: bronze
+            destination_table: departments
+    pipeline_sales_01_g01p01:
+      name: sales_01_g01p01
+      catalog: main
+      schema: bronze
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.gateway_sales_01_g01.id}
+        objects:
+        - table:
+            source_catalog: SalesDB
+            source_schema: dbo
+            source_table: Customers
+            destination_catalog: main
+            destination_schema: bronze
+            destination_table: customers
+        - table:
+            source_catalog: SalesDB
+            source_schema: dbo
+            source_table: Orders
+            destination_catalog: main
+            destination_schema: bronze
+            destination_table: orders
+    pipeline_sales_02_g01p01:
+      name: sales_02_g01p01
+      catalog: main
+      schema: bronze
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.gateway_sales_02_g01.id}
+        objects:
+        - table:
+            source_catalog: SalesDB
+            source_schema: dbo
+            source_table: Products
+            destination_catalog: main
+            destination_schema: bronze
+            destination_table: products
+        - table:
+            source_catalog: SalesDB
+            source_schema: dbo
+            source_table: OrderItems
+            destination_catalog: main
+            destination_schema: bronze
+            destination_table: order_items

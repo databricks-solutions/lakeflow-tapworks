@@ -1,0 +1,51 @@
+resources:
+  pipelines:
+    pipeline_cloudsql_01_g01p01:
+      name: cloudsql_01_g01p01
+      catalog: main
+      schema: postgres_cloudsql_test
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.gateway_cloudsql_01_g01.id}
+        objects:
+        - table:
+            source_catalog: postgres
+            source_schema: public
+            source_table: customers
+            destination_catalog: main
+            destination_schema: postgres_cloudsql_test
+            destination_table: customers
+        - table:
+            source_catalog: postgres
+            source_schema: public
+            source_table: orders
+            destination_catalog: main
+            destination_schema: postgres_cloudsql_test
+            destination_table: orders
+        source_configurations:
+        - catalog:
+            source_catalog: postgres
+            postgres:
+              slot_config:
+                slot_name: cloudsql_slot
+                publication_name: cloudsql_publication
+    pipeline_cloudsql_02_g01p01:
+      name: cloudsql_02_g01p01
+      catalog: main
+      schema: postgres_cloudsql_test
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.gateway_cloudsql_02_g01.id}
+        objects:
+        - table:
+            source_catalog: postgres
+            source_schema: public
+            source_table: products
+            destination_catalog: main
+            destination_schema: postgres_cloudsql_test
+            destination_table: products
+        source_configurations:
+        - catalog:
+            source_catalog: postgres
+            postgres:
+              slot_config:
+                slot_name: cloudsql_slot
+                publication_name: cloudsql_publication

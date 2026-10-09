@@ -2,7 +2,9 @@
 
 How Tapworks protects existing users from breaking changes.
 
-> **Status:** Proposed. Nothing below is in place yet. The repo currently has no tags, releases, changelog, or CI, and the docs tell users to `pip install -e .` from a clone of `main`, so every merge to `main` reaches users immediately.
+> **Status:**
+> - **In place:** release `v0.1.0` (baseline), golden-file tests, `CHANGELOG.md`, and pinned-install instructions in `README.md` / `docs/USAGE.md`.
+> - **Not yet in place:** CI.
 
 ## What "breaking" means for Tapworks
 
@@ -21,7 +23,7 @@ Internal class names (`DatabaseConnector`, `SaaSConnector`, ...) are **not** a c
   - **Minor** bump (`0.1` → `0.2`): may contain breaking or output-changing changes, which must be listed in the changelog.
   - **Patch** bump (`0.2.0` → `0.2.1`): fixes only, with no change to generated output for existing configs.
 - Keep `version` in `pyproject.toml` in sync with the tag.
-- The first step is to tag the current `main` as `v0.1.0` **before** any refactor lands, so existing users have a known-good version to pin.
+- `v0.1.0` is the baseline, tagged on `main` at `984d9c6` before any refactor, so existing users have a known-good version to pin.
 
 ### How users pin a version
 
@@ -41,10 +43,13 @@ In Databricks, point the Git folder at the release tag instead of `main`.
 
 Golden-file tests guard the generated output, which is where breaks cause data loss.
 
-- Commit the generated YAML for every example CSV (`examples/connectors/*/basic`, `examples/features/group_based_config/*`) plus a few large load-balancing cases under `tests/golden/`.
-- One test regenerates every case and compares the result **byte for byte** with the committed files. YAML is written with `sort_keys=False`, so key order is part of the output.
-- An intended output change requires regenerating the golden files on purpose. The change then shows up in the PR diff for the reviewer, and it needs a changelog entry.
-- Refactors must leave every golden file unchanged. New connectors only **add** golden files.
+- `tests/test_golden_output.py` generates the DAB files for every connector example (`examples/connectors/*/basic`), every group-based example (`examples/features/group_based_config/*`), and a few large load-balancing cases. It compares them **byte for byte** with the committed files under `tests/golden/<case_id>/`. YAML is written with `sort_keys=False`, so key order is part of the output.
+- An intended output change requires regenerating the golden files on purpose:
+  ```bash
+  TAPWORKS_UPDATE_GOLDEN=1 python3 -m pytest tests/test_golden_output.py
+  ```
+  The change then shows up in the PR diff for the reviewer, and it needs a changelog entry.
+- Refactors must leave every golden file unchanged. New connectors only **add** golden cases (add them to `_build_cases()`).
 
 ## 3. Changelog
 

@@ -1,0 +1,107 @@
+resources:
+  pipelines:
+    pipeline_business_unit1_01_p01:
+      name: business_unit1_01_p01
+      catalog: ga4_connector
+      schema: google_analytics
+      ingestion_definition:
+        connection_name: ga4_connection
+        objects:
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_123456789
+            source_table: events
+            destination_catalog: ga4_connector
+            destination_schema: google_analytics
+            destination_table: analytics_123456789_events
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_123456789
+            source_table: events_intraday
+            destination_catalog: ga4_connector
+            destination_schema: google_analytics
+            destination_table: analytics_123456789_events_intraday
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_123456789
+            source_table: users
+            destination_catalog: ga4_connector
+            destination_schema: google_analytics
+            destination_table: analytics_123456789_users
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_987654321
+            source_table: events
+            destination_catalog: ga4_connector
+            destination_schema: google_analytics
+            destination_table: analytics_987654321_events
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_987654321
+            source_table: events_intraday
+            destination_catalog: ga4_connector
+            destination_schema: google_analytics
+            destination_table: analytics_987654321_events_intraday
+    pipeline_business_unit1_02_p01:
+      name: business_unit1_02_p01
+      catalog: ga4_connector
+      schema: google_analytics
+      ingestion_definition:
+        connection_name: ga4_connection
+        objects:
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_111222333
+            source_table: events
+            destination_catalog: ga4_connector
+            destination_schema: google_analytics
+            destination_table: analytics_111222333_events
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_111222333
+            source_table: users
+            destination_catalog: ga4_connector
+            destination_schema: google_analytics
+            destination_table: analytics_111222333_users
+    pipeline_business_unit2_01_p01:
+      name: business_unit2_01_p01
+      catalog: ga4_connector
+      schema: google_analytics
+      ingestion_definition:
+        connection_name: ga4_connection
+        objects:
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_444555666
+            source_table: events
+            destination_catalog: ga4_connector
+            destination_schema: google_analytics
+            destination_table: analytics_444555666_events
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_444555666
+            source_table: events_intraday
+            destination_catalog: ga4_connector
+            destination_schema: google_analytics
+            destination_table: analytics_444555666_events_intraday
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_444555666
+            source_table: users
+            destination_catalog: ga4_connector
+            destination_schema: google_analytics
+            destination_table: analytics_444555666_users
+    pipeline_business_unit2_02_p01:
+      name: business_unit2_02_p01
+      catalog: ga4_connector
+      schema: google_analytics
+      ingestion_definition:
+        connection_name: ga4_connection
+        objects:
+        - table:
+            source_catalog: my-gcp-project
+            source_schema: analytics_777888999
+            source_table: events
+            destination_catalog: ga4_connector
+            destination_schema: google_analytics
+            destination_table: analytics_777888999_events
