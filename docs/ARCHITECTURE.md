@@ -308,7 +308,7 @@ For `pipeline_group = "sales_g01p01"`:
 
 | Resource | Name |
 |----------|------|
-| Pipeline display | `Ingestion - sales_g01p01` |
+| Pipeline display | `sales_g01p01` |
 | Pipeline resource ID | `pipeline_sales_g01p01` |
 | Job resource ID | `job_sales_g01p01` |
-| Job display | `Pipeline Scheduler - sales_g01p01` |
+| Job display | `sales_g01p01` |

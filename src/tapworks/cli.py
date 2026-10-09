@@ -65,7 +65,7 @@ def print_connector_list():
     for name in list_connectors():
         print(f"  {name}")
 
-    print("\nUse 'python cli.py <connector> --info' for connector details.")
+    print("\nUse 'tapworks <connector> --info' for connector details.")
 
 
 def print_connector_info(connector_name: str):
@@ -102,16 +102,16 @@ def main():
         epilog="""
 Examples:
   # List all connectors
-  python cli.py --list
+  tapworks --list
 
   # Show Salesforce connector info
-  python cli.py salesforce --info
+  tapworks salesforce --info
 
   # Generate pipelines using settings file
-  python cli.py salesforce --input-config tables.csv --output-dir output --settings settings.json
+  tapworks salesforce --input-config tables.csv --output-dir output --settings settings.json
 
   # Generate pipelines with inline JSON
-  python cli.py sql_server --input-config tables.csv --output-dir output \\
+  tapworks sql_server --input-config tables.csv --output-dir output \\
     --targets '{"dev": {"workspace_host": "https://..."}}' \\
     --default-values '{"project_name": "my_project"}'
 
@@ -252,7 +252,7 @@ Settings file format (settings.json):
     # Input is required for generation
     if not args.input_config:
         print(f"Error: --input-config is required for pipeline generation", file=sys.stderr)
-        print(f"Use 'python cli.py {args.connector} --info' for connector details", file=sys.stderr)
+        print(f"Use 'tapworks {args.connector} --info' for connector details", file=sys.stderr)
         sys.exit(1)
 
     try:
