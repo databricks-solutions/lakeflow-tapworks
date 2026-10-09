@@ -151,25 +151,24 @@ Tables are automatically split based on configurable limits (default: 250 tables
             └───────────────┘ └───────────────┘ └───────────────┘
 ```
 
-**Database connector example** (600 tables):
+**Database connector example** (300 tables):
 ```
-              Input: 600 tables, prefix="sales"
+              Input: 300 tables, prefix="sales"
                                       │
                     ┌─────────────────┴─────────────────┐
                     ▼                                   ▼
             ┌───────────────┐                   ┌───────────────┐
             │    Gateway    │                   │    Gateway    │
             │  sales_g01    │                   │  sales_g02    │
-            │ (500 tables)  │                   │ (100 tables)  │
+            │ (250 tables)  │                   │  (50 tables)  │
             └───────┬───────┘                   └───────┬───────┘
                     │                                   │
-          ┌─────────┴─────────┐                         │
-          ▼                   ▼                         ▼
-   ┌───────────────┐   ┌───────────────┐        ┌───────────────┐
-   │   Pipeline    │   │   Pipeline    │        │   Pipeline    │
-   │ sales_g01p01  │   │ sales_g01p02  │        │ sales_g02p01  │
-   │ (250 tables)  │   │ (250 tables)  │        │ (100 tables)  │
-   └───────────────┘   └───────────────┘        └───────────────┘
+                    ▼                                   ▼
+            ┌───────────────┐                   ┌───────────────┐
+            │   Pipeline    │                   │   Pipeline    │
+            │ sales_g01p01  │                   │ sales_g02p01  │
+            │ (250 tables)  │                   │  (50 tables)  │
+            └───────────────┘                   └───────────────┘
 ```
 
 ### Manual Subgroups
