@@ -75,10 +75,8 @@ Add a GitHub Actions workflow that runs `python3 -m pytest tests/` on every PR. 
 5. Tag `vX.Y.Z` on `main` and push it.
 6. Create a GitHub Release from the tag, using the changelog entry as the notes.
 
-## Known pending output change
+## Example: the gateway limit fix
 
-`max_tables_per_gateway` is currently ignored by the CLI, `run_pipeline_generation()`, and the notebook runner. `runner.py` checks `run_complete_pipeline_generation`'s signature for the parameter, but that method takes `**kwargs`, so the check is always false and the default of 250 always applies. Calling the connector directly is not affected.
+In `v0.1.0`, `max_tables_per_gateway` was ignored by the CLI, `run_pipeline_generation()`, and the notebook runner. `runner.py` checked `run_complete_pipeline_generation`'s signature for the parameter, but that method takes `**kwargs`, so the check was always false and the default of 250 always applied.
 
-Reproduce: `tapworks sql_server --max-tables-per-gateway 1` on the 3-table `examples/connectors/sql_server` CSV still produces one gateway.
-
-The fix is to inspect `generate_pipeline_config` instead. However, users who deployed with a gateway limit below their table count would get more gateways after regenerating, which renames and recreates pipelines. Ship the fix in its own minor release with a "Changes to generated output" entry.
+The fix (inspecting `generate_pipeline_config` instead) is one line, but it changes generated output for anyone who had set the limit, so it ships with a "Changes to generated output" entry in `CHANGELOG.md`. It is covered by a runner-level test (`tests/test_unified_entry.py`) and a golden case that goes through the runner (`load_balancing_sql_server_600_gw500_p250`). Both fail without the fix.

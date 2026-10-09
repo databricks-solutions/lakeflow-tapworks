@@ -263,6 +263,40 @@ class TestDatabaseConnectorRunner:
         assert 'gateway' in result.columns
         assert 'pipeline_group' in result.columns
 
+    def test_max_tables_per_gateway_is_applied(
+        self,
+        large_df_for_load_balancing,
+        sample_targets,
+        temp_output_dir
+    ):
+        """Gateway limit passed to the runner should reach the connector."""
+        result = run_pipeline_generation(
+            connector_name='sql_server',
+            input_source=large_df_for_load_balancing,
+            output_dir=str(temp_output_dir),
+            targets=sample_targets,
+            max_tables_per_gateway=100,
+        )
+
+        assert result['gateway'].nunique() == 6
+
+    def test_saas_connector_ignores_max_tables_per_gateway(
+        self,
+        large_df_for_load_balancing,
+        sample_targets,
+        temp_output_dir
+    ):
+        """SaaS connectors have no gateways, so the gateway limit must not be passed."""
+        result = run_pipeline_generation(
+            connector_name='salesforce',
+            input_source=large_df_for_load_balancing,
+            output_dir=str(temp_output_dir),
+            targets=sample_targets,
+            max_tables_per_gateway=100,
+        )
+
+        assert result['pipeline_group'].nunique() == 3
+
 
 class TestAllConnectorsLoad:
     """Test that all registered connectors can be loaded."""

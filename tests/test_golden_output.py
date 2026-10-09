@@ -19,7 +19,6 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from tapworks.core.registry import get_connector
 from tapworks.core.runner import run_pipeline_generation
 
 
@@ -146,11 +145,11 @@ def _build_cases():
             )
         )
 
-    # Several pipelines per gateway. Calls the connector directly because the
-    # runner currently ignores max_tables_per_gateway (see docs/RELEASING.md).
+    # Several pipelines per gateway
     cases['load_balancing_sql_server_600_gw500_p250'] = (
-        lambda out: get_connector('sql_server').run_complete_pipeline_generation(
-            df=_large_df(600),
+        lambda out: run_pipeline_generation(
+            connector_name='sql_server',
+            input_source=_large_df(600),
             output_dir=out,
             targets=TARGETS,
             max_tables_per_gateway=500,

@@ -12,9 +12,10 @@ Each release lists **Changes to generated output** separately. Those entries cha
 
 ### Fixed
 - Example CSV tests (`tests/test_example_csvs.py`) were always skipped because they looked for examples in an old location.
+- `--max-tables-per-gateway` / `max_tables_per_gateway` is now applied by the CLI, `run_pipeline_generation()`, and the notebook runner. Previously it was ignored and the default of 250 always applied.
 
 ### Changes to generated output
-- None.
+- **Gateway limit now applied** (SQL Server, PostgreSQL). Affects only setups that set `max_tables_per_gateway` (CLI flag, settings file, or `run_pipeline_generation()` argument) to a value other than 250, **and** have a group (prefix/subgroup) with more tables than the smaller of that value and 250. Previously those groups were split at 250 tables per gateway; now they are split at the configured value. Tables move to different gateways and pipelines (for example, from `sales_g01p02` to `sales_g02p01`), and `bundle deploy` recreates the affected resources and re-ingests their tables. If affected, either stay on `v0.1.0`, remove the setting to keep the previous layout, or accept the new layout and review the recreate prompt in `bundle deploy`. All other setups are unchanged.
 
 ## [0.1.0] - 2026-10-09
 

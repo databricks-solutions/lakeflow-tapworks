@@ -192,7 +192,7 @@ Each step is its own commit; steps 2 and 3 can be one PR.
 1. [x] **Release baseline**: tag current `main` as `v0.1.0` and create the GitHub Release (maintainer).
 2. [x] **Safety net**: golden-file tests for all existing example CSVs and load-balancing cases; `CHANGELOG.md`.
 3. [ ] **Refactor, no output change**: `core/database.py` with the new hierarchy; SQL Server and PostgreSQL moved onto `GatewayConnector`; PostgreSQL slot config via `_build_pipeline`. All existing tests and golden files must be unchanged.
-4. [ ] **Gateway limit fix** (separate commit and changelog entry under "Changes to generated output"): `runner.py` inspects `generate_pipeline_config` instead of `run_complete_pipeline_generation`. See [RELEASING.md](./RELEASING.md#known-pending-output-change).
+4. [x] **Gateway limit fix** (separate commit and changelog entry under "Changes to generated output"): `runner.py` inspects `generate_pipeline_config` instead of `run_complete_pipeline_generation`. See [RELEASING.md](./RELEASING.md#example-the-gateway-limit-fix).
 5. [ ] **Oracle integrated CDC**: `IntegratedCDCConnector` and `OracleConnector`, registry entry, example CSV and notebook, unit tests, golden files.
 6. [ ] **Oracle query-based**: `QueryBasedConnector` and `OracleQueryBasedConnector`, registry entry, example CSV and notebook, unit tests, golden files.
 7. [ ] **Docs**, per `AGENTS.md`: `README.md`, `docs/ARCHITECTURE.md`, `docs/CONFIGURATION.md`, `docs/USAGE.md`, `docs/VALIDATIONS.md`, `prompts/` (01, 02, 04, README).
@@ -228,6 +228,6 @@ Workspace: `https://dogfood.staging.databricks.com/?o=6051921418418893`
    - error when a pipeline group mixes `source_database` (service name) values,
    - confirm `cursor_columns` as a required column for query-based.
 5. **Query-based sources in this change**: Oracle only, or also SQL Server and PostgreSQL?
-6. **Gateway limit fix**: ship in this release or a later one?
+6. ~~**Gateway limit fix**: ship in this release or a later one?~~ Decided: fixed in this release (step 4).
 7. **Oracle test source**: is an Oracle database reachable from dogfood with a UC connection? For CDC it also needs archive and supplemental logging.
 8. **Include/exclude columns** for integrated CDC and query-based: not documented for these modes; confirm before emitting.

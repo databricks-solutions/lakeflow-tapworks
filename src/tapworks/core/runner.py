@@ -99,9 +99,10 @@ def run_pipeline_generation(
 
     # Add gateway limit for database connectors
     if hasattr(connector, 'run_complete_pipeline_generation'):
-        # Check if connector accepts max_tables_per_gateway
+        # Check if connector accepts max_tables_per_gateway. run_complete_pipeline_generation
+        # forwards **kwargs, so inspect generate_pipeline_config, which declares it explicitly.
         import inspect
-        sig = inspect.signature(connector.run_complete_pipeline_generation)
+        sig = inspect.signature(connector.generate_pipeline_config)
         if 'max_tables_per_gateway' in sig.parameters:
             kwargs['max_tables_per_gateway'] = max_tables_per_gateway
 
