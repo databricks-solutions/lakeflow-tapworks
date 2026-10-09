@@ -7,7 +7,7 @@ name = "lakeflow-tapworks"
 version = "0.1.0"
 description = "Automated Load Balancer and DAB generation toolkit for Databricks Lakeflow Connectors"
 readme = "README.md"
-license = "Apache-2.0"
+license = {file = "LICENSE.md"}
 requires-python = ">=3.9"
 dependencies = [
     "pyyaml>=6.0",
