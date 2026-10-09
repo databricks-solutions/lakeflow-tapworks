@@ -1,0 +1,32 @@
+resources:
+  pipelines:
+    gateway_finance_g01:
+      name: finance_g01
+      gateway_definition:
+        connection_name: sql_connection
+        gateway_storage_catalog: main
+        gateway_storage_schema: bronze
+        gateway_storage_name: finance_g01
+      schema: bronze
+      continuous: true
+      catalog: main
+    gateway_hr_g01:
+      name: hr_g01
+      gateway_definition:
+        connection_name: sql_connection
+        gateway_storage_catalog: main
+        gateway_storage_schema: bronze
+        gateway_storage_name: hr_g01
+      schema: bronze
+      continuous: true
+      catalog: main
+    gateway_sales_g01:
+      name: sales_g01
+      gateway_definition:
+        connection_name: sql_connection
+        gateway_storage_catalog: main
+        gateway_storage_schema: bronze
+        gateway_storage_name: sales_g01
+      schema: bronze
+      continuous: true
+      catalog: main

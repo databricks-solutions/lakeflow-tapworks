@@ -16,6 +16,7 @@ When making major changes, update these files:
 | `prompts/` | File paths, import patterns, or connector development workflow changes |
 | `examples/connectors/*/example_notebook.ipynb` | Entry function signature or import paths change |
 | `examples/connectors/*/basic/pipeline_config.csv` | Required columns, column names, or default values change |
+| `CHANGELOG.md` | Any user-visible change; list changes to generated DAB output under "Changes to generated output" (see `docs/RELEASING.md`) |
 
 
 ## Development Rules

@@ -1,0 +1,22 @@
+resources:
+  pipelines:
+    gateway_cloudsql_01_g01:
+      name: cloudsql_01_g01
+      gateway_definition:
+        connection_name: postgres_cloudsql_test_fixed
+        gateway_storage_catalog: main
+        gateway_storage_schema: postgres_cloudsql_test
+        gateway_storage_name: cloudsql_01_g01
+      schema: postgres_cloudsql_test
+      continuous: true
+      catalog: main
+    gateway_cloudsql_02_g01:
+      name: cloudsql_02_g01
+      gateway_definition:
+        connection_name: postgres_cloudsql_test_fixed
+        gateway_storage_catalog: main
+        gateway_storage_schema: postgres_cloudsql_test
+        gateway_storage_name: cloudsql_02_g01
+      schema: postgres_cloudsql_test
+      continuous: true
+      catalog: main

@@ -1,0 +1,65 @@
+resources:
+  pipelines:
+    pipeline_finance_p01:
+      name: finance_p01
+      catalog: main
+      schema: salesforce
+      ingestion_definition:
+        connection_name: sfdc_connection
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Invoice__c
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: invoice
+        - table:
+            source_schema: objects
+            source_table: Payment__c
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: payment
+    pipeline_hr_p01:
+      name: hr_p01
+      catalog: main
+      schema: salesforce
+      ingestion_definition:
+        connection_name: sfdc_connection
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Employee__c
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: employee
+        - table:
+            source_schema: objects
+            source_table: Department__c
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: department
+    pipeline_sales_p01:
+      name: sales_p01
+      catalog: main
+      schema: salesforce
+      ingestion_definition:
+        connection_name: sfdc_connection
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Account
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: account
+        - table:
+            source_schema: objects
+            source_table: Contact
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: contact
+        - table:
+            source_schema: objects
+            source_table: Opportunity
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: opportunity

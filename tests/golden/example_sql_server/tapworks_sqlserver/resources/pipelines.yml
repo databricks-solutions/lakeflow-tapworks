@@ -1,0 +1,30 @@
+resources:
+  pipelines:
+    pipeline_sales_01_g01p01:
+      name: sales_01_g01p01
+      catalog: tapworks_catalog
+      schema: tapworks
+      ingestion_definition:
+        ingestion_gateway_id: ${resources.pipelines.gateway_sales_01_g01.id}
+        objects:
+        - table:
+            source_catalog: db1
+            source_schema: dbo
+            source_table: Products
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks
+            destination_table: products
+        - table:
+            source_catalog: db1
+            source_schema: dbo
+            source_table: Customers
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks
+            destination_table: customers
+        - table:
+            source_catalog: db1
+            source_schema: dbo
+            source_table: Orders
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks
+            destination_table: orders

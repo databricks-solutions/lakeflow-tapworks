@@ -1,0 +1,59 @@
+resources:
+  pipelines:
+    pipeline_sales_01_p01:
+      name: sales_01_p01
+      catalog: main
+      schema: salesforce
+      ingestion_definition:
+        connection_name: sfdc_connection
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Account
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: account
+        - table:
+            source_schema: objects
+            source_table: Contact
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: contact
+    pipeline_sales_02_p01:
+      name: sales_02_p01
+      catalog: main
+      schema: salesforce
+      ingestion_definition:
+        connection_name: sfdc_connection
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Opportunity
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: opportunity
+        - table:
+            source_schema: objects
+            source_table: Lead
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: lead
+    pipeline_sales_03_p01:
+      name: sales_03_p01
+      catalog: main
+      schema: salesforce
+      ingestion_definition:
+        connection_name: sfdc_connection
+        objects:
+        - table:
+            source_schema: objects
+            source_table: Campaign
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: campaign
+        - table:
+            source_schema: objects
+            source_table: Task
+            destination_catalog: main
+            destination_schema: salesforce
+            destination_table: task

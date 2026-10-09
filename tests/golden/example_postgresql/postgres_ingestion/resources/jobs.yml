@@ -1,0 +1,20 @@
+resources:
+  jobs:
+    job_cloudsql_01_g01p01:
+      name: cloudsql_01_g01p01
+      schedule:
+        quartz_cron_expression: 0 0 */6 * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_cloudsql_01_g01p01.id}
+    job_cloudsql_02_g01p01:
+      name: cloudsql_02_g01p01
+      schedule:
+        quartz_cron_expression: 0 0 */12 * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_cloudsql_02_g01p01.id}
