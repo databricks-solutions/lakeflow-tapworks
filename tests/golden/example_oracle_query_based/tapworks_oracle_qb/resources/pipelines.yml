@@ -37,6 +37,7 @@ resources:
                 cursor_columns:
                 - LAST_MODIFIED
                 deletion_condition: IS_DELETED = 1
+      serverless: true
     pipeline_sales_02_p01:
       name: sales_02_p01
       catalog: tapworks_catalog
@@ -57,3 +58,4 @@ resources:
               query_based_connector_config:
                 cursor_columns:
                 - EVENT_ID
+      serverless: true

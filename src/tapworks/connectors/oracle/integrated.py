@@ -31,6 +31,8 @@ class OracleIntegratedConnector(OracleSource, IntegratedCDCConnector):
     - pipeline_schema: Pipeline-level schema for event log location
 
     Optional CSV columns:
+    - classic_compute: true to run on classic compute (default: serverless)
+    - pipeline_worker_type / pipeline_driver_type: Node types for classic compute
     - project_name: Project identifier
     - prefix: Grouping prefix (default: project_name)
     - subgroup: Subgroup identifier (default: none)
@@ -77,6 +79,9 @@ class OracleIntegratedConnector(OracleSource, IntegratedCDCConnector):
             'schedule': '0 * * * *',
             'staging_catalog': None,  # Will fall back to target_catalog
             'staging_schema': None,   # Will fall back to target_schema
+            'classic_compute': None,  # Empty means serverless
+            'pipeline_worker_type': None,
+            'pipeline_driver_type': None,
             'pipeline_catalog': None,
             'pipeline_schema': None,
         }

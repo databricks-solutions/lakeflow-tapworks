@@ -30,6 +30,7 @@ resources:
           catalog_name: tapworks_catalog
           schema_name: tapworks_oracle
       channel: PREVIEW
+      serverless: true
     pipeline_hr_02_p01:
       name: hr_02_p01
       catalog: tapworks_catalog
@@ -51,3 +52,4 @@ resources:
           catalog_name: tapworks_catalog
           schema_name: tapworks_oracle
       channel: PREVIEW
+      serverless: true

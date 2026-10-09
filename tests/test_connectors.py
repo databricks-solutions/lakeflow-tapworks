@@ -480,3 +480,70 @@ class TestOracleQueryBasedConnector:
 
     def test_connector_type(self, oracle_query_based_connector):
         assert oracle_query_based_connector.connector_type == 'oracle_query_based'
+
+
+@pytest.mark.parametrize('connector_fixture', ['oracle_connector', 'oracle_query_based_connector'])
+class TestPipelineCompute:
+    """Compute settings for database connectors without a gateway (serverless by default)."""
+
+    def _pipeline(self, request, connector_fixture, df, targets, output_dir):
+        connector = request.getfixturevalue(connector_fixture)
+        connector.run_complete_pipeline_generation(
+            df=df,
+            output_dir=str(output_dir),
+            targets=targets,
+            default_values={'project_name': 'compute_test'},
+        )
+        with open(output_dir / 'compute_test' / 'resources' / 'pipelines.yml') as f:
+            return yaml.safe_load(f)['resources']['pipelines']['pipeline_compute_test_p01']
+
+    def test_serverless_by_default(self, request, connector_fixture, sample_oracle_df, sample_targets_minimal, temp_output_dir):
+        pipeline = self._pipeline(request, connector_fixture, sample_oracle_df, sample_targets_minimal, temp_output_dir)
+        assert pipeline['serverless'] is True
+        assert 'clusters' not in pipeline
+
+    def test_classic_with_default_settings(self, request, connector_fixture, sample_oracle_df, sample_targets_minimal, temp_output_dir):
+        df = sample_oracle_df.copy()
+        df['classic_compute'] = 'TRUE'
+        pipeline = self._pipeline(request, connector_fixture, df, sample_targets_minimal, temp_output_dir)
+        assert pipeline['serverless'] is False
+        assert 'clusters' not in pipeline
+
+    def test_classic_with_node_types(self, request, connector_fixture, sample_oracle_df, sample_targets_minimal, temp_output_dir):
+        df = sample_oracle_df.copy()
+        df['classic_compute'] = 'true'
+        df['pipeline_worker_type'] = 'm5d.large'
+        df['pipeline_driver_type'] = 'm5d.xlarge'
+        pipeline = self._pipeline(request, connector_fixture, df, sample_targets_minimal, temp_output_dir)
+        assert pipeline['serverless'] is False
+        assert pipeline['clusters'] == [{'num_workers': 1, 'node_type_id': 'm5d.large', 'driver_node_type_id': 'm5d.xlarge'}]
+
+    def test_classic_false_is_serverless(self, request, connector_fixture, sample_oracle_df, sample_targets_minimal, temp_output_dir):
+        df = sample_oracle_df.copy()
+        df['classic_compute'] = 'false'
+        pipeline = self._pipeline(request, connector_fixture, df, sample_targets_minimal, temp_output_dir)
+        assert pipeline['serverless'] is True
+
+    def test_node_types_without_classic_are_ignored(self, request, connector_fixture, sample_oracle_df, sample_targets_minimal, temp_output_dir, caplog):
+        df = sample_oracle_df.copy()
+        df['pipeline_worker_type'] = 'm5d.large'
+        with caplog.at_level('WARNING'):
+            pipeline = self._pipeline(request, connector_fixture, df, sample_targets_minimal, temp_output_dir)
+        assert pipeline['serverless'] is True
+        assert 'clusters' not in pipeline
+        assert 'pipeline_worker_type is set for 3 row(s) without classic_compute=true' in caplog.text
+
+    def test_invalid_classic_compute_value(self, request, connector_fixture, sample_oracle_df):
+        connector = request.getfixturevalue(connector_fixture)
+        df = sample_oracle_df.copy()
+        df['classic_compute'] = 'yes'
+        with pytest.raises(ValidationError, match="Invalid classic_compute value 'yes'"):
+            connector.load_and_normalize_input(df, default_values={'project_name': 'compute_test'})
+
+    def test_conflicting_compute_in_pipeline(self, request, connector_fixture, sample_oracle_df):
+        connector = request.getfixturevalue(connector_fixture)
+        df = sample_oracle_df.copy()
+        df['classic_compute'] = ['true', 'false', 'true']
+        df = connector.load_and_normalize_input(df, default_values={'project_name': 'compute_test'})
+        with pytest.raises(ValidationError, match='classic_compute'):
+            connector.generate_pipeline_config(df)

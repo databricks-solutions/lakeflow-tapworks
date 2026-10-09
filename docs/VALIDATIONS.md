@@ -165,7 +165,7 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 
 | | |
 |---|---|
-| **What it checks** | Within each `pipeline_group`, the `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. For connectors without a gateway (Oracle), `connection_name`, `staging_catalog`, and `staging_schema` must also be the same, since each pipeline connects directly and has one staging location. |
+| **What it checks** | Within each `pipeline_group`, the `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. For connectors without a gateway (Oracle), `connection_name`, `classic_compute`, `pipeline_worker_type`, and `pipeline_driver_type` must also be the same (plus `staging_catalog` and `staging_schema` for integrated CDC), since each pipeline connects directly with one compute configuration and one staging location. |
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Pipeline group 'sql_g01p01' has conflicting tags values: ['{"team":"a"}', '{"team":"b"}']. All tables in the same pipeline group must have the same tags.` |
 | **How to fix** | Use the same `tags` for all tables in the group, or split them into different subgroups. |
@@ -187,6 +187,24 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Pipeline group 'pg_g01p01': source database 'mydb' has conflicting slot_name values: ['slot_a', 'slot_b']. All tables from the same source database must use the same slot_name.` |
 | **How to fix** | Use the same `slot_name` and `publication_name` for all tables from the same source database, or split them into different subgroups. |
+
+### Invalid classic_compute value (integrated CDC and query-based)
+
+| | |
+|---|---|
+| **What it checks** | `classic_compute` is `true`, `false` (case-insensitive), or empty. |
+| **Severity** | Error (`ValidationError`) |
+| **Example message** | `Invalid classic_compute value 'yes'. Use true or false (empty means serverless).` |
+| **How to fix** | Use `true` for classic compute, or leave empty / `false` for serverless. |
+
+### Node types without classic compute (integrated CDC and query-based)
+
+| | |
+|---|---|
+| **What it checks** | `pipeline_worker_type` or `pipeline_driver_type` set on rows whose pipelines run on serverless compute. |
+| **Severity** | Warning (logged; the node types are ignored) |
+| **Example message** | `pipeline_worker_type is set for 3 row(s) without classic_compute=true; it is ignored because those pipelines run on serverless compute.` |
+| **How to fix** | Set `classic_compute` to `true`, or remove the node types. |
 
 ### Lowercase identifiers (Oracle only)
 

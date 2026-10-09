@@ -1441,6 +1441,71 @@ class DatabaseConnector(BaseConnector):
 
         return pipeline_def
 
+    def _normalize_pipeline_compute(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Normalize classic_compute to a boolean (empty means serverless).
+
+        Used by connectors whose pipelines run without a gateway, where the
+        pipeline itself connects to the source.
+
+        Raises:
+            ValidationError: If classic_compute is not true or false
+        """
+        if 'classic_compute' not in df.columns:
+            return df
+
+        def to_bool(value):
+            if not self._is_value_set(value):
+                return False
+            if isinstance(value, bool):
+                return value
+            text = str(value).strip().lower()
+            if text not in ('true', 'false'):
+                raise ValidationError(
+                    f"Invalid classic_compute value '{value}'. Use true or false (empty means serverless)."
+                )
+            return text == 'true'
+
+        df['classic_compute'] = df['classic_compute'].apply(to_bool).astype(object)
+
+        for column in ('pipeline_worker_type', 'pipeline_driver_type'):
+            if column in df.columns:
+                ignored = df[column].apply(self._is_value_set) & ~df['classic_compute'].astype(bool)
+                if ignored.any():
+                    logger.warning(
+                        f"{column} is set for {ignored.sum()} row(s) without classic_compute=true; "
+                        f"it is ignored because those pipelines run on serverless compute."
+                    )
+
+        return df
+
+    def _add_pipeline_compute(self, pipeline_def: Dict, group_df: pd.DataFrame) -> None:
+        """
+        Add compute settings to a pipeline that connects to the source itself.
+
+        Serverless by default. With classic_compute=true the pipeline runs on classic
+        compute with default settings, plus a cluster spec when worker/driver types are set.
+        """
+        row = group_df.iloc[0]
+        if not row.get('classic_compute'):
+            pipeline_def['serverless'] = True
+            return
+
+        pipeline_def['serverless'] = False
+
+        worker_type = row.get('pipeline_worker_type')
+        driver_type = row.get('pipeline_driver_type')
+        has_worker_type = self._is_value_set(worker_type)
+        has_driver_type = self._is_value_set(driver_type)
+
+        if has_worker_type or has_driver_type:
+            cluster_config = {'num_workers': 1}
+            if has_worker_type:
+                cluster_config['node_type_id'] = worker_type
+            if has_driver_type:
+                cluster_config['driver_node_type_id'] = driver_type
+            pipeline_def['clusters'] = [cluster_config]
+
     def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
         """
         Create pipeline YAML configuration from dataframe.
@@ -1714,6 +1779,7 @@ class IntegratedCDCConnector(DatabaseConnector):
     connection, without a separate gateway. Uses single-level load balancing.
     Change data is staged in staging_catalog / staging_schema, which default to
     target_catalog / target_schema (like gateway storage for standard connectors).
+    Pipelines run on serverless compute unless classic_compute is true.
 
     Examples: Oracle
     """
@@ -1721,7 +1787,8 @@ class IntegratedCDCConnector(DatabaseConnector):
     # Validation configuration - fields that must be consistent within pipeline groups
     PIPELINE_CONSISTENCY_FIELDS = [
         'connection_name', 'pipeline_catalog', 'pipeline_schema',
-        'staging_catalog', 'staging_schema', 'tags'
+        'staging_catalog', 'staging_schema', 'tags',
+        'classic_compute', 'pipeline_worker_type', 'pipeline_driver_type'
     ]
 
     def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -1745,7 +1812,7 @@ class IntegratedCDCConnector(DatabaseConnector):
             mask = df['staging_schema'].isna()
             df.loc[mask, 'staging_schema'] = df.loc[mask, 'target_schema']
 
-        return df
+        return self._normalize_pipeline_compute(df)
 
     def _ingestion_source(self, group_df: pd.DataFrame) -> Dict:
         """Pipelines connect to the source directly and use CDC ingestion."""
@@ -1762,6 +1829,7 @@ class IntegratedCDCConnector(DatabaseConnector):
             'schema_name': group_df.iloc[0]['staging_schema'],
         }
         pipeline_def['channel'] = 'PREVIEW'
+        self._add_pipeline_compute(pipeline_def, group_df)
         return pipeline_def
 
 
@@ -1772,9 +1840,21 @@ class QueryBasedConnector(DatabaseConnector):
     Each pipeline queries the source tables through its Unity Catalog connection.
     Tables with cursor columns are read incrementally; tables without one are read
     as full snapshots. No gateway or staging. Uses single-level load balancing.
+    Pipelines run on serverless compute unless classic_compute is true.
 
     Examples: Oracle
     """
+
+    # Validation configuration - fields that must be consistent within pipeline groups
+    PIPELINE_CONSISTENCY_FIELDS = [
+        'connection_name', 'pipeline_catalog', 'pipeline_schema', 'tags',
+        'classic_compute', 'pipeline_worker_type', 'pipeline_driver_type'
+    ]
+
+    def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Apply database normalization and normalize compute settings."""
+        df = super()._apply_connector_specific_normalization(df)
+        return self._normalize_pipeline_compute(df)
 
     def _ingestion_source(self, group_df: pd.DataFrame) -> Dict:
         """Pipelines connect to the source directly and use query-based ingestion."""
@@ -1782,6 +1862,12 @@ class QueryBasedConnector(DatabaseConnector):
             'connection_name': group_df.iloc[0]['connection_name'],
             'connector_type': 'QUERY_BASED',
         }
+
+    def _build_pipeline(self, names: Dict[str, str], group_df: pd.DataFrame) -> Dict:
+        """Add compute settings (serverless by default)."""
+        pipeline_def = super()._build_pipeline(names, group_df)
+        self._add_pipeline_compute(pipeline_def, group_df)
+        return pipeline_def
 
     def _build_table_configuration(self, row: pd.Series) -> Dict:
         """Add primary keys and the query-based configuration (cursor columns, deletion condition)."""

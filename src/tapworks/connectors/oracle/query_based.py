@@ -35,6 +35,8 @@ class OracleQueryBasedConnector(OracleSource, QueryBasedConnector):
     Optional CSV columns:
     - cursor_columns: Comma-separated monotonically increasing columns (e.g., 'UPDATED_AT');
       without one, the table is read as a full snapshot
+    - classic_compute: true to run on classic compute (default: serverless)
+    - pipeline_worker_type / pipeline_driver_type: Node types for classic compute
     - project_name: Project identifier
     - prefix: Grouping prefix (default: project_name)
     - subgroup: Subgroup identifier (default: none)
@@ -81,6 +83,9 @@ class OracleQueryBasedConnector(OracleSource, QueryBasedConnector):
             'pipeline_catalog': None,
             'pipeline_schema': None,
             'cursor_columns': None,
+            'classic_compute': None,  # Empty means serverless
+            'pipeline_worker_type': None,
+            'pipeline_driver_type': None,
         }
 
     @property

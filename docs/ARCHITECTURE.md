@@ -249,6 +249,7 @@ Base class for database connectors that use integrated CDC: each pipeline reads 
 - Single-level load balancing (inherited from `DatabaseConnector`)
 - Pipelines set `connection_name` and `connector_type: CDC`, on the `PREVIEW` channel
 - Staging location (`data_staging_options`) from `staging_catalog`/`staging_schema`, which fall back to the target catalog/schema
+- Compute via `_add_pipeline_compute()`: serverless by default; `classic_compute=true` for classic, with `pipeline_worker_type`/`pipeline_driver_type` as a cluster spec
 
 ### QueryBasedConnector (Abstract)
 
@@ -257,6 +258,7 @@ Base class for query-based database connectors: each pipeline queries the source
 **Features:**
 - Single-level load balancing (inherited from `DatabaseConnector`)
 - Pipelines set `connection_name` and `connector_type: QUERY_BASED`
+- Compute via `_add_pipeline_compute()`, as for integrated CDC
 - `_build_table_configuration()` adds `primary_keys` and `query_based_connector_config` (`cursor_columns`, `deletion_condition`; always emitted, empty when neither is set)
 
 ### SaaSConnector (Abstract)

@@ -9,6 +9,7 @@ Each release lists **Changes to generated output** separately. Those entries cha
 ### Added
 - **Oracle integrated CDC connector** (`oracle_integrated`), using Lakeflow Connect integrated CDC (Beta; requires workspace enablement). Pipelines connect directly through `connection_name` with `connector_type: CDC` on the `PREVIEW` channel; no gateway. Single-level load balancing (250 tables per pipeline), default schedule hourly. Optional `staging_catalog`/`staging_schema` columns set the staging location (`data_staging_options`) and default to the target catalog/schema, like the gateway columns. Logs a warning for lowercase Oracle identifiers. Example in `examples/connectors/oracle_integrated/`.
 - **Oracle query-based connector** (`oracle_query_based`). Pipelines connect directly through `connection_name` with `connector_type: QUERY_BASED`; no gateway or staging. Optional `cursor_columns` (tables without one are read as full snapshots), `primary_keys`, `deletion_condition`, and `scd_type` (`SCD_TYPE_1`, `SCD_TYPE_2`, `APPEND_ONLY`). Default schedule hourly. Example in `examples/connectors/oracle_query_based/`.
+- Compute for integrated CDC and query-based pipelines: serverless by default (`serverless: true`); optional `classic_compute=true` for classic compute (e.g. databases that only accept classic compute), with optional `pipeline_worker_type`/`pipeline_driver_type`.
 - `IntegratedCDCConnector` and `QueryBasedConnector` base classes, ready for integrated CDC and query-based versions of other databases.
 
 ### Changed

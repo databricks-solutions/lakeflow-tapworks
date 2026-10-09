@@ -195,6 +195,15 @@ Verified against the bundle schema from Databricks CLI v1.20.0 (`databricks bund
 | Q7 | **Default schedule: hourly (`0 * * * *`)** | Matches the docs' job example and the integrated CDC connector. |
 | Q8 | **Oracle only for now** | SQL Server, PostgreSQL, MySQL, ... query-based connectors are a source class plus a ~15-line module each. |
 
+### Compute decisions
+
+| # | Decision | Rationale |
+|---|---|---|
+| C1 | **Serverless by default** for integrated CDC and query-based pipelines (`serverless: true` always emitted) | Maintainer decision. Explicit, so the platform default (which differs between modes: classic observed for integrated CDC, serverless for query-based) doesn't decide. |
+| C2 | **`classic_compute=true` → `serverless: false`** with default classic settings | For databases that only accept classic compute. Found in dogfood: the query-based replica failed with `ORA-12170 TCP connect timeout` on serverless and completed with `serverless: false`. |
+| C3 | **`pipeline_worker_type` / `pipeline_driver_type`** → `clusters: [{num_workers: 1, node_type_id, driver_node_type_id}]`, classic only | Same shape as the gateway cluster for standard connectors. Ignored with a warning on serverless. |
+| C4 | **Validation**: `classic_compute` must be true/false/empty; compute columns consistent per pipeline | Prevents silent misconfiguration and one pipeline with two compute settings. |
+
 ## Open decisions
 
 1. **Oracle test source**: integrated CDC is being tested against `airnz_oracle_demo` in dogfood; query-based not yet tested end to end.

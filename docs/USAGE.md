@@ -216,7 +216,7 @@ tapworks oracle_integrated --input-config tables.csv --output-dir output --setti
 ```
 Required columns: `source_database` (Oracle service name), `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`
 
-Optional: `staging_catalog`, `staging_schema` (default to the target catalog/schema), `scd_type`, `include_columns`, `exclude_columns`
+Optional: `staging_catalog`, `staging_schema` (default to the target catalog/schema), `classic_compute` (default: serverless), `pipeline_worker_type`, `pipeline_driver_type`, `scd_type`, `include_columns`, `exclude_columns`
 
 Integrated CDC is in Beta and must be enabled for the workspace. `--max-tables-per-gateway` does not apply.
 
@@ -226,7 +226,7 @@ tapworks oracle_query_based --input-config tables.csv --output-dir output --sett
 ```
 Required columns: `source_database` (Oracle service name), `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`
 
-Optional: `cursor_columns` (without one, the table is read as a full snapshot), `primary_keys`, `deletion_condition`, `scd_type` (`SCD_TYPE_1`, `SCD_TYPE_2`, `APPEND_ONLY`), `include_columns`, `exclude_columns`
+Optional: `cursor_columns` (without one, the table is read as a full snapshot), `primary_keys`, `deletion_condition`, `classic_compute` (default: serverless), `pipeline_worker_type`, `pipeline_driver_type`, `scd_type` (`SCD_TYPE_1`, `SCD_TYPE_2`, `APPEND_ONLY`), `include_columns`, `exclude_columns`
 
 Query-based ingestion reads the latest state of each row at each run; it does not capture intermediate changes between runs. `--max-tables-per-gateway` does not apply.
 

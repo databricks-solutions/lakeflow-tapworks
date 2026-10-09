@@ -231,6 +231,8 @@ Oracle has two connectors, both without a gateway: `oracle_integrated` (integrat
 | `source_database` | Oracle **service name**. For multitenant databases, use the `CDB$ROOT` service name. |
 | `source_schema`, `source_table_name` | Case must match how Oracle stores the identifier, usually uppercase. Tapworks logs a warning for lowercase values. |
 | `staging_catalog` | Integrated CDC only. Optional. Catalog where change data is staged. Falls back to `target_catalog` (like `gateway_catalog` for standard connectors). |
+| `classic_compute` | Optional. `true` runs the pipeline on classic compute; empty or `false` runs it on serverless (default). Use classic when the database only accepts connections from classic compute. |
+| `pipeline_worker_type`, `pipeline_driver_type` | Optional, classic compute only. Node types for the pipeline cluster (one worker). Without them, classic compute uses its default settings. Ignored (with a warning) on serverless. |
 | `staging_schema` | Integrated CDC only. Optional. Schema where change data is staged. Falls back to `target_schema` (like `gateway_schema` for standard connectors). |
 
 ### Query-Based Columns
