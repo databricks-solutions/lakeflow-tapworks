@@ -331,6 +331,36 @@ class TestOracleConnector:
         with pytest.raises(ValidationError, match='connection_name'):
             oracle_connector.generate_pipeline_config(df)
 
+    def test_staging_defaults_to_target(self, oracle_connector, sample_oracle_df, sample_targets_minimal, temp_output_dir):
+        pipelines = self._generate(oracle_connector, sample_oracle_df, sample_targets_minimal, temp_output_dir)
+
+        staging = pipelines['pipeline_oracle_test_p01']['ingestion_definition']['data_staging_options']
+        assert staging == {'catalog_name': 'main', 'schema_name': 'bronze'}
+
+    def test_staging_from_columns(self, oracle_connector, sample_oracle_df, sample_targets_minimal, temp_output_dir):
+        df = sample_oracle_df.copy()
+        df['staging_catalog'] = 'staging_cat'
+        df['staging_schema'] = 'staging_sch'
+        pipelines = self._generate(oracle_connector, df, sample_targets_minimal, temp_output_dir)
+
+        staging = pipelines['pipeline_oracle_test_p01']['ingestion_definition']['data_staging_options']
+        assert staging == {'catalog_name': 'staging_cat', 'schema_name': 'staging_sch'}
+
+    def test_conflicting_staging_in_pipeline(self, oracle_connector, sample_oracle_df):
+        df = sample_oracle_df.copy()
+        df['staging_schema'] = ['staging_a', 'staging_b', 'staging_a']
+        df = oracle_connector.load_and_normalize_input(df, default_values={'project_name': 'oracle_test'})
+
+        with pytest.raises(ValidationError, match='staging_schema'):
+            oracle_connector.generate_pipeline_config(df)
+
+    def test_invalid_staging_name(self, oracle_connector, sample_oracle_df):
+        df = sample_oracle_df.copy()
+        df['staging_schema'] = 'bad.name'
+
+        with pytest.raises(ValidationError, match="Invalid characters in 'staging_schema'"):
+            oracle_connector.load_and_normalize_input(df, default_values={'project_name': 'oracle_test'})
+
     def test_scd_type(self, oracle_connector, sample_oracle_df, sample_targets_minimal, temp_output_dir):
         df = sample_oracle_df.copy()
         df['scd_type'] = 'SCD_TYPE_2'

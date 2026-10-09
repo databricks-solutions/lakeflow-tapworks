@@ -55,13 +55,15 @@ class OracleConnector(IntegratedCDCConnector):
     - target_schema: Target Databricks schema
     - target_table_name: Destination table name
     - connection_name: Databricks connection name for Oracle
-    - pipeline_catalog: Pipeline-level catalog for event log and staging location
-    - pipeline_schema: Pipeline-level schema for event log and staging location
+    - pipeline_catalog: Pipeline-level catalog for event log location
+    - pipeline_schema: Pipeline-level schema for event log location
 
     Optional CSV columns:
     - project_name: Project identifier
     - prefix: Grouping prefix (default: project_name)
     - subgroup: Subgroup identifier (default: none)
+    - staging_catalog: Catalog for staged change data (default: target_catalog)
+    - staging_schema: Schema for staged change data (default: target_schema)
     - schedule: Cron schedule (default: 0 * * * *)
     - scd_type: SCD_TYPE_1 or SCD_TYPE_2
     - include_columns / exclude_columns: Comma-separated column lists
@@ -101,6 +103,8 @@ class OracleConnector(IntegratedCDCConnector):
         """
         return {
             'schedule': '0 * * * *',
+            'staging_catalog': None,  # Will fall back to target_catalog
+            'staging_schema': None,   # Will fall back to target_schema
             'pipeline_catalog': None,
             'pipeline_schema': None,
         }

@@ -96,7 +96,7 @@ These checks run at the end of normalization, validating the fully resolved conf
 
 | | |
 |---|---|
-| **What it checks** | Values in `target_table_name`, `target_schema`, `target_catalog`, `pipeline_catalog`, `pipeline_schema`, `gateway_catalog`, and `gateway_schema` follow Unity Catalog naming rules. Periods (`.`), spaces, forward slashes (`/`), and control characters are not allowed. |
+| **What it checks** | Values in `target_table_name`, `target_schema`, `target_catalog`, `pipeline_catalog`, `pipeline_schema`, `gateway_catalog`, `gateway_schema`, `staging_catalog`, and `staging_schema` follow Unity Catalog naming rules. Periods (`.`), spaces, forward slashes (`/`), and control characters are not allowed. |
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Invalid characters in 'target_table_name': ['my.table', 'bad table']. Periods (.), spaces, forward slashes (/), and control characters are not allowed in Unity Catalog names.` |
 | **How to fix** | Replace disallowed characters with underscores or other valid characters. |
@@ -165,7 +165,7 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 
 | | |
 |---|---|
-| **What it checks** | Within each `pipeline_group`, the `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. For connectors without a gateway (Oracle), `connection_name` must also be the same, since each pipeline connects directly. |
+| **What it checks** | Within each `pipeline_group`, the `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. For connectors without a gateway (Oracle), `connection_name`, `staging_catalog`, and `staging_schema` must also be the same, since each pipeline connects directly and has one staging location. |
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Pipeline group 'sql_g01p01' has conflicting tags values: ['{"team":"a"}', '{"team":"b"}']. All tables in the same pipeline group must have the same tags.` |
 | **How to fix** | Use the same `tags` for all tables in the group, or split them into different subgroups. |

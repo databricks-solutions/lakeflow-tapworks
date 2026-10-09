@@ -225,6 +225,7 @@ Base class for database connectors that use integrated CDC: each pipeline reads 
 **Features:**
 - Single-level load balancing (inherited from `DatabaseConnector`)
 - Pipelines set `connection_name` and `connector_type: CDC`, on the `PREVIEW` channel
+- Staging location (`data_staging_options`) from `staging_catalog`/`staging_schema`, which fall back to the target catalog/schema
 
 ### SaaSConnector (Abstract)
 

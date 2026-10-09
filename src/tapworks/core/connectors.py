@@ -466,6 +466,7 @@ class BaseConnector(ABC):
             'target_table_name', 'target_schema', 'target_catalog',
             'pipeline_catalog', 'pipeline_schema',
             'gateway_catalog', 'gateway_schema',
+            'staging_catalog', 'staging_schema',
         ] if c in df.columns]
         for col in uc_name_cols:
             values = df[col].astype(str)

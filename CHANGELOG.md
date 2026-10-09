@@ -7,7 +7,7 @@ Each release lists **Changes to generated output** separately. Those entries cha
 ## [Unreleased]
 
 ### Added
-- **Oracle connector** (`oracle`), using Lakeflow Connect integrated CDC (Beta; requires workspace enablement). Pipelines connect directly through `connection_name` with `connector_type: CDC` on the `PREVIEW` channel; no gateway. Single-level load balancing (250 tables per pipeline), default schedule hourly. Logs a warning for lowercase Oracle identifiers. Example in `examples/connectors/oracle/`.
+- **Oracle connector** (`oracle`), using Lakeflow Connect integrated CDC (Beta; requires workspace enablement). Pipelines connect directly through `connection_name` with `connector_type: CDC` on the `PREVIEW` channel; no gateway. Single-level load balancing (250 tables per pipeline), default schedule hourly. Optional `staging_catalog`/`staging_schema` columns set the staging location (`data_staging_options`) and default to the target catalog/schema, like the gateway columns. Logs a warning for lowercase Oracle identifiers. Example in `examples/connectors/oracle/`.
 - `IntegratedCDCConnector` base class, ready for integrated CDC versions of other databases.
 
 ### Changed

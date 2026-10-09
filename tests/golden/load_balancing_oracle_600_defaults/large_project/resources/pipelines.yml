@@ -1758,6 +1758,9 @@ resources:
             destination_catalog: main
             destination_schema: bronze
             destination_table: table_0249
+        data_staging_options:
+          catalog_name: main
+          schema_name: bronze
       channel: PREVIEW
     pipeline_sales_p02:
       name: sales_p02
@@ -3517,6 +3520,9 @@ resources:
             destination_catalog: main
             destination_schema: bronze
             destination_table: table_0499
+        data_staging_options:
+          catalog_name: main
+          schema_name: bronze
       channel: PREVIEW
     pipeline_sales_p03:
       name: sales_p03
@@ -4226,4 +4232,7 @@ resources:
             destination_catalog: main
             destination_schema: bronze
             destination_table: table_0599
+        data_staging_options:
+          catalog_name: main
+          schema_name: bronze
       channel: PREVIEW

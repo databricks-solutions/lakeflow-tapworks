@@ -26,6 +26,9 @@ resources:
             destination_table: departments
             table_configuration:
               scd_type: SCD_TYPE_1
+        data_staging_options:
+          catalog_name: tapworks_catalog
+          schema_name: tapworks_oracle
       channel: PREVIEW
     pipeline_hr_02_p01:
       name: hr_02_p01
@@ -44,4 +47,7 @@ resources:
             destination_table: job_history
             table_configuration:
               scd_type: SCD_TYPE_2
+        data_staging_options:
+          catalog_name: tapworks_catalog
+          schema_name: tapworks_oracle
       channel: PREVIEW

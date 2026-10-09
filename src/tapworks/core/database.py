@@ -507,9 +507,40 @@ class IntegratedCDCConnector(DatabaseConnector):
 
     Each pipeline reads changes directly from the source through its Unity Catalog
     connection, without a separate gateway. Uses single-level load balancing.
+    Change data is staged in staging_catalog / staging_schema, which default to
+    target_catalog / target_schema (like gateway storage for gateway connectors).
 
     Examples: Oracle
     """
+
+    # Validation configuration - fields that must be consistent within pipeline groups
+    PIPELINE_CONSISTENCY_FIELDS = [
+        'connection_name', 'pipeline_catalog', 'pipeline_schema',
+        'staging_catalog', 'staging_schema', 'tags'
+    ]
+
+    def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Apply integrated CDC normalization including staging defaults.
+
+        Extends database normalization to handle staging columns.
+        """
+        # Call parent normalization first
+        df = super()._apply_connector_specific_normalization(df)
+
+        # Handle staging_catalog and staging_schema defaults
+        # Use target values if staging values are not provided
+        if 'staging_catalog' in df.columns:
+            df['staging_catalog'] = df['staging_catalog'].astype(object)
+            mask = df['staging_catalog'].isna()
+            df.loc[mask, 'staging_catalog'] = df.loc[mask, 'target_catalog']
+
+        if 'staging_schema' in df.columns:
+            df['staging_schema'] = df['staging_schema'].astype(object)
+            mask = df['staging_schema'].isna()
+            df.loc[mask, 'staging_schema'] = df.loc[mask, 'target_schema']
+
+        return df
 
     def _ingestion_source(self, group_df: pd.DataFrame) -> Dict:
         """Pipelines connect to the source directly and use CDC ingestion."""
@@ -519,7 +550,11 @@ class IntegratedCDCConnector(DatabaseConnector):
         }
 
     def _build_pipeline(self, names: Dict[str, str], group_df: pd.DataFrame) -> Dict:
-        """Integrated CDC pipelines must be created on the PREVIEW channel."""
+        """Add the staging location; integrated CDC pipelines must be created on the PREVIEW channel."""
         pipeline_def = super()._build_pipeline(names, group_df)
+        pipeline_def['ingestion_definition']['data_staging_options'] = {
+            'catalog_name': group_df.iloc[0]['staging_catalog'],
+            'schema_name': group_df.iloc[0]['staging_schema'],
+        }
         pipeline_def['channel'] = 'PREVIEW'
         return pipeline_def

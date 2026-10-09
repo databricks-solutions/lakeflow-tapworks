@@ -157,7 +157,7 @@ Each connector has a built-in default schedule used when no `schedule` column or
 
 ## Naming Constraints
 
-Column values used in Unity Catalog names (`target_catalog`, `target_schema`, `target_table_name`, `pipeline_catalog`, `pipeline_schema`, `gateway_catalog`, `gateway_schema`) must follow these rules:
+Column values used in Unity Catalog names (`target_catalog`, `target_schema`, `target_table_name`, `pipeline_catalog`, `pipeline_schema`, `gateway_catalog`, `gateway_schema`, `staging_catalog`, `staging_schema`) must follow these rules:
 
 - No periods (`.`), spaces, forward slashes (`/`), or control characters
 - Maximum 255 characters
@@ -229,7 +229,8 @@ Oracle uses integrated CDC: each pipeline reads changes directly through `connec
 |--------|-------|
 | `source_database` | Oracle **service name**. For multitenant databases, use the `CDB$ROOT` service name. |
 | `source_schema`, `source_table_name` | Case must match how Oracle stores the identifier, usually uppercase. Tapworks logs a warning for lowercase values. |
-| `pipeline_catalog`, `pipeline_schema` | Also used as the staging location for change data. |
+| `staging_catalog` | Optional. Catalog where change data is staged. Falls back to `target_catalog` (like `gateway_catalog` for gateway connectors). |
+| `staging_schema` | Optional. Schema where change data is staged. Falls back to `target_schema` (like `gateway_schema` for gateway connectors). |
 
 ### Salesforce Columns
 

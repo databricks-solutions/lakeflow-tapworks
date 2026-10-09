@@ -149,6 +149,9 @@ resources:
               destination_table: employees
               table_configuration:
                 scd_type: SCD_TYPE_1
+        data_staging_options:
+          catalog_name: main                # staging_catalog (default: target_catalog)
+          schema_name: bronze               # staging_schema (default: target_schema)
       channel: PREVIEW
 ```
 
@@ -218,7 +221,7 @@ Decisions made for the Oracle integrated CDC connector (step 5). They can be rev
 | # | Decision | Rationale |
 |---|---|---|
 | 1 | **Default schedule: hourly (`0 * * * *`)** | Each integrated CDC update runs for about 30 minutes; the docs suggest 60 minutes as a starting point. |
-| 2 | **Staging location: not emitted.** No `staging_catalog`/`staging_schema` columns. | The bundle schema says that without `data_staging_options`, staged data goes to the pipeline's `catalog`/`schema`, which is the fallback we would have built. Add optional columns later if a different location is needed (the docs mention it for migrating from gateway pipelines). |
+| 2 | **Staging location: optional `staging_catalog`/`staging_schema` columns, falling back to `target_catalog`/`target_schema`; always emitted as `data_staging_options`.** | Same behavior as `gateway_catalog`/`gateway_schema` for gateway connectors, which also default to the target. Emitting it explicitly avoids the server default (pipeline catalog/schema), which differs from the other database connectors. Staging columns get the same UC naming and per-pipeline consistency checks. |
 | 3 | **Lowercase identifier check: warning, not error** | Lowercase is valid for quoted Oracle identifiers, so it must not block generation. |
 | 4 | **No error for mixed service names in one pipeline** | Not documented as invalid; an error could block valid configs. |
 | 5 | **Include/exclude columns: inherited, emitted when set** | `include_columns`/`exclude_columns` are part of the generic `table_configuration` in the bundle schema; they are opt-in per row. Not yet verified against a live Oracle pipeline. |

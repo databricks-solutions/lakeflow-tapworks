@@ -216,7 +216,7 @@ tapworks oracle --input-config tables.csv --output-dir output --settings setting
 ```
 Required columns: `source_database` (Oracle service name), `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`
 
-Optional: `scd_type`, `include_columns`, `exclude_columns`
+Optional: `staging_catalog`, `staging_schema` (default to the target catalog/schema), `scd_type`, `include_columns`, `exclude_columns`
 
 Integrated CDC is in Beta and must be enabled for the workspace. `--max-tables-per-gateway` does not apply.
 
