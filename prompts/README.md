@@ -24,9 +24,9 @@ These prompts are designed to work with AI coding assistants (Claude, Cursor, et
 If you're familiar with the codebase, here's the minimal path:
 
 1. **Create connector class** in `src/tapworks/connectors/myconnector/connector.py`
-   - Extend `GatewayConnector` or `SaaSConnector`
+   - Extend `StandardConnector` / `IntegratedCDCConnector` (with a source class) or `SaaSConnector`
    - Implement `connector_type`, `required_columns`, `default_values`
-   - Implement `_create_pipelines()` (SaaS); gateway connectors inherit YAML generation
+   - Implement `_create_pipelines()` (SaaS); database connectors inherit YAML generation
 
 2. **Register** in `src/tapworks/core/registry.py`
 

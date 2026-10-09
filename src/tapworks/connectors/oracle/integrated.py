@@ -1,46 +1,18 @@
 """
-Oracle connector implementation.
+Oracle integrated CDC connector implementation.
 
-This module provides the OracleConnector class which implements the
-IntegratedCDCConnector interface for Oracle data sources.
+This module provides the OracleIntegratedConnector class, which combines
+OracleSource (source rules) with IntegratedCDCConnector (CDC without a gateway).
 """
-
-import logging
-import pandas as pd
 
 from tapworks.core import IntegratedCDCConnector
 
-# Configure module logger
-logger = logging.getLogger(__name__)
-
-# Columns holding Oracle identifiers, whose case must match how Oracle stores them
-IDENTIFIER_COLUMNS = ['source_database', 'source_schema', 'source_table_name']
+from .source import OracleSource
 
 
-def warn_on_lowercase_identifiers(df: pd.DataFrame) -> None:
+class OracleIntegratedConnector(OracleSource, IntegratedCDCConnector):
     """
-    Log a warning for Oracle identifiers that contain lowercase letters.
-
-    Oracle stores unquoted identifiers in uppercase, and Lakeflow Connect requires
-    the case to match. Lowercase is only correct for quoted identifiers, so this
-    warns rather than fails.
-    """
-    for column in IDENTIFIER_COLUMNS:
-        if column not in df.columns:
-            continue
-        values = df[column].dropna().astype(str)
-        lowercase = sorted(set(values[values != values.str.upper()]))
-        if lowercase:
-            logger.warning(
-                f"{column} has values with lowercase letters: {lowercase[:5]}"
-                f"{' ...' if len(lowercase) > 5 else ''}. Oracle stores unquoted identifiers "
-                f"in uppercase; the case must match how Oracle stores the identifier."
-            )
-
-
-class OracleConnector(IntegratedCDCConnector):
-    """
-    Oracle connector for Databricks Lakeflow Connect pipelines (integrated CDC).
+    Oracle integrated CDC connector for Databricks Lakeflow Connect pipelines.
 
     Implements integrated CDC pattern with:
     - Single-level load balancing (pipelines only, no gateways)
@@ -72,7 +44,7 @@ class OracleConnector(IntegratedCDCConnector):
     @property
     def connector_type(self) -> str:
         """Return connector type identifier."""
-        return 'oracle'
+        return 'oracle_integrated'
 
     @property
     def required_columns(self) -> list:
@@ -113,9 +85,3 @@ class OracleConnector(IntegratedCDCConnector):
     def supported_scd_types(self) -> list:
         """Return supported SCD types for Oracle connector."""
         return ["SCD_TYPE_1", "SCD_TYPE_2"]
-
-    def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Warn about identifiers whose case may not match Oracle."""
-        df = super()._apply_connector_specific_normalization(df)
-        warn_on_lowercase_identifiers(df)
-        return df

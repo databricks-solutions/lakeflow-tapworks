@@ -141,7 +141,7 @@ default_values = {
 
 ### DatabaseConnector (extends BaseConnector)
 
-Shared database pipeline flow, in `core/database.py`.
+Shared database pipeline flow.
 
 | Method | Description |
 |--------|-------------|
@@ -152,7 +152,7 @@ Shared database pipeline flow, in `core/database.py`.
 | `_create_extra_resource_files()` | Additional resource files (e.g. `gateways.yml`) |
 | `generate_yaml_files()` | Implemented for databases |
 
-### GatewayConnector (extends DatabaseConnector)
+### StandardConnector (extends DatabaseConnector)
 
 Adds two-level load balancing and gateway handling (`gateways.yml`, `ingestion_gateway_id`).
 

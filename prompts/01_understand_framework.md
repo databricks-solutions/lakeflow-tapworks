@@ -13,7 +13,7 @@ Before adding a new connector, understand how the existing framework works.
 ```
 BaseConnector (abstract)
 ├── DatabaseConnector (abstract) - Database sources
-│   ├── GatewayConnector (abstract) - Databases ingested through a gateway (SQL Server, PostgreSQL)
+│   ├── StandardConnector (abstract) - Databases ingested through a separate gateway (SQL Server, PostgreSQL)
 │   └── IntegratedCDCConnector (abstract) - Databases with integrated CDC, no gateway (Oracle)
 └── SaaSConnector (abstract) - Cloud sources without gateways (Salesforce, GA4)
 ```
@@ -63,12 +63,13 @@ Input CSV → Normalization → Load Balancing → YAML Generation
 
 Before proceeding, you should be able to answer:
 
-- What's the difference between `GatewayConnector` and `SaaSConnector`?
+- What's the difference between `StandardConnector`, `IntegratedCDCConnector`, and `SaaSConnector`?
+- Why do database connectors combine a source class (e.g. `OracleSource`) with a mode class?
 - How does `prefix + subgroup` become `pipeline_group`?
 - What triggers auto-splitting into multiple pipelines?
 - What files are generated and where?
 
 ## Reference Implementations
 
-- **Database:** `src/tapworks/connectors/sql_server/connector.py`, `src/tapworks/connectors/postgresql/connector.py`
+- **Database:** `src/tapworks/connectors/sql_server/standard.py`, `src/tapworks/connectors/postgresql/standard.py`, `src/tapworks/connectors/oracle/integrated.py` (and each folder's `source.py`)
 - **SaaS:** `src/tapworks/connectors/salesforce/connector.py`, `src/tapworks/connectors/google_analytics/connector.py`

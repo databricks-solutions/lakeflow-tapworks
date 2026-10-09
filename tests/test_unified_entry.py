@@ -28,8 +28,9 @@ class TestConnectorRegistry:
         """Should return all registered connectors."""
         connectors = list_connectors()
         assert 'salesforce' in connectors
-        assert 'sql_server' in connectors
-        assert 'postgresql' in connectors
+        assert 'sql_server_standard' in connectors
+        assert 'postgresql_standard' in connectors
+        assert 'oracle_integrated' in connectors
         assert 'google_analytics' in connectors
         assert 'servicenow' in connectors
         assert 'workday_reports' in connectors
@@ -42,12 +43,32 @@ class TestConnectorRegistry:
     def test_resolve_canonical_name(self):
         """Should return canonical name unchanged."""
         assert resolve_connector_name('salesforce') == 'salesforce'
-        assert resolve_connector_name('sql_server') == 'sql_server'
+        assert resolve_connector_name('sql_server_standard') == 'sql_server_standard'
+
+    def test_resolve_backward_compatible_aliases(self):
+        """Bare database names should resolve to the standard connectors."""
+        assert resolve_connector_name('sql_server') == 'sql_server_standard'
+        assert resolve_connector_name('postgresql') == 'postgresql_standard'
+        assert resolve_connector_name('SQL_Server') == 'sql_server_standard'
+
+    def test_alias_returns_same_class(self):
+        """Aliases should load the same connector class as the canonical name."""
+        assert type(get_connector('sql_server')) is type(get_connector('sql_server_standard'))
+        assert type(get_connector('postgresql')) is type(get_connector('postgresql_standard'))
+
+    def test_old_import_path_still_works(self):
+        """Previous module paths and class names should keep working."""
+        from tapworks.connectors.sql_server.connector import SQLServerConnector
+        from tapworks.connectors.sql_server.standard import SQLServerStandardConnector
+        from tapworks.connectors.postgresql.connector import PostgreSQLConnector
+        from tapworks.connectors.postgresql.standard import PostgreSQLStandardConnector
+        assert SQLServerConnector is SQLServerStandardConnector
+        assert PostgreSQLConnector is PostgreSQLStandardConnector
 
     def test_resolve_case_insensitive(self):
         """Should be case insensitive."""
         assert resolve_connector_name('SALESFORCE') == 'salesforce'
-        assert resolve_connector_name('Postgresql') == 'postgresql'
+        assert resolve_connector_name('Postgresql_Standard') == 'postgresql_standard'
 
     def test_resolve_unknown_raises_error(self):
         """Should raise ValueError for unknown connector."""

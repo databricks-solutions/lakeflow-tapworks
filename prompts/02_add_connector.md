@@ -6,7 +6,7 @@ This guide covers adding a new connector to the framework.
 
 | Source Type | Base Class | Features |
 |-------------|------------|----------|
-| Database (through a gateway) | `GatewayConnector` | Gateways + pipelines, two-level load balancing |
+| Database (standard, through a gateway) | `StandardConnector` | Gateways + pipelines, two-level load balancing |
 | Database (integrated CDC) | `IntegratedCDCConnector` | Pipelines only, single-level load balancing |
 | SaaS (cloud-to-cloud) | `SaaSConnector` | Pipelines only, single-level load balancing |
 
@@ -37,7 +37,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict
 
-from tapworks.core import SaaSConnector  # or GatewayConnector
+from tapworks.core import SaaSConnector  # or StandardConnector / IntegratedCDCConnector
 
 
 class MyConnector(SaaSConnector):
@@ -121,7 +121,15 @@ Create `examples/connectors/myconnector/example_notebook.ipynb` following the pa
 
 ## Database Connector Specifics
 
-If extending `GatewayConnector`, you also need:
+Database connectors live in `src/tapworks/connectors/<database>/`, with one module per mode (`standard.py`, `integrated.py`) plus `source.py` for rules that apply to the database in every mode. Combine them with the source class first:
+
+```python
+class MyDbStandardConnector(MyDbSource, StandardConnector): ...
+```
+
+Register as `<database>_<mode>` (e.g. `mydb_standard`).
+
+If extending `StandardConnector`, you also need:
 
 1. **Gateway columns** in required/default values:
    - `gateway_catalog`, `gateway_schema`
@@ -130,7 +138,7 @@ If extending `GatewayConnector`, you also need:
 
 Gateway YAML, pipeline YAML, and file writing are inherited. For source-specific additions, override `_build_pipeline()` (pipeline-level, e.g. PostgreSQL `source_configurations`) or `_build_table_configuration()` (per table).
 
-See `src/tapworks/connectors/sql_server/connector.py` for a complete example.
+See `src/tapworks/connectors/sql_server/standard.py` (standard) and `src/tapworks/connectors/oracle/` (integrated CDC with a source class) for complete examples.
 
 ## Connector-Specific Normalization
 

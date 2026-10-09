@@ -7,11 +7,12 @@ Each release lists **Changes to generated output** separately. Those entries cha
 ## [Unreleased]
 
 ### Added
-- **Oracle connector** (`oracle`), using Lakeflow Connect integrated CDC (Beta; requires workspace enablement). Pipelines connect directly through `connection_name` with `connector_type: CDC` on the `PREVIEW` channel; no gateway. Single-level load balancing (250 tables per pipeline), default schedule hourly. Optional `staging_catalog`/`staging_schema` columns set the staging location (`data_staging_options`) and default to the target catalog/schema, like the gateway columns. Logs a warning for lowercase Oracle identifiers. Example in `examples/connectors/oracle/`.
+- **Oracle integrated CDC connector** (`oracle_integrated`), using Lakeflow Connect integrated CDC (Beta; requires workspace enablement). Pipelines connect directly through `connection_name` with `connector_type: CDC` on the `PREVIEW` channel; no gateway. Single-level load balancing (250 tables per pipeline), default schedule hourly. Optional `staging_catalog`/`staging_schema` columns set the staging location (`data_staging_options`) and default to the target catalog/schema, like the gateway columns. Logs a warning for lowercase Oracle identifiers. Example in `examples/connectors/oracle_integrated/`.
 - `IntegratedCDCConnector` base class, ready for integrated CDC versions of other databases.
 
 ### Changed
-- Database connector classes restructured to prepare for integrated CDC and query-based connectors (see `docs/DATABASE_CONNECTORS_PLAN.md`). `DatabaseConnector` is now the shared base for all database connectors, and the gateway logic moved to the new `GatewayConnector` (both in `core/database.py`). Internal only: registry names, CLI, API, and CSV columns are unchanged.
+- Database connectors restructured so each database can have standard, integrated CDC, and query-based connectors (see `docs/DATABASE_CONNECTORS_PLAN.md`). `DatabaseConnector` is now the shared base for all database connectors; the gateway logic moved to the new `StandardConnector`. Each database has a source class (`connectors/<database>/source.py`) for rules that apply in every mode.
+- Database connector names are now `<database>_<mode>`: `sql_server_standard`, `postgresql_standard`. `sql_server` and `postgresql` still work as aliases, and `tapworks --list` shows them. Classes renamed to `SQLServerStandardConnector` / `PostgreSQLStandardConnector`; the old import paths (`tapworks.connectors.<database>.connector.SQLServerConnector` / `PostgreSQLConnector`) still work.
 
 ### Changes to generated output
 - None.

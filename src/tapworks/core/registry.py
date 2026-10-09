@@ -11,12 +11,19 @@ from typing import Dict, Type
 # Registry mapping connector names to their module paths
 CONNECTORS: Dict[str, str] = {
     'salesforce': 'tapworks.connectors.salesforce.connector.SalesforceConnector',
-    'sql_server': 'tapworks.connectors.sql_server.connector.SQLServerConnector',
-    'oracle': 'tapworks.connectors.oracle.connector.OracleConnector',
-    'postgresql': 'tapworks.connectors.postgresql.connector.PostgreSQLConnector',
+    'sql_server_standard': 'tapworks.connectors.sql_server.standard.SQLServerStandardConnector',
+    'postgresql_standard': 'tapworks.connectors.postgresql.standard.PostgreSQLStandardConnector',
+    'oracle_integrated': 'tapworks.connectors.oracle.integrated.OracleIntegratedConnector',
     'google_analytics': 'tapworks.connectors.google_analytics.connector.GoogleAnalyticsConnector',
     'servicenow': 'tapworks.connectors.servicenow.connector.ServiceNowConnector',
     'workday_reports': 'tapworks.connectors.workday_reports.connector.WorkdayReportsConnector',
+}
+
+# Alternative names accepted for connectors. Database connector names are
+# <database>_<mode>; the bare database names are kept for backward compatibility.
+ALIASES: Dict[str, str] = {
+    'sql_server': 'sql_server_standard',
+    'postgresql': 'postgresql_standard',
 }
 
 
@@ -38,6 +45,10 @@ def resolve_connector_name(name: str) -> str:
     # Check if it's a canonical name
     if name_lower in CONNECTORS:
         return name_lower
+
+    # Check if it's an alias
+    if name_lower in ALIASES:
+        return ALIASES[name_lower]
 
     # Not found
     raise ValueError(

@@ -1,5 +1,5 @@
-"""SQL Server connector for Databricks Lakeflow Connect."""
+"""SQL Server connectors for Databricks Lakeflow Connect."""
 
-from .connector import SQLServerConnector
+from .standard import SQLServerStandardConnector
 
-__all__ = ["SQLServerConnector"]
+__all__ = ["SQLServerStandardConnector"]

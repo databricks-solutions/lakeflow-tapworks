@@ -7,11 +7,11 @@ Technical reference for developers working on the Lakehouse Tapworks codebase.
 ```
 BaseConnector (abstract)
 ├── DatabaseConnector (abstract)
-│   ├── GatewayConnector (abstract)
-│   │   ├── SQLServerConnector
-│   │   └── PostgreSQLConnector
+│   ├── StandardConnector (abstract)
+│   │   ├── SQLServerStandardConnector      (+ SQLServerSource)
+│   │   └── PostgreSQLStandardConnector     (+ PostgreSQLSource)
 │   └── IntegratedCDCConnector (abstract)
-│       └── OracleConnector
+│       └── OracleIntegratedConnector       (+ OracleSource)
 └── SaaSConnector (abstract)
     ├── SalesforceConnector
     ├── GoogleAnalyticsConnector
@@ -19,7 +19,27 @@ BaseConnector (abstract)
     └── WorkdayReportsConnector
 ```
 
-**Location:** `src/tapworks/core/connectors.py` (`BaseConnector`, `SaaSConnector`) and `src/tapworks/core/database.py` (`DatabaseConnector`, `GatewayConnector`, `IntegratedCDCConnector`)
+**Location:** `src/tapworks/core/connectors.py`
+
+### Database connectors: mode × database
+
+Each database can be ingested in up to three modes: **standard** (through a separate ingestion gateway), **integrated CDC** (no gateway), and **query-based**. Database connectors are built from two parts:
+
+- **Mode base class** (`StandardConnector`, `IntegratedCDCConnector`): resources, load balancing, and how a pipeline reaches the source.
+- **Source class** (`connectors/<database>/source.py`, e.g. `OracleSource`): rules that apply to that database in every mode, such as Oracle's identifier case warning. Source classes override hooks and call `super()`.
+
+Each concrete connector combines one of each, in one module per mode:
+
+```
+connectors/sql_server/source.py      SQLServerSource
+connectors/sql_server/standard.py    SQLServerStandardConnector(SQLServerSource, StandardConnector)
+connectors/postgresql/source.py      PostgreSQLSource
+connectors/postgresql/standard.py    PostgreSQLStandardConnector(PostgreSQLSource, StandardConnector)
+connectors/oracle/source.py          OracleSource
+connectors/oracle/integrated.py      OracleIntegratedConnector(OracleSource, IntegratedCDCConnector)
+```
+
+Registry names are `<database>_<mode>` (`sql_server_standard`, `postgresql_standard`, `oracle_integrated`). The bare names `sql_server` and `postgresql` are aliases for the standard connectors, and `connectors/<database>/connector.py` still exports the previous class names (`SQLServerConnector`, `PostgreSQLConnector`).
 
 ## Entry Points
 
@@ -54,9 +74,9 @@ result = run_pipeline_generation(
 ### Direct Connector Usage
 
 ```python
-from tapworks.connectors.sql_server.connector import SQLServerConnector
+from tapworks.connectors.sql_server.standard import SQLServerStandardConnector
 
-connector = SQLServerConnector()
+connector = SQLServerStandardConnector()
 result = connector.run_complete_pipeline_generation(
     df=input_df,
     output_dir='output',
@@ -208,9 +228,9 @@ Base class for all database connectors. Implements the pipeline-building flow sh
 - `_build_pipeline()` - Pipeline-level additions (e.g., PostgreSQL `source_configurations`)
 - `_create_extra_resource_files()` - Additional resource files
 
-### GatewayConnector (Abstract)
+### StandardConnector (Abstract)
 
-Base class for database connectors that ingest through a gateway.
+Base class for standard database connectors, which ingest through a separate ingestion gateway.
 
 **Features:**
 - Two-level load balancing (gateways + pipelines)
@@ -241,16 +261,20 @@ Base class for SaaS connectors without gateway support.
 
 ### Step 1: Choose Base Class
 
-- `GatewayConnector` - database source ingested through a gateway
+- `StandardConnector` - database source ingested through a separate gateway
 - `IntegratedCDCConnector` - database source ingested with integrated CDC (no gateway)
+
+For a database, also create (or reuse) its source class in `connectors/<database>/source.py` and list it first: `class MyDbStandardConnector(MyDbSource, StandardConnector)`.
 - `SaaSConnector` - no gateways needed (cloud-to-cloud)
 
 ### Step 2: Create Connector Class
 
 ```python
-from tapworks.core import GatewayConnector  # or SaaSConnector
+from tapworks.core import StandardConnector  # or IntegratedCDCConnector / SaaSConnector
 
-class MyConnector(GatewayConnector):
+from .source import MyDbSource
+
+class MyDbStandardConnector(MyDbSource, StandardConnector):
     @property
     def connector_type(self) -> str:
         return 'myservice'
@@ -273,7 +297,7 @@ class MyConnector(GatewayConnector):
         }
 ```
 
-`GatewayConnector` already implements load balancing, gateway/pipeline/job YAML, and file writing. Override `_build_pipeline()` or `_build_table_configuration()` only for source-specific additions (see `PostgreSQLConnector`).
+`StandardConnector` already implements load balancing, gateway/pipeline/job YAML, and file writing. Override `_build_pipeline()` or `_build_table_configuration()` only for mode-specific additions (see `PostgreSQLStandardConnector`), and put rules that apply to every mode in the source class (see `OracleSource`).
 
 ### Step 3: Register the Connector
 
@@ -282,7 +306,7 @@ Add to `src/tapworks/core/registry.py`:
 ```python
 CONNECTORS = {
     # ... existing connectors ...
-    'myservice': 'tapworks.connectors.myservice.connector.MyServiceConnector',
+    'mydb_standard': 'tapworks.connectors.mydb.standard.MyDbStandardConnector',
 }
 ```
 
@@ -301,11 +325,11 @@ The architecture makes testing straightforward:
 
 ```python
 import pytest
-from tapworks.connectors.sql_server.connector import SQLServerConnector
+from tapworks.connectors.sql_server.standard import SQLServerStandardConnector
 
 class TestSQLServerConnector:
     def setup_method(self):
-        self.connector = SQLServerConnector()
+        self.connector = SQLServerStandardConnector()
 
     def test_connector_type(self):
         assert self.connector.connector_type == 'sql_server'

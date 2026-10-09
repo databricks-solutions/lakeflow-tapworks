@@ -1,5 +1,5 @@
-"""Oracle connector for Databricks Lakeflow Connect."""
+"""Oracle connectors for Databricks Lakeflow Connect."""
 
-from .connector import OracleConnector
+from .integrated import OracleIntegratedConnector
 
-__all__ = ["OracleConnector"]
+__all__ = ["OracleIntegratedConnector"]

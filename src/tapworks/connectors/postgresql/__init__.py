@@ -1,5 +1,5 @@
-"""PostgreSQL connector for Databricks Lakeflow Connect."""
+"""PostgreSQL connectors for Databricks Lakeflow Connect."""
 
-from .connector import PostgreSQLConnector
+from .standard import PostgreSQLStandardConnector
 
-__all__ = ["PostgreSQLConnector"]
+__all__ = ["PostgreSQLStandardConnector"]

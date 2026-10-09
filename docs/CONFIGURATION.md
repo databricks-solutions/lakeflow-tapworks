@@ -229,8 +229,8 @@ Oracle uses integrated CDC: each pipeline reads changes directly through `connec
 |--------|-------|
 | `source_database` | Oracle **service name**. For multitenant databases, use the `CDB$ROOT` service name. |
 | `source_schema`, `source_table_name` | Case must match how Oracle stores the identifier, usually uppercase. Tapworks logs a warning for lowercase values. |
-| `staging_catalog` | Optional. Catalog where change data is staged. Falls back to `target_catalog` (like `gateway_catalog` for gateway connectors). |
-| `staging_schema` | Optional. Schema where change data is staged. Falls back to `target_schema` (like `gateway_schema` for gateway connectors). |
+| `staging_catalog` | Optional. Catalog where change data is staged. Falls back to `target_catalog` (like `gateway_catalog` for standard connectors). |
+| `staging_schema` | Optional. Schema where change data is staged. Falls back to `target_schema` (like `gateway_schema` for standard connectors). |
 
 ### Salesforce Columns
 

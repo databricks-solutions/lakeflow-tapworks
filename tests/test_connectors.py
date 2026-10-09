@@ -389,4 +389,4 @@ class TestOracleConnector:
         assert 'lowercase' not in caplog.text
 
     def test_connector_type(self, oracle_connector):
-        assert oracle_connector.connector_type == 'oracle'
+        assert oracle_connector.connector_type == 'oracle_integrated'

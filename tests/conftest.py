@@ -299,9 +299,9 @@ def sqlserver_connector():
 
 @pytest.fixture
 def oracle_connector():
-    """OracleConnector instance."""
-    from tapworks.connectors.oracle.connector import OracleConnector
-    return OracleConnector()
+    """OracleIntegratedConnector instance."""
+    from tapworks.connectors.oracle.integrated import OracleIntegratedConnector
+    return OracleIntegratedConnector()
 
 
 @pytest.fixture

@@ -29,7 +29,7 @@ import logging
 import sys
 from pathlib import Path
 
-from tapworks.core.registry import list_connectors, get_connector_info, resolve_connector_name
+from tapworks.core.registry import ALIASES, list_connectors, get_connector_info, resolve_connector_name
 from tapworks.core.runner import run_pipeline_generation
 from tapworks.core import BaseConnector
 
@@ -64,6 +64,10 @@ def print_connector_list():
     print("-" * 40)
     for name in list_connectors():
         print(f"  {name}")
+
+    print("\nAliases:")
+    for alias, name in sorted(ALIASES.items()):
+        print(f"  {alias} -> {name}")
 
     print("\nUse 'tapworks <connector> --info' for connector details.")
 
