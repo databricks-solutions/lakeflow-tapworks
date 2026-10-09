@@ -141,7 +141,20 @@ default_values = {
 
 ### DatabaseConnector (extends BaseConnector)
 
-Adds two-level load balancing and gateway handling.
+Shared database pipeline flow, in `core/database.py`.
+
+| Method | Description |
+|--------|-------------|
+| `_ingestion_source()` | How a pipeline reaches the source (abstract) |
+| `_build_pipeline()` | Pipeline definition for one pipeline group |
+| `_build_table_entry()` | Table object for `ingestion_definition.objects` |
+| `_build_table_configuration()` | Per-table options (include/exclude, SCD type) |
+| `_create_extra_resource_files()` | Additional resource files (e.g. `gateways.yml`) |
+| `generate_yaml_files()` | Implemented for databases |
+
+### GatewayConnector (extends DatabaseConnector)
+
+Adds two-level load balancing and gateway handling (`gateways.yml`, `ingestion_gateway_id`).
 
 ### SaaSConnector (extends BaseConnector)
 

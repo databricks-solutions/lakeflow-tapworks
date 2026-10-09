@@ -6,7 +6,7 @@ This guide covers adding a new connector to the framework.
 
 | Source Type | Base Class | Features |
 |-------------|------------|----------|
-| Database (network-isolated) | `DatabaseConnector` | Gateways + pipelines, two-level load balancing |
+| Database (through a gateway) | `GatewayConnector` | Gateways + pipelines, two-level load balancing |
 | SaaS (cloud-to-cloud) | `SaaSConnector` | Pipelines only, single-level load balancing |
 
 ## Files to Create
@@ -36,7 +36,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict
 
-from tapworks.core import SaaSConnector  # or DatabaseConnector
+from tapworks.core import SaaSConnector  # or GatewayConnector
 
 
 class MyConnector(SaaSConnector):
@@ -120,16 +120,14 @@ Create `examples/connectors/myconnector/example_notebook.ipynb` following the pa
 
 ## Database Connector Specifics
 
-If extending `DatabaseConnector`, you also need:
+If extending `GatewayConnector`, you also need:
 
 1. **Gateway columns** in required/default values:
    - `gateway_catalog`, `gateway_schema`
    - `gateway_driver_type`, `gateway_worker_type`
    - `source_database` (typically required)
 
-2. **`_create_gateways()` method** to generate gateway YAML
-
-3. **Override `generate_yaml_files()`** to include `gateways.yml`
+Gateway YAML, pipeline YAML, and file writing are inherited. For source-specific additions, override `_build_pipeline()` (pipeline-level, e.g. PostgreSQL `source_configurations`) or `_build_table_configuration()` (per table).
 
 See `src/tapworks/connectors/sql_server/connector.py` for a complete example.
 

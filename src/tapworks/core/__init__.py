@@ -6,7 +6,8 @@ to various data sources (databases, SaaS applications, etc.).
 
 Base Classes:
 - BaseConnector: Root abstract base class for all connectors
-- DatabaseConnector: Base class for database sources with gateway support
+- DatabaseConnector: Base class for database sources
+- GatewayConnector: Base class for database sources with gateway support
 - SaaSConnector: Base class for SaaS sources without gateway support
 
 Exceptions:
@@ -21,7 +22,8 @@ Registry & Runner:
 - run_pipeline_generation: Unified pipeline generation function
 """
 
-from .connectors import BaseConnector, DatabaseConnector, SaaSConnector
+from .connectors import BaseConnector, SaaSConnector
+from .database import DatabaseConnector, GatewayConnector
 from .exceptions import (
     LakehouseTapworksError,
     ConfigurationError,
@@ -43,6 +45,7 @@ __all__ = [
     # Base classes
     'BaseConnector',
     'DatabaseConnector',
+    'GatewayConnector',
     'SaaSConnector',
     # Exceptions
     'LakehouseTapworksError',

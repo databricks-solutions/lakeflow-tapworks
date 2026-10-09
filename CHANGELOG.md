@@ -6,6 +6,12 @@ Each release lists **Changes to generated output** separately. Those entries cha
 
 ## [Unreleased]
 
+### Changed
+- Database connector classes restructured to prepare for integrated CDC and query-based connectors (see `docs/DATABASE_CONNECTORS_PLAN.md`). `DatabaseConnector` is now the shared base for all database connectors, and the gateway logic moved to the new `GatewayConnector` (both in `core/database.py`). Internal only: registry names, CLI, API, and CSV columns are unchanged.
+
+### Changes to generated output
+- None.
+
 ## [0.2.0] - 2026-10-09
 
 ### Added

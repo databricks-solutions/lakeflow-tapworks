@@ -2,19 +2,19 @@
 SQL Server connector implementation.
 
 This module provides the SQLServerConnector class which implements the
-DatabaseConnector interface for SQL Server data sources.
+GatewayConnector interface for SQL Server data sources.
 """
 
 import logging
 from typing import Dict
 
-from tapworks.core import DatabaseConnector
+from tapworks.core import GatewayConnector
 
 # Configure module logger
 logger = logging.getLogger(__name__)
 
 
-class SQLServerConnector(DatabaseConnector):
+class SQLServerConnector(GatewayConnector):
     """
     SQL Server connector for Databricks Lakeflow Connect pipelines.
 

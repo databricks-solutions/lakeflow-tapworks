@@ -2,21 +2,21 @@
 PostgreSQL connector implementation.
 
 This module provides the PostgreSQLConnector class which implements the
-DatabaseConnector interface for PostgreSQL data sources.
+GatewayConnector interface for PostgreSQL data sources.
 """
 
 import logging
 import pandas as pd
 from typing import Dict
 
-from tapworks.core import DatabaseConnector
+from tapworks.core import GatewayConnector
 from tapworks.core.exceptions import ValidationError
 
 # Configure module logger
 logger = logging.getLogger(__name__)
 
 
-class PostgreSQLConnector(DatabaseConnector):
+class PostgreSQLConnector(GatewayConnector):
     """
     PostgreSQL connector for Databricks Lakeflow Connect pipelines.
 
@@ -116,38 +116,32 @@ class PostgreSQLConnector(DatabaseConnector):
                         f"All tables from the same source database must use the same publication_name."
                     )
 
-    def _create_pipelines(self, df: pd.DataFrame, project_name: str) -> Dict:
+    def _build_pipeline(self, names: Dict[str, str], group_df: pd.DataFrame) -> Dict:
         """
-        Create pipeline YAML with PostgreSQL source_configurations.
+        Build pipeline definition with PostgreSQL source_configurations.
 
-        Extends base database pipeline creation to inject source_configurations
+        Extends database pipeline creation to add source_configurations
         with slot_config for each unique source_database.
         """
-        result = super()._create_pipelines(df, project_name)
+        pipeline_def = super()._build_pipeline(names, group_df)
 
-        for pipeline_group, group_df in df.groupby('pipeline_group'):
-            names = self._generate_resource_names(pipeline_group)
-            pipeline_key = names['pipeline_resource_name']
+        source_configs = []
+        for source_db in group_df['source_database'].unique():
+            db_rows = group_df[group_df['source_database'] == source_db]
+            first_row = db_rows.iloc[0]
 
-            source_configs = []
-            for source_db in group_df['source_database'].unique():
-                db_rows = group_df[group_df['source_database'] == source_db]
-                first_row = db_rows.iloc[0]
-
-                source_configs.append({
-                    'catalog': {
-                        'source_catalog': source_db,
-                        'postgres': {
-                            'slot_config': {
-                                'slot_name': str(first_row['slot_name']).strip(),
-                                'publication_name': str(first_row['publication_name']).strip(),
-                            }
+            source_configs.append({
+                'catalog': {
+                    'source_catalog': source_db,
+                    'postgres': {
+                        'slot_config': {
+                            'slot_name': str(first_row['slot_name']).strip(),
+                            'publication_name': str(first_row['publication_name']).strip(),
                         }
                     }
-                })
+                }
+            })
 
-            result['resources']['pipelines'][pipeline_key]['ingestion_definition']['source_configurations'] = source_configs
+        pipeline_def['ingestion_definition']['source_configurations'] = source_configs
 
-        return result
-
-
+        return pipeline_def

@@ -7,8 +7,9 @@ Technical reference for developers working on the Lakehouse Tapworks codebase.
 ```
 BaseConnector (abstract)
 ├── DatabaseConnector (abstract)
-│   ├── SQLServerConnector
-│   └── PostgreSQLConnector
+│   └── GatewayConnector (abstract)
+│       ├── SQLServerConnector
+│       └── PostgreSQLConnector
 └── SaaSConnector (abstract)
     ├── SalesforceConnector
     ├── GoogleAnalyticsConnector
@@ -16,7 +17,7 @@ BaseConnector (abstract)
     └── WorkdayReportsConnector
 ```
 
-**Location:** `src/tapworks/core/connectors.py`
+**Location:** `src/tapworks/core/connectors.py` (`BaseConnector`, `SaaSConnector`) and `src/tapworks/core/database.py` (`DatabaseConnector`, `GatewayConnector`)
 
 ## Entry Points
 
@@ -188,12 +189,32 @@ The root base class that defines the common interface for all connectors.
 
 ### DatabaseConnector (Abstract)
 
-Base class for database connectors with gateway support.
+Base class for all database connectors. Implements the pipeline-building flow shared by every database ingestion mode.
+
+**Features:**
+- `_create_pipelines()` builds each pipeline via `_build_pipeline()`, which builds table entries via `_build_table_entry()` and `_build_table_configuration()` (include/exclude columns, SCD type)
+- `generate_yaml_files()` writes `databricks.yml`, `pipelines.yml`, `jobs.yml`, plus any files from `_create_extra_resource_files()`
+- `target_table_name` defaults to `source_table_name`
+- Pipeline consistency validation (`pipeline_catalog`, `pipeline_schema`, `tags`)
+
+**Abstract Methods:**
+- `_ingestion_source()` - `ingestion_definition` fields that tell a pipeline how to reach the source
+- `generate_pipeline_config()` - Load balancing
+
+**Extension points:**
+- `_build_table_configuration()` - Per-table options
+- `_build_pipeline()` - Pipeline-level additions (e.g., PostgreSQL `source_configurations`)
+- `_create_extra_resource_files()` - Additional resource files
+
+### GatewayConnector (Abstract)
+
+Base class for database connectors that ingest through a gateway.
 
 **Features:**
 - Two-level load balancing (gateways + pipelines)
-- Gateway configuration handling
-- Implements `generate_pipeline_config()` directly with two-level splitting
+- Gateway configuration handling (`gateway_catalog`/`gateway_schema` default to the target catalog/schema)
+- Writes `gateways.yml`; pipelines reference their gateway via `ingestion_gateway_id`
+- Gateway consistency validation (`gateway_catalog`, `gateway_schema`, `connection_name`, `tags`)
 
 ### SaaSConnector (Abstract)
 
@@ -209,15 +230,15 @@ Base class for SaaS connectors without gateway support.
 
 ### Step 1: Choose Base Class
 
-- `DatabaseConnector` - source requires gateways (databases with network isolation)
+- `GatewayConnector` - database source ingested through a gateway
 - `SaaSConnector` - no gateways needed (cloud-to-cloud)
 
 ### Step 2: Create Connector Class
 
 ```python
-from tapworks.core import DatabaseConnector  # or SaaSConnector
+from tapworks.core import GatewayConnector  # or SaaSConnector
 
-class MyConnector(DatabaseConnector):
+class MyConnector(GatewayConnector):
     @property
     def connector_type(self) -> str:
         return 'myservice'
@@ -238,26 +259,9 @@ class MyConnector(DatabaseConnector):
             'subgroup': '',
             'schedule': '*/15 * * * *'
         }
-
-    def generate_yaml_files(self, df, output_dir, targets):
-        for project_name in df['project_name'].unique():
-            project_df = df[df['project_name'] == project_name]
-            project_dir = Path(output_dir) / project_name
-            resources_dir = project_dir / 'resources'
-            resources_dir.mkdir(parents=True, exist_ok=True)
-
-            # Use helper methods from base class
-            gateways = self._create_gateways(project_df, project_name)  # DB only
-            pipelines = self._create_pipelines(project_df, project_name)
-            jobs = self._create_jobs(project_df, project_name)
-            databricks_yml = self._create_databricks_yml(project_name, targets)
-
-            # Write YAML files
-            self._write_yaml_file(resources_dir / 'gateways.yml', gateways)
-            self._write_yaml_file(resources_dir / 'pipelines.yml', pipelines)
-            self._write_yaml_file(resources_dir / 'jobs.yml', jobs)
-            self._write_yaml_file(project_dir / 'databricks.yml', databricks_yml)
 ```
+
+`GatewayConnector` already implements load balancing, gateway/pipeline/job YAML, and file writing. Override `_build_pipeline()` or `_build_table_configuration()` only for source-specific additions (see `PostgreSQLConnector`).
 
 ### Step 3: Register the Connector
 

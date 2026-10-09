@@ -12,7 +12,8 @@ Before adding a new connector, understand how the existing framework works.
 
 ```
 BaseConnector (abstract)
-├── DatabaseConnector (abstract) - Sources with gateways (SQL Server, PostgreSQL)
+├── DatabaseConnector (abstract) - Database sources
+│   └── GatewayConnector (abstract) - Databases ingested through a gateway (SQL Server, PostgreSQL)
 └── SaaSConnector (abstract) - Cloud sources without gateways (Salesforce, GA4)
 ```
 
@@ -61,7 +62,7 @@ Input CSV → Normalization → Load Balancing → YAML Generation
 
 Before proceeding, you should be able to answer:
 
-- What's the difference between `DatabaseConnector` and `SaaSConnector`?
+- What's the difference between `GatewayConnector` and `SaaSConnector`?
 - How does `prefix + subgroup` become `pipeline_group`?
 - What triggers auto-splitting into multiple pipelines?
 - What files are generated and where?

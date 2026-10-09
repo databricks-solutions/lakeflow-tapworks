@@ -84,9 +84,10 @@ BaseConnector                      (unchanged: defaults/overrides, validation, j
 |---|---|---|---|---|
 | `_ingestion_source(group_df)` (abstract) | how the pipeline reaches the source | `ingestion_gateway_id` | `connection_name`, `connector_type: CDC` | `connection_name` |
 | `_build_table_configuration(row)` | per-table options | base | base (+ `primary_keys`) | base + `query_based_connector_config` |
-| `_build_pipeline(pipeline_group, group_df)` | pipeline-level extras | – | + `channel`, staging | – |
+| `_build_pipeline(names, group_df)` | pipeline-level extras | – | + `channel`, staging | – |
+| `_create_extra_resource_files(df, project_name)` | resource files beyond `pipelines.yml`/`jobs.yml` | `gateways.yml` | – | – |
 
-`PostgreSQLConnector` overrides `_build_pipeline` to add `source_configurations` (slot config). This replaces today's second loop that patches the pipelines after they are built. Key order must stay the same (`source_configurations` after `objects`).
+`PostgreSQLConnector` overrides `_build_pipeline` to add `source_configurations` (slot config), after `objects` as before.
 
 ### Rules
 
@@ -191,9 +192,9 @@ Each step is its own commit; steps 2 and 3 can be one PR.
 
 1. [x] **Release baseline**: tag current `main` as `v0.1.0` and create the GitHub Release (maintainer).
 2. [x] **Safety net**: golden-file tests for all existing example CSVs and load-balancing cases; `CHANGELOG.md`.
-3. [ ] **Refactor, no output change**: `core/database.py` with the new hierarchy; SQL Server and PostgreSQL moved onto `GatewayConnector`; PostgreSQL slot config via `_build_pipeline`. All existing tests and golden files must be unchanged.
+3. [x] **Refactor, no output change**: `core/database.py` with `DatabaseConnector` and `GatewayConnector`; SQL Server and PostgreSQL moved onto `GatewayConnector`; PostgreSQL slot config via `_build_pipeline`. All existing tests and golden files unchanged. The single-level database split is deferred to step 5, its first user.
 4. [x] **Gateway limit fix** (separate commit and changelog entry under "Changes to generated output"): `runner.py` inspects `generate_pipeline_config` instead of `run_complete_pipeline_generation`. See [RELEASING.md](./RELEASING.md#example-the-gateway-limit-fix).
-5. [ ] **Oracle integrated CDC**: `IntegratedCDCConnector` and `OracleConnector`, registry entry, example CSV and notebook, unit tests, golden files.
+5. [ ] **Oracle integrated CDC**: single-level split and `connection_name` pipeline consistency in `DatabaseConnector` (`GatewayConnector` keeps two levels and gateway-level `connection_name`); `IntegratedCDCConnector` and `OracleConnector`, registry entry, example CSV and notebook, unit tests, golden files.
 6. [ ] **Oracle query-based**: `QueryBasedConnector` and `OracleQueryBasedConnector`, registry entry, example CSV and notebook, unit tests, golden files.
 7. [ ] **Docs**, per `AGENTS.md`: `README.md`, `docs/ARCHITECTURE.md`, `docs/CONFIGURATION.md`, `docs/USAGE.md`, `docs/VALIDATIONS.md`, `prompts/` (01, 02, 04, README).
 8. [ ] **E2E in dogfood** (below).
