@@ -29,10 +29,10 @@ Internal class names (`DatabaseConnector`, `SaaSConnector`, ...) are **not** a c
 
 ```bash
 # pip from git
-pip install "git+https://github.com/databricks-solutions/lakeflow-tapworks.git@v0.1.0"
+pip install "git+https://github.com/databricks-solutions/lakeflow-tapworks.git@v0.2.0"
 
 # local clone
-git checkout v0.1.0 && pip install -e .
+git checkout v0.2.0 && pip install -e .
 ```
 
 In Databricks, point the Git folder at the release tag instead of `main`.
