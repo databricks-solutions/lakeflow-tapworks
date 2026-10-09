@@ -138,17 +138,17 @@ When load balancing splits a group into multiple pipelines or gateways, tables a
 
 Tables are automatically split based on configurable limits (default: 250 tables per pipeline/gateway):
 
-**SaaS connector example** (600 tables):
+**SaaS connector example** (300 tables):
 ```
-              Input: 600 tables, prefix="sales"
+              Input: 300 tables, prefix="sales"
                                       │
-                    ┌─────────────────┼─────────────────┐
-                    ▼                 ▼                 ▼
-            ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
-            │   Pipeline    │ │   Pipeline    │ │   Pipeline    │
-            │  sales_p01    │ │  sales_p02    │ │  sales_p03    │
-            │ (250 tables)  │ │ (250 tables)  │ │ (100 tables)  │
-            └───────────────┘ └───────────────┘ └───────────────┘
+                    ┌─────────────────┴─────────────────┐
+                    ▼                                   ▼
+            ┌───────────────┐                   ┌───────────────┐
+            │   Pipeline    │                   │   Pipeline    │
+            │  sales_p01    │                   │  sales_p02    │
+            │ (250 tables)  │                   │  (50 tables)  │
+            └───────────────┘                   └───────────────┘
 ```
 
 **Database connector example** (300 tables):
