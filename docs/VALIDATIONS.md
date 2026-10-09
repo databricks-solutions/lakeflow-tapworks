@@ -165,7 +165,7 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 
 | | |
 |---|---|
-| **What it checks** | Within each `pipeline_group`, the `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. |
+| **What it checks** | Within each `pipeline_group`, the `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. For connectors without a gateway (Oracle), `connection_name` must also be the same, since each pipeline connects directly. |
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Pipeline group 'sql_g01p01' has conflicting tags values: ['{"team":"a"}', '{"team":"b"}']. All tables in the same pipeline group must have the same tags.` |
 | **How to fix** | Use the same `tags` for all tables in the group, or split them into different subgroups. |
@@ -187,6 +187,15 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Pipeline group 'pg_g01p01': source database 'mydb' has conflicting slot_name values: ['slot_a', 'slot_b']. All tables from the same source database must use the same slot_name.` |
 | **How to fix** | Use the same `slot_name` and `publication_name` for all tables from the same source database, or split them into different subgroups. |
+
+### Lowercase identifiers (Oracle only)
+
+| | |
+|---|---|
+| **What it checks** | `source_database`, `source_schema`, and `source_table_name` values containing lowercase letters. Oracle stores unquoted identifiers in uppercase, and Lakeflow Connect requires the case to match. |
+| **Severity** | Warning (logged; generation continues) |
+| **Example message** | `source_table_name has values with lowercase letters: ['employees']. Oracle stores unquoted identifiers in uppercase; the case must match how Oracle stores the identifier.` |
+| **How to fix** | Use the identifier's stored case (usually uppercase). Lowercase is only correct for quoted identifiers created in lowercase. |
 
 ### Primary keys required (Workday Reports only)
 

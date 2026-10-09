@@ -8,6 +8,7 @@ Base Classes:
 - BaseConnector: Root abstract base class for all connectors
 - DatabaseConnector: Base class for database sources
 - GatewayConnector: Base class for database sources with gateway support
+- IntegratedCDCConnector: Base class for database sources with CDC without a gateway
 - SaaSConnector: Base class for SaaS sources without gateway support
 
 Exceptions:
@@ -23,7 +24,7 @@ Registry & Runner:
 """
 
 from .connectors import BaseConnector, SaaSConnector
-from .database import DatabaseConnector, GatewayConnector
+from .database import DatabaseConnector, GatewayConnector, IntegratedCDCConnector
 from .exceptions import (
     LakehouseTapworksError,
     ConfigurationError,
@@ -46,6 +47,7 @@ __all__ = [
     'BaseConnector',
     'DatabaseConnector',
     'GatewayConnector',
+    'IntegratedCDCConnector',
     'SaaSConnector',
     # Exceptions
     'LakehouseTapworksError',

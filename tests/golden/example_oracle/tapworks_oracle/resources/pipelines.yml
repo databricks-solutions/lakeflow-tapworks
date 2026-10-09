@@ -1,0 +1,47 @@
+resources:
+  pipelines:
+    pipeline_hr_01_p01:
+      name: hr_01_p01
+      catalog: tapworks_catalog
+      schema: tapworks_oracle
+      ingestion_definition:
+        connection_name: tapworks_oracle_connection
+        connector_type: CDC
+        objects:
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: HR
+            source_table: EMPLOYEES
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks_oracle
+            destination_table: employees
+            table_configuration:
+              scd_type: SCD_TYPE_1
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: HR
+            source_table: DEPARTMENTS
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks_oracle
+            destination_table: departments
+            table_configuration:
+              scd_type: SCD_TYPE_1
+      channel: PREVIEW
+    pipeline_hr_02_p01:
+      name: hr_02_p01
+      catalog: tapworks_catalog
+      schema: tapworks_oracle
+      ingestion_definition:
+        connection_name: tapworks_oracle_connection
+        connector_type: CDC
+        objects:
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: HR
+            source_table: JOB_HISTORY
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks_oracle
+            destination_table: job_history
+            table_configuration:
+              scd_type: SCD_TYPE_2
+      channel: PREVIEW

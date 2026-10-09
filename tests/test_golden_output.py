@@ -138,7 +138,7 @@ def _build_cases():
         )
 
     # Load balancing with default limits (250 per pipeline / gateway)
-    for connector_name in ('salesforce', 'sql_server'):
+    for connector_name in ('salesforce', 'sql_server', 'oracle'):
         cases[f'load_balancing_{connector_name}_600_defaults'] = (
             lambda out, c=connector_name: run_pipeline_generation(
                 connector_name=c, input_source=_large_df(600), output_dir=out, targets=TARGETS,

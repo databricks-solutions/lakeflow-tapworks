@@ -157,6 +157,22 @@ def sample_postgresql_df():
 
 
 @pytest.fixture
+def sample_oracle_df():
+    """Sample Oracle input dataframe with minimal required columns."""
+    return pd.DataFrame({
+        'source_database': ['ORCLPDB1', 'ORCLPDB1', 'ORCLPDB1'],
+        'source_schema': ['HR', 'HR', 'HR'],
+        'source_table_name': ['EMPLOYEES', 'DEPARTMENTS', 'JOBS'],
+        'target_catalog': ['main', 'main', 'main'],
+        'target_schema': ['bronze', 'bronze', 'bronze'],
+        'pipeline_catalog': ['main', 'main', 'main'],
+        'pipeline_schema': ['bronze', 'bronze', 'bronze'],
+        'target_table_name': ['employees', 'departments', 'jobs'],
+        'connection_name': ['oracle_conn', 'oracle_conn', 'oracle_conn'],
+    })
+
+
+@pytest.fixture
 def large_df_for_load_balancing():
     """Large dataframe for testing load balancing splits."""
     num_rows = 600
@@ -279,6 +295,13 @@ def sqlserver_connector():
     """SQLServerConnector instance."""
     from tapworks.connectors.sql_server.connector import SQLServerConnector
     return SQLServerConnector()
+
+
+@pytest.fixture
+def oracle_connector():
+    """OracleConnector instance."""
+    from tapworks.connectors.oracle.connector import OracleConnector
+    return OracleConnector()
 
 
 @pytest.fixture

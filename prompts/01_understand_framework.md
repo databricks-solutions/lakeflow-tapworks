@@ -13,7 +13,8 @@ Before adding a new connector, understand how the existing framework works.
 ```
 BaseConnector (abstract)
 ├── DatabaseConnector (abstract) - Database sources
-│   └── GatewayConnector (abstract) - Databases ingested through a gateway (SQL Server, PostgreSQL)
+│   ├── GatewayConnector (abstract) - Databases ingested through a gateway (SQL Server, PostgreSQL)
+│   └── IntegratedCDCConnector (abstract) - Databases with integrated CDC, no gateway (Oracle)
 └── SaaSConnector (abstract) - Cloud sources without gateways (Salesforce, GA4)
 ```
 

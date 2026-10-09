@@ -59,7 +59,7 @@ Tapworks reads from a simple configuration (e.g., CSV, YAML, JSON, Delta table, 
     output/<project_name>/
       databricks.yml
       resources/
-        gateways.yml    # database connectors only
+        gateways.yml    # gateway database connectors only (SQL Server, PostgreSQL)
         pipelines.yml
         jobs.yml
     ```
@@ -122,12 +122,19 @@ Project (DAB Package)
     └── Pipeline(s) - auto-split if > 250 tables
 ```
 
-**Database connectors** (e.g., SQL Server, PostgreSQL):
+**Database connectors with a gateway** (e.g., SQL Server, PostgreSQL):
 ```
 Project (DAB Package)
 └── Prefix + Subgroup (logical grouping)
     └── Gateway(s) - auto-split if > 250 tables
         └── Pipeline(s) - auto-split if > 250 tables per gateway
+```
+
+**Integrated CDC database connectors** (e.g., Oracle), which have no gateway:
+```
+Project (DAB Package)
+└── Prefix + Subgroup (logical grouping)
+    └── Pipeline(s) - auto-split if > 250 tables
 ```
 
 ### Row Order Matters

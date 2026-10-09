@@ -192,7 +192,7 @@ Required columns: `source_url`, `target_catalog`, `target_schema`, `target_table
 
 ### Database Connectors
 
-Database connectors support two-level load balancing with gateways.
+SQL Server and PostgreSQL use two-level load balancing with gateways. Oracle uses integrated CDC without gateways.
 
 **SQL Server**:
 ```bash
@@ -209,6 +209,16 @@ tapworks postgresql --input-config tables.csv --output-dir output --settings set
 Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`, `slot_name`, `publication_name`
 
 Optional: `gateway_catalog`, `gateway_schema`, `gateway_worker_type`, `gateway_driver_type`
+
+**Oracle** (integrated CDC, no gateway; single-level load balancing):
+```bash
+tapworks oracle --input-config tables.csv --output-dir output --settings settings.json
+```
+Required columns: `source_database` (Oracle service name), `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`
+
+Optional: `scd_type`, `include_columns`, `exclude_columns`
+
+Integrated CDC is in Beta and must be enabled for the workspace. `--max-tables-per-gateway` does not apply.
 
 ---
 
@@ -244,6 +254,7 @@ Each connector folder contains an `example_notebook.ipynb`:
 - `examples/connectors/salesforce/example_notebook.ipynb`
 - `examples/connectors/sql_server/example_notebook.ipynb`
 - `examples/connectors/postgresql/example_notebook.ipynb`
+- `examples/connectors/oracle/example_notebook.ipynb`
 - `examples/connectors/google_analytics/example_notebook.ipynb`
 - `examples/connectors/servicenow/example_notebook.ipynb`
 - `examples/connectors/workday_reports/example_notebook.ipynb`

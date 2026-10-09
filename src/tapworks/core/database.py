@@ -8,9 +8,11 @@ reach the source and which extra resources it needs.
 Architecture:
     BaseConnector (ABC)
     └── DatabaseConnector (ABC) - Shared database logic
-        └── GatewayConnector (ABC) - CDC through an ingestion gateway
-            ├── SQLServerConnector
-            └── PostgreSQLConnector
+        ├── GatewayConnector (ABC) - CDC through an ingestion gateway
+        │   ├── SQLServerConnector
+        │   └── PostgreSQLConnector
+        └── IntegratedCDCConnector (ABC) - CDC without a gateway
+            └── OracleConnector
 """
 
 import logging
@@ -31,18 +33,20 @@ class DatabaseConnector(BaseConnector):
     """
     Abstract base class for database connectors.
 
-    Provides the shared pipeline-building flow. Subclasses implement:
+    Provides the shared pipeline-building flow and single-level load balancing
+    (split into pipelines when a group exceeds max_tables_per_pipeline).
+    Subclasses implement:
     - _ingestion_source(): how a pipeline reaches the source
-    - generate_pipeline_config(): load balancing
 
     And may override:
+    - generate_pipeline_config(): load balancing
     - _build_table_configuration(): per-table options
     - _build_pipeline(): pipeline-level additions
     - _create_extra_resource_files(): resource files beyond pipelines.yml and jobs.yml
     """
 
     # Validation configuration - fields that must be consistent within pipeline groups
-    PIPELINE_CONSISTENCY_FIELDS = ['pipeline_catalog', 'pipeline_schema', 'tags']
+    PIPELINE_CONSISTENCY_FIELDS = ['connection_name', 'pipeline_catalog', 'pipeline_schema', 'tags']
 
     def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -95,6 +99,47 @@ class DatabaseConnector(BaseConnector):
             lambda r: r['prefix'] + '_' + r['subgroup'] if r['subgroup'].strip() else r['prefix'],
             axis=1
         )
+
+        return df
+
+    def generate_pipeline_config(
+        self,
+        df: pd.DataFrame,
+        max_tables_per_pipeline: int = None
+    ) -> pd.DataFrame:
+        """
+        Generate database pipeline configuration with single-level load balancing.
+
+        Uses prefix + subgroup grouping with single-level splitting:
+        - Split into pipelines if exceeds max_tables_per_pipeline
+
+        Args:
+            df: Normalized input DataFrame
+            max_tables_per_pipeline: Maximum tables per pipeline (default: DEFAULT_MAX_TABLES_PER_PIPELINE)
+
+        Returns:
+            DataFrame with 'pipeline_group' column added
+        """
+        # Apply default constant if not specified
+        if max_tables_per_pipeline is None:
+            max_tables_per_pipeline = self.DEFAULT_MAX_TABLES_PER_PIPELINE
+
+        df = self._add_base_group(df)
+
+        # Split groups by capacity
+        df = self._split_groups_by_size(
+            df=df,
+            group_column='base_group',
+            max_size=max_tables_per_pipeline,
+            output_column='pipeline_group',
+            suffix='p'
+        )
+
+        # Drop temporary base_group column
+        df = df.drop(columns=['base_group'])
+
+        # Validate generated names and group consistency
+        self._validate_generated_names(df)
 
         return df
 
@@ -287,7 +332,8 @@ class GatewayConnector(DatabaseConnector):
     Examples: SQL Server, PostgreSQL
     """
 
-    # Validation configuration - fields that must be consistent within gateways
+    # Validation configuration - connection_name is checked per gateway, not per pipeline
+    PIPELINE_CONSISTENCY_FIELDS = ['pipeline_catalog', 'pipeline_schema', 'tags']
     GATEWAY_CONSISTENCY_FIELDS = ['gateway_catalog', 'gateway_schema', 'connection_name', 'tags']
 
     def _apply_connector_specific_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -453,3 +499,27 @@ class GatewayConnector(DatabaseConnector):
     def _create_extra_resource_files(self, df: pd.DataFrame, project_name: str) -> Dict[str, Dict]:
         """Gateway connectors also write resources/gateways.yml."""
         return {'gateways.yml': self._create_gateways(df, project_name)}
+
+
+class IntegratedCDCConnector(DatabaseConnector):
+    """
+    Abstract base class for integrated CDC database connectors.
+
+    Each pipeline reads changes directly from the source through its Unity Catalog
+    connection, without a separate gateway. Uses single-level load balancing.
+
+    Examples: Oracle
+    """
+
+    def _ingestion_source(self, group_df: pd.DataFrame) -> Dict:
+        """Pipelines connect to the source directly and use CDC ingestion."""
+        return {
+            'connection_name': group_df.iloc[0]['connection_name'],
+            'connector_type': 'CDC',
+        }
+
+    def _build_pipeline(self, names: Dict[str, str], group_df: pd.DataFrame) -> Dict:
+        """Integrated CDC pipelines must be created on the PREVIEW channel."""
+        pipeline_def = super()._build_pipeline(names, group_df)
+        pipeline_def['channel'] = 'PREVIEW'
+        return pipeline_def

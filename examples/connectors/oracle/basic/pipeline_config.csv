@@ -1,0 +1,4 @@
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,pipeline_catalog,pipeline_schema,target_table_name,prefix,subgroup,connection_name,schedule,scd_type
+tapworks_oracle,ORCLPDB1,HR,EMPLOYEES,tapworks_catalog,tapworks_oracle,tapworks_catalog,tapworks_oracle,employees,hr,01,tapworks_oracle_connection,0 * * * *,SCD_TYPE_1
+tapworks_oracle,ORCLPDB1,HR,DEPARTMENTS,tapworks_catalog,tapworks_oracle,tapworks_catalog,tapworks_oracle,departments,hr,01,tapworks_oracle_connection,0 * * * *,SCD_TYPE_1
+tapworks_oracle,ORCLPDB1,HR,JOB_HISTORY,tapworks_catalog,tapworks_oracle,tapworks_catalog,tapworks_oracle,job_history,hr,02,tapworks_oracle_connection,0 */6 * * *,SCD_TYPE_2

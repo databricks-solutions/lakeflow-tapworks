@@ -156,6 +156,10 @@ Shared database pipeline flow, in `core/database.py`.
 
 Adds two-level load balancing and gateway handling (`gateways.yml`, `ingestion_gateway_id`).
 
+### IntegratedCDCConnector (extends DatabaseConnector)
+
+Pipelines connect directly (`connection_name`, `connector_type: CDC`, `channel: PREVIEW`); single-level load balancing.
+
 ### SaaSConnector (extends BaseConnector)
 
 | Method | Description |

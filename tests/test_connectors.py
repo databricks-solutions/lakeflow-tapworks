@@ -1,7 +1,7 @@
 """
 Tests for individual connector implementations.
 
-Tests ServiceNow, Workday Reports, Google Analytics, and PostgreSQL connectors
+Tests ServiceNow, Workday Reports, Google Analytics, PostgreSQL, and Oracle connectors
 with end-to-end pipeline generation and YAML output validation.
 """
 
@@ -265,3 +265,98 @@ class TestPostgreSQLConnector:
 
     def test_connector_type(self, postgres_connector):
         assert postgres_connector.connector_type == 'postgresql'
+
+
+class TestOracleConnector:
+    """Tests for Oracle integrated CDC connector."""
+
+    def _generate(self, connector, df, targets, output_dir, **kwargs):
+        connector.run_complete_pipeline_generation(
+            df=df,
+            output_dir=str(output_dir),
+            targets=targets,
+            default_values={'project_name': 'oracle_test'},
+            **kwargs,
+        )
+        with open(output_dir / 'oracle_test' / 'resources' / 'pipelines.yml') as f:
+            return yaml.safe_load(f)['resources']['pipelines']
+
+    def test_end_to_end_without_gateways(self, oracle_connector, sample_oracle_df, sample_targets_minimal, temp_output_dir):
+        result = oracle_connector.run_complete_pipeline_generation(
+            df=sample_oracle_df,
+            output_dir=str(temp_output_dir),
+            targets=sample_targets_minimal,
+            default_values={'project_name': 'oracle_test'},
+        )
+
+        assert 'pipeline_group' in result.columns
+        assert 'gateway' not in result.columns
+        assert len(result) == 3
+
+        project_dir = temp_output_dir / 'oracle_test'
+        assert (project_dir / 'databricks.yml').exists()
+        assert (project_dir / 'resources' / 'pipelines.yml').exists()
+        assert (project_dir / 'resources' / 'jobs.yml').exists()
+        assert not (project_dir / 'resources' / 'gateways.yml').exists()
+
+    def test_pipeline_uses_integrated_cdc(self, oracle_connector, sample_oracle_df, sample_targets_minimal, temp_output_dir):
+        pipelines = self._generate(oracle_connector, sample_oracle_df, sample_targets_minimal, temp_output_dir)
+
+        pipeline = pipelines['pipeline_oracle_test_p01']
+        assert pipeline['channel'] == 'PREVIEW'
+        assert pipeline['catalog'] == 'main'
+        assert pipeline['schema'] == 'bronze'
+
+        ingestion = pipeline['ingestion_definition']
+        assert ingestion['connection_name'] == 'oracle_conn'
+        assert ingestion['connector_type'] == 'CDC'
+        assert 'ingestion_gateway_id' not in ingestion
+
+        table = ingestion['objects'][0]['table']
+        assert table['source_catalog'] == 'ORCLPDB1'
+        assert table['source_schema'] == 'HR'
+        assert table['source_table'] == 'EMPLOYEES'
+
+    def test_splits_into_pipelines_only(self, oracle_connector, large_df_for_load_balancing):
+        df = oracle_connector.load_and_normalize_input(large_df_for_load_balancing)
+        result = oracle_connector.generate_pipeline_config(df, max_tables_per_pipeline=250)
+
+        assert sorted(result['pipeline_group'].unique()) == ['test_01_p01', 'test_01_p02', 'test_01_p03']
+
+    def test_conflicting_connection_names_in_pipeline(self, oracle_connector, sample_oracle_df):
+        df = sample_oracle_df.copy()
+        df.loc[0, 'connection_name'] = 'other_conn'
+        df = oracle_connector.load_and_normalize_input(df, default_values={'project_name': 'oracle_test'})
+
+        with pytest.raises(ValidationError, match='connection_name'):
+            oracle_connector.generate_pipeline_config(df)
+
+    def test_scd_type(self, oracle_connector, sample_oracle_df, sample_targets_minimal, temp_output_dir):
+        df = sample_oracle_df.copy()
+        df['scd_type'] = 'SCD_TYPE_2'
+        pipelines = self._generate(oracle_connector, df, sample_targets_minimal, temp_output_dir)
+
+        table = pipelines['pipeline_oracle_test_p01']['ingestion_definition']['objects'][0]['table']
+        assert table['table_configuration']['scd_type'] == 'SCD_TYPE_2'
+
+    def test_default_schedule_is_hourly(self, oracle_connector, sample_oracle_df):
+        df = oracle_connector.load_and_normalize_input(sample_oracle_df, default_values={'project_name': 'oracle_test'})
+        assert set(df['schedule']) == {'0 * * * *'}
+
+    def test_warns_on_lowercase_identifiers(self, oracle_connector, sample_oracle_df, caplog):
+        df = sample_oracle_df.copy()
+        df.loc[0, 'source_table_name'] = 'employees'
+
+        with caplog.at_level('WARNING'):
+            oracle_connector.load_and_normalize_input(df, default_values={'project_name': 'oracle_test'})
+
+        assert "source_table_name has values with lowercase letters: ['employees']" in caplog.text
+
+    def test_no_warning_for_uppercase_identifiers(self, oracle_connector, sample_oracle_df, caplog):
+        with caplog.at_level('WARNING'):
+            oracle_connector.load_and_normalize_input(sample_oracle_df, default_values={'project_name': 'oracle_test'})
+
+        assert 'lowercase' not in caplog.text
+
+    def test_connector_type(self, oracle_connector):
+        assert oracle_connector.connector_type == 'oracle'

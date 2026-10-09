@@ -151,6 +151,7 @@ Each connector has a built-in default schedule used when no `schedule` column or
 | **Database connectors** | |
 | SQL Server | `*/15 * * * *` (every 15 minutes) |
 | PostgreSQL | `*/15 * * * *` (every 15 minutes) |
+| Oracle | `0 * * * *` (hourly; each integrated CDC update runs for about 30 minutes) |
 
 ---
 
@@ -194,7 +195,7 @@ Use `tapworks <connector> --info` from the CLI to see required columns and defau
 
 ### Database Connector Columns
 
-Used by **SQL Server** and **PostgreSQL**.
+Used by **SQL Server**, **PostgreSQL**, and **Oracle**. Gateway columns apply only to SQL Server and PostgreSQL.
 
 | Column | Required | Default | Description |
 |--------|----------|---------|-------------|
@@ -207,6 +208,7 @@ Used by **SQL Server** and **PostgreSQL**.
 | `connection_name` | Yes | — | Databricks Unity Catalog connection name |
 | `pipeline_catalog` | Yes | — | Catalog for the pipeline event log |
 | `pipeline_schema` | Yes | — | Schema for the pipeline event log |
+| `include_columns` / `exclude_columns` | No | — | Comma-separated columns to include or exclude (not both) |
 | `gateway_catalog` | No | Falls back to `target_catalog` | Gateway storage catalog |
 | `gateway_schema` | No | Falls back to `target_schema` | Gateway storage schema |
 | `gateway_worker_type` | No | — | Gateway worker node instance type |
@@ -218,6 +220,16 @@ Used by **SQL Server** and **PostgreSQL**.
 |--------|----------|---------|-------------|
 | `slot_name` | Yes | — | PostgreSQL replication slot name |
 | `publication_name` | Yes | — | PostgreSQL publication name |
+
+### Oracle-Specific Notes
+
+Oracle uses integrated CDC: each pipeline reads changes directly through `connection_name`, with no gateway. Integrated CDC is in Beta and must be enabled for the workspace.
+
+| Column | Notes |
+|--------|-------|
+| `source_database` | Oracle **service name**. For multitenant databases, use the `CDB$ROOT` service name. |
+| `source_schema`, `source_table_name` | Case must match how Oracle stores the identifier, usually uppercase. Tapworks logs a warning for lowercase values. |
+| `pipeline_catalog`, `pipeline_schema` | Also used as the staging location for change data. |
 
 ### Salesforce Columns
 

@@ -7,6 +7,7 @@ This guide covers adding a new connector to the framework.
 | Source Type | Base Class | Features |
 |-------------|------------|----------|
 | Database (through a gateway) | `GatewayConnector` | Gateways + pipelines, two-level load balancing |
+| Database (integrated CDC) | `IntegratedCDCConnector` | Pipelines only, single-level load balancing |
 | SaaS (cloud-to-cloud) | `SaaSConnector` | Pipelines only, single-level load balancing |
 
 ## Files to Create

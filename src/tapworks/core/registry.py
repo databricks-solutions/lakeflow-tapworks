@@ -12,6 +12,7 @@ from typing import Dict, Type
 CONNECTORS: Dict[str, str] = {
     'salesforce': 'tapworks.connectors.salesforce.connector.SalesforceConnector',
     'sql_server': 'tapworks.connectors.sql_server.connector.SQLServerConnector',
+    'oracle': 'tapworks.connectors.oracle.connector.OracleConnector',
     'postgresql': 'tapworks.connectors.postgresql.connector.PostgreSQLConnector',
     'google_analytics': 'tapworks.connectors.google_analytics.connector.GoogleAnalyticsConnector',
     'servicenow': 'tapworks.connectors.servicenow.connector.ServiceNowConnector',

@@ -66,7 +66,7 @@ BaseConnector                      (unchanged: defaults/overrides, validation, j
     │   └── PostgreSQLConnector            'postgresql'               (+ slot source_configurations)
     │
     ├── IntegratedCDCConnector (abstract)  + connection_name, connector_type: CDC,
-    │   │                                    channel: PREVIEW, staging
+    │   │                                    channel: PREVIEW
     │   └── OracleConnector                'oracle'
     │       (later: SQLServerIntegratedConnector, PostgreSQLIntegratedConnector)
     │
@@ -134,7 +134,6 @@ resources:
   pipelines:
     pipeline_sales_p01:
       name: sales_p01
-      channel: PREVIEW
       catalog: <pipeline_catalog>
       schema: <pipeline_schema>
       ingestion_definition:
@@ -150,7 +149,7 @@ resources:
               destination_table: employees
               table_configuration:
                 scd_type: SCD_TYPE_1
-        # staging location: pending decision (see Open decisions)
+      channel: PREVIEW
 ```
 
 Oracle query-based pipeline:
@@ -194,7 +193,7 @@ Each step is its own commit; steps 2 and 3 can be one PR.
 2. [x] **Safety net**: golden-file tests for all existing example CSVs and load-balancing cases; `CHANGELOG.md`.
 3. [x] **Refactor, no output change**: `core/database.py` with `DatabaseConnector` and `GatewayConnector`; SQL Server and PostgreSQL moved onto `GatewayConnector`; PostgreSQL slot config via `_build_pipeline`. All existing tests and golden files unchanged. The single-level database split is deferred to step 5, its first user.
 4. [x] **Gateway limit fix** (separate commit and changelog entry under "Changes to generated output"): `runner.py` inspects `generate_pipeline_config` instead of `run_complete_pipeline_generation`. See [RELEASING.md](./RELEASING.md#example-the-gateway-limit-fix).
-5. [ ] **Oracle integrated CDC**: single-level split and `connection_name` pipeline consistency in `DatabaseConnector` (`GatewayConnector` keeps two levels and gateway-level `connection_name`); `IntegratedCDCConnector` and `OracleConnector`, registry entry, example CSV and notebook, unit tests, golden files.
+5. [x] **Oracle integrated CDC**: single-level split and `connection_name` pipeline consistency in `DatabaseConnector` (`GatewayConnector` keeps two levels and gateway-level `connection_name`); `IntegratedCDCConnector` and `OracleConnector`, registry entry, example CSV and notebook, unit tests, golden files.
 6. [ ] **Oracle query-based**: `QueryBasedConnector` and `OracleQueryBasedConnector`, registry entry, example CSV and notebook, unit tests, golden files.
 7. [ ] **Docs**, per `AGENTS.md`: `README.md`, `docs/ARCHITECTURE.md`, `docs/CONFIGURATION.md`, `docs/USAGE.md`, `docs/VALIDATIONS.md`, `prompts/` (01, 02, 04, README).
 8. [ ] **E2E in dogfood** (below).
@@ -212,23 +211,32 @@ Workspace: `https://dogfood.staging.databricks.com/?o=6051921418418893`
 3. Generate bundles into the git-ignored `e2e/oracle/` and `e2e/oracle_query_based/`, then run `databricks bundle validate -t dev`.
 4. With maintainer approval: `bundle deploy`, run the job, check that target tables fill, then `bundle destroy`. Record deployed resources in `e2e/TODO.md` as for the other connectors.
 
+## Decisions
+
+Decisions made for the Oracle integrated CDC connector (step 5). They can be revisited; changing a default or adding a column later is backward compatible as long as existing configs generate the same output.
+
+| # | Decision | Rationale |
+|---|---|---|
+| 1 | **Default schedule: hourly (`0 * * * *`)** | Each integrated CDC update runs for about 30 minutes; the docs suggest 60 minutes as a starting point. |
+| 2 | **Staging location: not emitted.** No `staging_catalog`/`staging_schema` columns. | The bundle schema says that without `data_staging_options`, staged data goes to the pipeline's `catalog`/`schema`, which is the fallback we would have built. Add optional columns later if a different location is needed (the docs mention it for migrating from gateway pipelines). |
+| 3 | **Lowercase identifier check: warning, not error** | Lowercase is valid for quoted Oracle identifiers, so it must not block generation. |
+| 4 | **No error for mixed service names in one pipeline** | Not documented as invalid; an error could block valid configs. |
+| 5 | **Include/exclude columns: inherited, emitted when set** | `include_columns`/`exclude_columns` are part of the generic `table_configuration` in the bundle schema; they are opt-in per row. Not yet verified against a live Oracle pipeline. |
+| 6 | **`primary_keys` / `sequence_by`: not supported yet** | Autodetected by Lakeflow Connect; add when needed. |
+| 7 | **SCD types: `SCD_TYPE_1`, `SCD_TYPE_2`** | As documented for Oracle. |
+| 8 | **`channel: PREVIEW` and `connector_type: CDC` always set** | Both required for programmatic creation. Per the bundle schema, a database pipeline with `connection_name` and no `connector_type` defaults to query-based, so `CDC` must be explicit. |
+| 9 | **Gateway limit fix: shipped in `v0.2.0`** | See [RELEASING.md](./RELEASING.md#example-the-gateway-limit-fix). |
+
+Verified against the bundle schema from Databricks CLI v1.20.0 (`databricks bundle schema`): `connector_type` (`CDC`, `QUERY_BASED`), `channel`, `data_staging_options` (`catalog_name`, `schema_name`, `volume_name`), `table_configuration` (`include_columns`, `exclude_columns`, `primary_keys`, `sequence_by`, `scd_type`, `query_based_connector_config`).
+
 ## Open decisions
 
-1. **Default schedules** (AGENTS.md requires confirmation):
-   - Integrated CDC: hourly `0 * * * *` per the docs, or `*/15 * * * *`?
-   - Query-based: ?
-2. **Staging location for integrated CDC**:
-   - new optional `staging_catalog`/`staging_schema` columns falling back to `pipeline_catalog`/`pipeline_schema`,
-   - required columns,
-   - or omit (as in the docs' DAB example).
+1. **Query-based**:
+   - default schedule,
+   - `cursor_columns` and `primary_keys` as comma-separated strings (like `include_columns`),
+   - support `deletion_condition` now,
+   - `cursor_columns` as a required column,
+   - sources in the first change: Oracle only, or also SQL Server and PostgreSQL.
 
-   Also confirm the exact DAB field name (`data_staging_options` in the REST example).
-3. **Query-based columns**: `cursor_columns` and `primary_keys` as comma-separated strings (like `include_columns`)? Support `deletion_condition` now?
-4. **Validations**:
-   - warn when Oracle identifiers aren't uppercase,
-   - error when a pipeline group mixes `source_database` (service name) values,
-   - confirm `cursor_columns` as a required column for query-based.
-5. **Query-based sources in this change**: Oracle only, or also SQL Server and PostgreSQL?
-6. ~~**Gateway limit fix**: ship in this release or a later one?~~ Decided: fixed in this release (step 4).
-7. **Oracle test source**: is an Oracle database reachable from dogfood with a UC connection? For CDC it also needs archive and supplemental logging.
-8. **Include/exclude columns** for integrated CDC and query-based: not documented for these modes; confirm before emitting.
+   Per the bundle schema, query-based pipelines should set `connector_type: QUERY_BASED` explicitly.
+2. **Oracle test source**: is an Oracle database reachable from dogfood with a UC connection? For CDC it also needs archive and supplemental logging.
