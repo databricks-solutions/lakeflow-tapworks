@@ -129,6 +129,8 @@ Config keys are matched in this order (most specific wins):
 
 See [examples/features/group_based_config](./examples/features/group_based_config) (<a href="$./examples/features/group_based_config">Databricks</a>) for detailed examples.
 
+See [examples/features/minimal_config](./examples/features/minimal_config) (<a href="$./examples/features/minimal_config">Databricks</a>) for a config that only lists tables, with everything else from `default_values` and `override_config`.
+
 ---
 
 ## Settings File Format

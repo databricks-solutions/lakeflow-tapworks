@@ -1,0 +1,4 @@
+source_schema,source_table_name
+HR,EMPLOYEES
+HR,DEPARTMENTS
+HR,JOB_HISTORY

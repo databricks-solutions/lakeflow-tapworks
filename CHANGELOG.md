@@ -12,7 +12,10 @@ Each release lists **Changes to generated output** separately. Those entries cha
 - Compute for integrated CDC and query-based pipelines: serverless by default (`serverless: true`); optional `classic_compute=true` for classic compute (e.g. databases that only accept classic compute), with optional `pipeline_worker_type`/`pipeline_driver_type`.
 - `IntegratedCDCConnector` and `QueryBasedConnector` base classes, ready for integrated CDC and query-based versions of other databases.
 
+- Minimal config example (`examples/features/minimal_config/`): deploys Oracle integrated CDC and query-based pipelines from a table list only, using `default_values` and `override_config`, with a notebook that creates schemas, generates, deploys, and runs the pipelines.
+
 ### Changed
+- Database connectors: `target_table_name` now falls back to `source_table_name` when the column is missing entirely (previously only when its values were empty). Configs that worked before generate the same output.
 - Database connectors restructured so each database can have standard, integrated CDC, and query-based connectors (see `docs/DATABASE_CONNECTORS_PLAN.md`). `DatabaseConnector` is now the shared base for all database connectors; the gateway logic moved to the new `StandardConnector`. Each database has a source class (`connectors/<database>/source.py`) for rules that apply in every mode.
 - Database connector names are now `<database>_<mode>`: `sql_server_standard`, `postgresql_standard`. `sql_server` and `postgresql` still work as aliases, and `tapworks --list` shows them. Classes renamed to `SQLServerStandardConnector` / `PostgreSQLStandardConnector`; the old import paths (`tapworks.connectors.<database>.connector.SQLServerConnector` / `PostgreSQLConnector`) still work.
 

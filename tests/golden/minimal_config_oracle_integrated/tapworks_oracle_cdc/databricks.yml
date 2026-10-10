@@ -1,0 +1,15 @@
+bundle:
+  name: tapworks_oracle_cdc
+include:
+- resources/*.yml
+targets:
+  dev:
+    mode: development
+    workspace:
+      host: https://dev.cloud.databricks.com
+    default: true
+  prod:
+    mode: production
+    workspace:
+      host: https://prod.cloud.databricks.com
+      root_path: /Shared/tapworks/prod

@@ -1,0 +1,38 @@
+resources:
+  pipelines:
+    pipeline_tapworks_oracle_qbc_p01:
+      name: tapworks_oracle_qbc_p01
+      catalog: main
+      schema: tapworks_oracle_qbc
+      ingestion_definition:
+        connection_name: my_oracle_connection
+        connector_type: QUERY_BASED
+        objects:
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: HR
+            source_table: EMPLOYEES
+            destination_catalog: main
+            destination_schema: tapworks_oracle_qbc
+            destination_table: EMPLOYEES
+            table_configuration:
+              query_based_connector_config: {}
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: HR
+            source_table: DEPARTMENTS
+            destination_catalog: main
+            destination_schema: tapworks_oracle_qbc
+            destination_table: DEPARTMENTS
+            table_configuration:
+              query_based_connector_config: {}
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: HR
+            source_table: JOB_HISTORY
+            destination_catalog: main
+            destination_schema: tapworks_oracle_qbc
+            destination_table: JOB_HISTORY
+            table_configuration:
+              query_based_connector_config: {}
+      serverless: false

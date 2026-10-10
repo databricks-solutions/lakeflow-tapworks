@@ -1256,13 +1256,15 @@ class DatabaseConnector(BaseConnector):
         """
         Apply database connector normalization.
 
-        Derives target_table_name from source_table_name if empty.
+        Derives target_table_name from source_table_name if empty or missing.
         """
         # Call parent normalization first
         df = super()._apply_connector_specific_normalization(df)
 
-        # Derive target_table_name from source_table_name if empty
-        if 'target_table_name' in df.columns and 'source_table_name' in df.columns:
+        # Derive target_table_name from source_table_name if empty or missing
+        if 'source_table_name' in df.columns:
+            if 'target_table_name' not in df.columns:
+                df['target_table_name'] = None
             empty = df['target_table_name'].isna() | (df['target_table_name'].astype(str).str.strip() == '')
             df.loc[empty, 'target_table_name'] = df.loc[empty, 'source_table_name']
 

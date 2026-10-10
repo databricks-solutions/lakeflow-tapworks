@@ -317,6 +317,17 @@ class TestLoadAndNormalizeInput:
 class TestDatabaseConnectorNormalization:
     """Tests specific to DatabaseConnector normalization."""
 
+    def test_target_table_name_derived_when_column_missing(self, sqlserver_connector, sample_sqlserver_df):
+        """target_table_name should default to source_table_name when the column is absent."""
+        df = sample_sqlserver_df.drop(columns=['target_table_name'])
+
+        result = sqlserver_connector.load_and_normalize_input(
+            df=df,
+            default_values={'project_name': 'test_project'}
+        )
+
+        assert list(result['target_table_name']) == list(result['source_table_name'])
+
     def test_gateway_catalog_defaults_to_target_catalog(self, sqlserver_connector, sample_sqlserver_df):
         """gateway_catalog should default to target_catalog."""
         df = sample_sqlserver_df.copy()

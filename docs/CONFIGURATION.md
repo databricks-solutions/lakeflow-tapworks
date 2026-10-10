@@ -205,7 +205,7 @@ Used by **SQL Server**, **PostgreSQL**, and **Oracle**. Gateway columns apply on
 | `source_table_name` | Yes | — | Source table to ingest |
 | `target_catalog` | Yes | — | Unity Catalog destination catalog |
 | `target_schema` | Yes | — | Destination schema |
-| `target_table_name` | Yes | — | Destination table name |
+| `target_table_name` | No | Falls back to `source_table_name` | Destination table name |
 | `connection_name` | Yes | — | Databricks Unity Catalog connection name |
 | `pipeline_catalog` | Yes | — | Catalog for the pipeline event log |
 | `pipeline_schema` | Yes | — | Schema for the pipeline event log |

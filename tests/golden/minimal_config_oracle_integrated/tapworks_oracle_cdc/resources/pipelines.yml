@@ -1,0 +1,36 @@
+resources:
+  pipelines:
+    pipeline_tapworks_oracle_cdc_p01:
+      name: tapworks_oracle_cdc_p01
+      catalog: main
+      schema: tapworks_oracle_cdc
+      ingestion_definition:
+        connection_name: my_oracle_connection
+        connector_type: CDC
+        objects:
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: HR
+            source_table: EMPLOYEES
+            destination_catalog: main
+            destination_schema: tapworks_oracle_cdc
+            destination_table: EMPLOYEES
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: HR
+            source_table: DEPARTMENTS
+            destination_catalog: main
+            destination_schema: tapworks_oracle_cdc
+            destination_table: DEPARTMENTS
+        - table:
+            source_catalog: ORCLPDB1
+            source_schema: HR
+            source_table: JOB_HISTORY
+            destination_catalog: main
+            destination_schema: tapworks_oracle_cdc
+            destination_table: JOB_HISTORY
+        data_staging_options:
+          catalog_name: main
+          schema_name: tapworks_oracle_cdc
+      channel: PREVIEW
+      serverless: false

@@ -28,6 +28,7 @@ UPDATE_GOLDEN = os.environ.get('TAPWORKS_UPDATE_GOLDEN') == '1'
 
 CONNECTOR_EXAMPLES = PROJECT_ROOT / 'examples' / 'connectors'
 GROUP_EXAMPLES = PROJECT_ROOT / 'examples' / 'features' / 'group_based_config'
+MINIMAL_CONFIG = PROJECT_ROOT / 'examples' / 'features' / 'minimal_config' / 'tables.csv'
 
 TARGETS = {
     'dev': {'workspace_host': 'https://dev.cloud.databricks.com'},
@@ -134,6 +135,31 @@ def _build_cases():
                 targets=TARGETS,
                 default_values=d,
                 override_config=o,
+            )
+        )
+
+    # Minimal config: tables only, everything else from defaults and overrides,
+    # mirroring examples/features/minimal_config/example_notebook.ipynb
+    for connector_name, project_name, schema in (
+        ('oracle_integrated', 'tapworks_oracle_cdc', 'tapworks_oracle_cdc'),
+        ('oracle_query_based', 'tapworks_oracle_qbc', 'tapworks_oracle_qbc'),
+    ):
+        cases[f'minimal_config_{connector_name}'] = (
+            lambda out, c=connector_name, n=project_name, sch=schema: run_pipeline_generation(
+                connector_name=c,
+                input_source=str(MINIMAL_CONFIG),
+                output_dir=out,
+                targets=TARGETS,
+                default_values={
+                    'source_database': 'ORCLPDB1',
+                    'connection_name': 'my_oracle_connection',
+                    'target_catalog': 'main',
+                    'pipeline_catalog': 'main',
+                    'project_name': n,
+                    'target_schema': sch,
+                    'pipeline_schema': sch,
+                },
+                override_config={'classic_compute': 'true'},
             )
         )
 

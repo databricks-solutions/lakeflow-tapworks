@@ -1,0 +1,11 @@
+resources:
+  jobs:
+    job_tapworks_oracle_qbc_p01:
+      name: tapworks_oracle_qbc_p01
+      schedule:
+        quartz_cron_expression: 0 0 * * * ?
+        timezone_id: UTC
+      tasks:
+      - task_key: run_pipeline
+        pipeline_task:
+          pipeline_id: ${resources.pipelines.pipeline_tapworks_oracle_qbc_p01.id}
