@@ -194,7 +194,7 @@ Required columns: `source_url`, `target_catalog`, `target_schema`, `target_table
 
 ### Database Connectors
 
-Database connectors are named `<database>_<mode>`: `sql_server_standard` and `postgresql_standard` (standard: through a separate gateway, two-level load balancing) `oracle_integrated` (integrated CDC, no gateway), and `oracle_query_based` (query-based, no gateway). `sql_server` and `postgresql` are aliases for the standard connectors.
+Database connectors are named `<database>_<mode>`: `sql_server_standard` and `postgresql_standard` (standard: through a separate gateway, two-level load balancing), `oracle_integrated` (integrated CDC, no gateway), and `oracle_query_based` and `postgresql_query_based` (query-based, no gateway). `sql_server` and `postgresql` are aliases for the standard connectors.
 
 **SQL Server**:
 ```bash
@@ -232,6 +232,14 @@ Optional: `cursor_columns` (without one, the table is read as a full snapshot), 
 
 Query-based ingestion reads the latest state of each row at each run; it does not capture intermediate changes between runs. `--max-tables-per-gateway` does not apply.
 
+**PostgreSQL query-based** (no gateway; single-level load balancing; no logical replication, slot, or publication needed):
+```bash
+tapworks postgresql_query_based --input-config tables.csv --output-dir output --settings settings.json
+```
+Required columns: `source_database`, `source_schema`, `source_table_name`, `target_catalog`, `target_schema`, `target_table_name`, `connection_name`, `pipeline_catalog`, `pipeline_schema`
+
+Optional: same as `oracle_query_based`. Tables without a primary key in PostgreSQL need `primary_keys` for `SCD_TYPE_1`/`SCD_TYPE_2` (or use `APPEND_ONLY`).
+
 ---
 
 ## Programmatic Usage
@@ -266,6 +274,7 @@ Each connector folder contains an `example_notebook.ipynb`:
 - `examples/connectors/salesforce/example_notebook.ipynb`
 - `examples/connectors/sql_server/example_notebook.ipynb`
 - `examples/connectors/postgresql/example_notebook.ipynb`
+- `examples/connectors/postgresql_query_based/example_notebook.ipynb`
 - `examples/connectors/oracle_integrated/example_notebook.ipynb`
 - `examples/connectors/oracle_query_based/example_notebook.ipynb`
 - `examples/connectors/google_analytics/example_notebook.ipynb`

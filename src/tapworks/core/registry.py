@@ -13,6 +13,7 @@ CONNECTORS: Dict[str, str] = {
     'salesforce': 'tapworks.connectors.salesforce.connector.SalesforceConnector',
     'sql_server_standard': 'tapworks.connectors.sql_server.standard.SQLServerStandardConnector',
     'postgresql_standard': 'tapworks.connectors.postgresql.standard.PostgreSQLStandardConnector',
+    'postgresql_query_based': 'tapworks.connectors.postgresql.query_based.PostgreSQLQueryBasedConnector',
     'oracle_integrated': 'tapworks.connectors.oracle.integrated.OracleIntegratedConnector',
     'oracle_query_based': 'tapworks.connectors.oracle.query_based.OracleQueryBasedConnector',
     'google_analytics': 'tapworks.connectors.google_analytics.connector.GoogleAnalyticsConnector',

@@ -15,7 +15,7 @@ BaseConnector (abstract)
 ├── DatabaseConnector (abstract) - Database sources
 │   ├── StandardConnector (abstract) - Databases ingested through a separate gateway (SQL Server, PostgreSQL)
 │   ├── IntegratedCDCConnector (abstract) - Databases with integrated CDC, no gateway (Oracle)
-│   └── QueryBasedConnector (abstract) - Databases with query-based ingestion, no gateway (Oracle)
+│   └── QueryBasedConnector (abstract) - Databases with query-based ingestion, no gateway (Oracle, PostgreSQL)
 └── SaaSConnector (abstract) - Cloud sources without gateways (Salesforce, GA4)
 ```
 

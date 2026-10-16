@@ -139,7 +139,7 @@ If extending `StandardConnector`, you also need:
 
 Gateway YAML, pipeline YAML, and file writing are inherited. For source-specific additions, override `_build_pipeline()` (pipeline-level, e.g. PostgreSQL `source_configurations`) or `_build_table_configuration()` (per table).
 
-See `src/tapworks/connectors/sql_server/standard.py` (standard) and `src/tapworks/connectors/oracle/` (integrated CDC with a source class) for complete examples.
+See `src/tapworks/connectors/sql_server/standard.py` (standard), `src/tapworks/connectors/oracle/` (integrated CDC with a source class), and `src/tapworks/connectors/postgresql/` (standard and query-based) for complete examples.
 
 ## Connector-Specific Normalization
 

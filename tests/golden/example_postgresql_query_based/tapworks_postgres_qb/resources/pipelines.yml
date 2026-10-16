@@ -1,0 +1,61 @@
+resources:
+  pipelines:
+    pipeline_sales_01_p01:
+      name: sales_01_p01
+      catalog: tapworks_catalog
+      schema: tapworks_postgres_qb
+      ingestion_definition:
+        connection_name: tapworks_postgres_connection
+        connector_type: QUERY_BASED
+        objects:
+        - table:
+            source_catalog: app_db
+            source_schema: public
+            source_table: orders
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks_postgres_qb
+            destination_table: orders
+            table_configuration:
+              scd_type: SCD_TYPE_1
+              primary_keys:
+              - order_id
+              query_based_connector_config:
+                cursor_columns:
+                - updated_at
+        - table:
+            source_catalog: app_db
+            source_schema: public
+            source_table: customers
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks_postgres_qb
+            destination_table: customers
+            table_configuration:
+              scd_type: SCD_TYPE_2
+              primary_keys:
+              - customer_id
+              query_based_connector_config:
+                cursor_columns:
+                - last_modified
+                deletion_condition: is_deleted = true
+      serverless: true
+    pipeline_sales_02_p01:
+      name: sales_02_p01
+      catalog: tapworks_catalog
+      schema: tapworks_postgres_qb
+      ingestion_definition:
+        connection_name: tapworks_postgres_connection
+        connector_type: QUERY_BASED
+        objects:
+        - table:
+            source_catalog: app_db
+            source_schema: public
+            source_table: order_events
+            destination_catalog: tapworks_catalog
+            destination_schema: tapworks_postgres_qb
+            destination_table: order_events
+            table_configuration:
+              scd_type: APPEND_ONLY
+              query_based_connector_config:
+                cursor_columns:
+                - event_id
+      serverless: true

@@ -219,8 +219,10 @@ Used by **SQL Server**, **PostgreSQL**, and **Oracle**. Gateway columns apply on
 
 | Column | Required | Default | Description |
 |--------|----------|---------|-------------|
-| `slot_name` | Yes | — | PostgreSQL replication slot name |
-| `publication_name` | Yes | — | PostgreSQL publication name |
+| `slot_name` | Yes (standard) | — | PostgreSQL replication slot name. Not used by `postgresql_query_based`. |
+| `publication_name` | Yes (standard) | — | PostgreSQL publication name. Not used by `postgresql_query_based`. |
+
+PostgreSQL also has a connector without a gateway: `postgresql_query_based` (query-based). It uses the same compute columns as the Oracle connectors below (`classic_compute`, `pipeline_worker_type`, `pipeline_driver_type`).
 
 ### Oracle-Specific Notes
 
@@ -237,7 +239,7 @@ Oracle has two connectors, both without a gateway: `oracle_integrated` (integrat
 
 ### Query-Based Columns
 
-Used by **Oracle query-based** (`oracle_query_based`).
+Used by **Oracle query-based** (`oracle_query_based`) and **PostgreSQL query-based** (`postgresql_query_based`).
 
 | Column | Required | Default | Description |
 |--------|----------|---------|-------------|

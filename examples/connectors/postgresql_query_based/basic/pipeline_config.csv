@@ -1,0 +1,4 @@
+project_name,source_database,source_schema,source_table_name,target_catalog,target_schema,pipeline_catalog,pipeline_schema,target_table_name,prefix,subgroup,connection_name,schedule,cursor_columns,primary_keys,deletion_condition,scd_type
+tapworks_postgres_qb,app_db,public,orders,tapworks_catalog,tapworks_postgres_qb,tapworks_catalog,tapworks_postgres_qb,orders,sales,01,tapworks_postgres_connection,0 * * * *,updated_at,order_id,,SCD_TYPE_1
+tapworks_postgres_qb,app_db,public,customers,tapworks_catalog,tapworks_postgres_qb,tapworks_catalog,tapworks_postgres_qb,customers,sales,01,tapworks_postgres_connection,0 * * * *,last_modified,customer_id,is_deleted = true,SCD_TYPE_2
+tapworks_postgres_qb,app_db,public,order_events,tapworks_catalog,tapworks_postgres_qb,tapworks_catalog,tapworks_postgres_qb,order_events,sales,02,tapworks_postgres_connection,0 */6 * * *,event_id,,,APPEND_ONLY

@@ -1844,7 +1844,7 @@ class QueryBasedConnector(DatabaseConnector):
     as full snapshots. No gateway or staging. Uses single-level load balancing.
     Pipelines run on serverless compute unless classic_compute is true.
 
-    Examples: Oracle
+    Examples: Oracle, PostgreSQL
     """
 
     # Validation configuration - fields that must be consistent within pipeline groups

@@ -320,6 +320,13 @@ def oracle_query_based_connector():
 
 
 @pytest.fixture
+def postgres_query_based_connector():
+    """PostgreSQLQueryBasedConnector instance."""
+    from tapworks.connectors.postgresql.query_based import PostgreSQLQueryBasedConnector
+    return PostgreSQLQueryBasedConnector()
+
+
+@pytest.fixture
 def postgres_connector():
     """PostgreSQLConnector instance."""
     from tapworks.connectors.postgresql.connector import PostgreSQLConnector

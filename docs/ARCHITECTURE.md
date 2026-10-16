@@ -13,7 +13,8 @@ BaseConnector (abstract)
 │   ├── IntegratedCDCConnector (abstract)
 │   │   └── OracleIntegratedConnector       (+ OracleSource)
 │   └── QueryBasedConnector (abstract)
-│       └── OracleQueryBasedConnector       (+ OracleSource)
+│       ├── OracleQueryBasedConnector       (+ OracleSource)
+│       └── PostgreSQLQueryBasedConnector   (+ PostgreSQLSource)
 └── SaaSConnector (abstract)
     ├── SalesforceConnector
     ├── GoogleAnalyticsConnector
@@ -37,12 +38,13 @@ connectors/sql_server/source.py      SQLServerSource
 connectors/sql_server/standard.py    SQLServerStandardConnector(SQLServerSource, StandardConnector)
 connectors/postgresql/source.py      PostgreSQLSource
 connectors/postgresql/standard.py    PostgreSQLStandardConnector(PostgreSQLSource, StandardConnector)
+connectors/postgresql/query_based.py PostgreSQLQueryBasedConnector(PostgreSQLSource, QueryBasedConnector)
 connectors/oracle/source.py          OracleSource
 connectors/oracle/integrated.py      OracleIntegratedConnector(OracleSource, IntegratedCDCConnector)
 connectors/oracle/query_based.py     OracleQueryBasedConnector(OracleSource, QueryBasedConnector)
 ```
 
-Registry names are `<database>_<mode>` (`sql_server_standard`, `postgresql_standard`, `oracle_integrated`, `oracle_query_based`). The bare names `sql_server` and `postgresql` are aliases for the standard connectors, and `connectors/<database>/connector.py` still exports the previous class names (`SQLServerConnector`, `PostgreSQLConnector`).
+Registry names are `<database>_<mode>` (`sql_server_standard`, `postgresql_standard`, `postgresql_query_based`, `oracle_integrated`, `oracle_query_based`). The bare names `sql_server` and `postgresql` are aliases for the standard connectors, and `connectors/<database>/connector.py` still exports the previous class names (`SQLServerConnector`, `PostgreSQLConnector`).
 
 ## Entry Points
 

@@ -19,6 +19,7 @@ CONNECTOR_DIR_MAP = {
     'salesforce': 'salesforce',
     'sql_server': 'sql_server',
     'postgresql': 'postgresql',
+    'postgresql_query_based': 'postgresql_query_based',
     'oracle_integrated': 'oracle_integrated',
     'oracle_query_based': 'oracle_query_based',
     'google_analytics': 'google_analytics',

@@ -547,3 +547,70 @@ class TestPipelineCompute:
         df = connector.load_and_normalize_input(df, default_values={'project_name': 'compute_test'})
         with pytest.raises(ValidationError, match='classic_compute'):
             connector.generate_pipeline_config(df)
+
+
+class TestPostgreSQLQueryBasedConnector:
+    """Tests for PostgreSQL query-based connector."""
+
+    def _generate(self, connector, df, targets, output_dir):
+        connector.run_complete_pipeline_generation(
+            df=df,
+            output_dir=str(output_dir),
+            targets=targets,
+            default_values={'project_name': 'pg_qb_test'},
+        )
+        with open(output_dir / 'pg_qb_test' / 'resources' / 'pipelines.yml') as f:
+            return yaml.safe_load(f)['resources']['pipelines']
+
+    def test_no_slot_columns_needed(self, postgres_query_based_connector, sample_postgresql_df, sample_targets_minimal, temp_output_dir):
+        df = sample_postgresql_df.drop(columns=['slot_name', 'publication_name'])
+        pipelines = self._generate(postgres_query_based_connector, df, sample_targets_minimal, temp_output_dir)
+
+        ingestion = pipelines['pipeline_pg_qb_test_p01']['ingestion_definition']
+        assert ingestion['connector_type'] == 'QUERY_BASED'
+        assert ingestion['connection_name'] == 'pg_conn'
+        assert 'source_configurations' not in ingestion
+        assert 'data_staging_options' not in ingestion
+        assert not (temp_output_dir / 'pg_qb_test' / 'resources' / 'gateways.yml').exists()
+
+    def test_table_options(self, postgres_query_based_connector, sample_postgresql_df, sample_targets_minimal, temp_output_dir):
+        df = sample_postgresql_df.copy()
+        df['scd_type'] = 'SCD_TYPE_2'
+        df['primary_keys'] = 'id'
+        df['cursor_columns'] = 'updated_at'
+        df['deletion_condition'] = 'is_deleted = true'
+        pipelines = self._generate(postgres_query_based_connector, df, sample_targets_minimal, temp_output_dir)
+
+        table_config = pipelines['pipeline_pg_qb_test_p01']['ingestion_definition']['objects'][0]['table']['table_configuration']
+        assert table_config == {
+            'scd_type': 'SCD_TYPE_2',
+            'primary_keys': ['id'],
+            'query_based_connector_config': {
+                'cursor_columns': ['updated_at'],
+                'deletion_condition': 'is_deleted = true',
+            },
+        }
+
+    def test_table_without_cursor_is_snapshot(self, postgres_query_based_connector, sample_postgresql_df, sample_targets_minimal, temp_output_dir):
+        pipelines = self._generate(postgres_query_based_connector, sample_postgresql_df, sample_targets_minimal, temp_output_dir)
+
+        table_config = pipelines['pipeline_pg_qb_test_p01']['ingestion_definition']['objects'][0]['table']['table_configuration']
+        assert table_config == {'query_based_connector_config': {}}
+
+    def test_classic_compute_and_tags(self, postgres_query_based_connector, sample_postgresql_df, sample_targets_minimal, temp_output_dir):
+        df = sample_postgresql_df.copy()
+        df['classic_compute'] = 'true'
+        df['tags'] = 'project=tapworks,owner=me'
+        pipeline = self._generate(postgres_query_based_connector, df, sample_targets_minimal, temp_output_dir)['pipeline_pg_qb_test_p01']
+        assert pipeline['serverless'] is False
+        assert pipeline['tags'] == {'project': 'tapworks', 'owner': 'me'}
+
+    def test_append_only_supported(self, postgres_query_based_connector):
+        assert 'APPEND_ONLY' in postgres_query_based_connector.supported_scd_types
+
+    def test_default_schedule_is_hourly(self, postgres_query_based_connector, sample_postgresql_df):
+        df = postgres_query_based_connector.load_and_normalize_input(sample_postgresql_df, default_values={'project_name': 'pg_qb_test'})
+        assert set(df['schedule']) == {'0 * * * *'}
+
+    def test_connector_type(self, postgres_query_based_connector):
+        assert postgres_query_based_connector.connector_type == 'postgresql_query_based'

@@ -165,7 +165,7 @@ These checks run after load balancing assigns `pipeline_group` (and `gateway` fo
 
 | | |
 |---|---|
-| **What it checks** | Within each `pipeline_group`, the `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. For connectors without a gateway (Oracle), `connection_name`, `classic_compute`, `pipeline_worker_type`, and `pipeline_driver_type` must also be the same (plus `staging_catalog` and `staging_schema` for integrated CDC), since each pipeline connects directly with one compute configuration and one staging location. |
+| **What it checks** | Within each `pipeline_group`, the `pipeline_catalog`, `pipeline_schema`, and `tags` values are the same for all rows. For connectors without a gateway (Oracle, PostgreSQL query-based), `connection_name`, `classic_compute`, `pipeline_worker_type`, and `pipeline_driver_type` must also be the same (plus `staging_catalog` and `staging_schema` for integrated CDC), since each pipeline connects directly with one compute configuration and one staging location. |
 | **Severity** | Error (`ValidationError`) |
 | **Example message** | `Pipeline group 'sql_g01p01' has conflicting tags values: ['{"team":"a"}', '{"team":"b"}']. All tables in the same pipeline group must have the same tags.` |
 | **How to fix** | Use the same `tags` for all tables in the group, or split them into different subgroups. |
